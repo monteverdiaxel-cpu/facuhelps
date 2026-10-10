@@ -240,31 +240,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 5. Pasos de Progreso
-  function setProgressStep(step, isInline = false) {
+  function setProgressStep(step) {
     // step: 'local' | 'cloud' | 'gemini' | 'done'
     const steps = [stepLocal, stepCloud, stepGemini];
     steps.forEach((s) => s.classList.remove("active", "completed"));
-
-    if (isInline) {
-      stepCloud.classList.add("hidden");
-    } else {
-      stepCloud.classList.remove("hidden");
-    }
+    stepCloud.classList.remove("hidden");
 
     if (step === "local") {
       stepLocal.classList.add("active");
-      progressTitle.textContent = isInline ? "Preparando audio..." : "Subiendo archivo local...";
-      progressSubtitle.textContent = isInline 
-        ? "Cargando audio en modo rápido directo (< 20 MB)." 
-        : "Cargando audio en streaming al servidor local.";
+      progressTitle.textContent = "Preparando audio...";
+      progressSubtitle.textContent = "Guardando audio en disco (bloques de 1 MB, RAM mínima).";
     } else if (step === "cloud") {
       stepLocal.classList.add("completed");
       stepCloud.classList.add("active");
       progressTitle.textContent = "Procesando en Google Files API...";
-      progressSubtitle.textContent = "Subiendo y verificando audio en Google AI Studio (archivo de gran tamaño).";
+      progressSubtitle.textContent = "Subiendo y verificando audio en Google AI Studio desde disco.";
     } else if (step === "gemini") {
       stepLocal.classList.add("completed");
-      if (!isInline) stepCloud.classList.add("completed");
+      stepCloud.classList.add("completed");
       stepGemini.classList.add("active");
       progressTitle.textContent = "Gemini Flash transcribiendo...";
       progressSubtitle.textContent = "Transcribiendo palabra por palabra (verbatim) de forma estructurada.";
@@ -320,9 +313,8 @@ document.addEventListener("DOMContentLoaded", () => {
     progressCard.classList.remove("hidden");
     btnStartTranscribe.disabled = true;
 
-    const isInline = currentFile.size < (20 * 1024 * 1024);
     startTimer();
-    setProgressStep("local", isInline);
+    setProgressStep("local");
 
     try {
       const formData = new FormData();
@@ -385,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const msg = JSON.parse(jsonStr);
 
               if (msg.event === "status") {
-                setProgressStep(msg.stage, msg.mode === "inline");
+                setProgressStep(msg.stage);
                 if (msg.message) progressSubtitle.textContent = msg.message;
               } else if (msg.event === "chunk") {
                 if (!hasReceivedFirstChunk) {
@@ -399,7 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
                 }
               } else if (msg.event === "done") {
-                setProgressStep("done", isInline);
+                setProgressStep("done");
                 if (completedBadge) completedBadge.classList.remove("hidden");
                 if (streamingIndicator) streamingIndicator.classList.add("hidden");
                 rawTranscriptText = msg.transcript || rawTranscriptText;

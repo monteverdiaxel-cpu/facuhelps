@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import io
 import json
 import os
@@ -45,8 +46,6 @@ MIME_MAP = {
     ".webm": "audio/webm",
     ".wma": "audio/x-ms-wma",
 }
-
-INLINE_SIZE_LIMIT = 20 * 1024 * 1024  # 20 MB
 
 SYSTEM_INSTRUCTION = """Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
 Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma literal (verbatim), con una estructura de lectura limpia, clara y sin marcas de tiempo.
@@ -110,15 +109,13 @@ async def transcribe_audio(
     mime_type = MIME_MAP[file_ext]
     target_model_name = "gemini-3.8-flash"
 
-    # Leer contenido del audio
-    content_bytes = await file.read()
-    file_size = len(content_bytes)
-    use_inline = file_size < INLINE_SIZE_LIMIT
+    # Streaming directo a disco en chunks de 1 MB para consumo mínimo de RAM (evita OOM en Render)
+    temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
+    local_temp_path = TEMP_DIR / temp_filename
 
     async def generate_events():
         google_file = None
         client = None
-        local_temp_path = None
 
         try:
             from google import genai
@@ -126,57 +123,51 @@ async def transcribe_audio(
 
             client = genai.Client(api_key=effective_key)
 
-            # Notificar fase de preparación
-            yield f"data: {json.dumps({'event': 'status', 'stage': 'local', 'message': 'Audio preparado...', 'mode': 'inline' if use_inline else 'files_api'})}\n\n"
+            # 1. Guardar archivo en disco leyendo en bloques de 1 MB sin cargarlo completo en memoria
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'local', 'message': 'Guardando audio en disco (consumo mínimo de RAM)...', 'mode': 'files_api'})}\n\n"
+            await asyncio.sleep(0)
 
-            if use_inline:
-                # 1. OPTIMIZACIÓN: Modo inline directo en memoria (< 20 MB) sin tocar disco ni Files API
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Modo rápido inline (< 20 MB) en memoria activado...', 'mode': 'inline'})}\n\n"
-                audio_content = types.Part.from_bytes(
-                    data=content_bytes,
-                    mime_type=mime_type
-                )
-                processing_mode = "inline (< 20 MB)"
-            else:
-                # 2. OPTIMIZACIÓN: Modo Files API (>= 20 MB) con polling cada 2 segundos
-                processing_mode = "files_api (>= 20 MB)"
-                temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
-                local_temp_path = TEMP_DIR / temp_filename
+            file_size = 0
+            with open(local_temp_path, "wb") as f:
+                while chunk := await file.read(1024 * 1024):
+                    f.write(chunk)
+                    file_size += len(chunk)
 
-                with open(local_temp_path, "wb") as f:
-                    f.write(content_bytes)
+            # 2. Subida a Google Files API transmitiendo directamente desde el archivo en disco
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Subiendo {file_size / (1024*1024):.1f} MB a Google Files API desde disco...', 'mode': 'files_api'})}\n\n"
+            await asyncio.sleep(0)
 
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Subiendo {file_size / (1024*1024):.1f} MB a Google Files API...', 'mode': 'files_api'})}\n\n"
-
-                try:
-                    google_file = client.files.upload(
-                        file=str(local_temp_path),
-                        config=types.UploadFileConfig(
-                            mime_type=mime_type,
-                            display_name=file.filename
-                        )
+            try:
+                google_file = client.files.upload(
+                    file=str(local_temp_path),
+                    config=types.UploadFileConfig(
+                        mime_type=mime_type,
+                        display_name=file.filename
                     )
-                except Exception as e:
-                    yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(e)}'})}\n\n"
+                )
+            except Exception as e:
+                yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(e)}'})}\n\n"
+                return
+
+            # Sondeo optimizado a cada 2 segundos
+            max_wait_seconds = 180
+            start_time = time.time()
+            while google_file.state.name == "PROCESSING":
+                if time.time() - start_time > max_wait_seconds:
+                    yield f"data: {json.dumps({'event': 'error', 'message': 'Tiempo de espera agotado mientras Google procesaba el audio.'})}\n\n"
                     return
+                yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 2s)...', 'mode': 'files_api'})}\n\n"
+                await asyncio.sleep(2)
+                google_file = client.files.get(name=google_file.name)
 
-                # Sondeo optimizado a cada 2 segundos
-                max_wait_seconds = 180
-                start_time = time.time()
-                while google_file.state.name == "PROCESSING":
-                    if time.time() - start_time > max_wait_seconds:
-                        yield f"data: {json.dumps({'event': 'error', 'message': 'Tiempo de espera agotado mientras Google procesaba el audio.'})}\n\n"
-                        return
-                    yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 2s)...', 'mode': 'files_api'})}\n\n"
-                    await asyncio.sleep(2)
-                    google_file = client.files.get(name=google_file.name)
+            if google_file.state.name != "ACTIVE":
+                yield f"data: {json.dumps({'event': 'error', 'message': f'Google no pudo procesar el archivo. Estado: {google_file.state.name}'})}\n\n"
+                return
 
-                if google_file.state.name != "ACTIVE":
-                    yield f"data: {json.dumps({'event': 'error', 'message': f'Google no pudo procesar el archivo. Estado: {google_file.state.name}'})}\n\n"
-                    return
-
-                audio_content = google_file
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Iniciando streaming con Gemini Flash...', 'mode': 'files_api'})}\n\n"
+            audio_content = google_file
+            processing_mode = "files_api (disco)"
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Iniciando streaming con Gemini Flash...', 'mode': 'files_api'})}\n\n"
+            await asyncio.sleep(0)
 
             # 3. Modelo exclusivo gemini-3.8-flash
             candidate_models = ["gemini-3.8-flash"]
@@ -309,18 +300,23 @@ async def transcribe_audio(
             yield f"data: {json.dumps({'event': 'error', 'message': f'Error en el proceso: {str(global_err)}'})}\n\n"
 
         finally:
-            # 5. Limpieza garantizada
-            if local_temp_path and local_temp_path.exists():
+            # 5. Limpieza garantizada de archivo temporal en disco
+            if local_temp_path:
                 try:
-                    local_temp_path.unlink()
+                    if os.path.exists(local_temp_path):
+                        os.remove(local_temp_path)
                 except Exception:
                     pass
 
+            # Eliminar archivo remoto en Google Files API
             if client and google_file and getattr(google_file, "name", None):
                 try:
                     client.files.delete(name=google_file.name)
                 except Exception:
                     pass
+
+            # Liberar cualquier residuo de memoria RAM inmediatamente
+            gc.collect()
 
     return StreamingResponse(
         generate_events(),
