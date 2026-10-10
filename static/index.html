@@ -166,7 +166,7 @@
         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
           Tipo de Audio
         </label>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="audioTypeGroup">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="audioTypeGroup">
           <button 
             type="button" 
             id="btnTypeClase" 
@@ -174,13 +174,13 @@
             data-type="clase"
           >
             <div class="flex items-center gap-2.5">
-              <span class="text-base">🎓</span>
+              <span class="text-base shrink-0">🎓</span>
               <div>
                 <p class="font-semibold text-slate-900">Clase / Teórico</p>
                 <p class="text-[11px] text-slate-500 mt-0.5">Etiquetas: <strong class="text-indigo-600">Docente</strong> y <strong class="text-indigo-600">Estudiante</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon shrink-0"></i>
           </button>
 
           <button 
@@ -190,13 +190,29 @@
             data-type="entrevista"
           >
             <div class="flex items-center gap-2.5">
-              <span class="text-base">🎙️</span>
+              <span class="text-base shrink-0">🎙️</span>
               <div>
                 <p class="font-semibold text-slate-900">Entrevista</p>
                 <p class="text-[11px] text-slate-500 mt-0.5">Etiquetas: <strong class="text-indigo-600">Entrevistador</strong> y <strong class="text-indigo-600">Entrevistado</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon hidden"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon shrink-0 hidden"></i>
+          </button>
+
+          <button 
+            type="button" 
+            id="btnTypeContinuo" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left"
+            data-type="continuo"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base shrink-0">📝</span>
+              <div>
+                <p class="font-semibold text-slate-900">Sin diferenciar hablantes</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Texto continuo en párrafos, sin etiquetas</p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon shrink-0 hidden"></i>
           </button>
         </div>
       </div>
@@ -289,6 +305,10 @@
 
         <!-- Action buttons -->
         <div class="flex items-center flex-wrap gap-2">
+          <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100/80 text-amber-900 text-xs font-semibold transition shadow-xs">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600"></i>
+            <span>⚡ Generar resumen</span>
+          </button>
           <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-800 text-xs font-medium transition shadow-xs">
             <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-600"></i>
             <span>👥 Renombrar oradores</span>
@@ -309,6 +329,38 @@
             <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
             <span>Descargar .md</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Recuadro Destacado y Colapsable de Resumen Ejecutivo -->
+      <div id="summarySection" class="hidden border-b border-amber-200 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/50 transition-all">
+        <div class="px-6 py-4 flex items-center justify-between cursor-pointer select-none" id="summaryHeader">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-amber-950 flex items-center gap-2">
+                Resumen Ejecutivo
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-800">IA Síntesis</span>
+              </h4>
+              <p class="text-[11px] text-amber-800/80">Tema central, conceptos clave y compromisos</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnCopySummary" class="text-xs px-2.5 py-1 rounded-lg border border-amber-300 bg-white/80 hover:bg-white text-amber-900 transition flex items-center gap-1" title="Copiar resumen">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copiar resumen</span>
+            </button>
+            <button id="btnToggleSummary" class="p-1 rounded-lg hover:bg-amber-100 text-amber-800 transition">
+              <i data-lucide="chevron-up" id="summaryChevron" class="w-4 h-4 transition-transform duration-200"></i>
+            </button>
+          </div>
+        </div>
+        <div id="summaryBody" class="px-6 pb-6 pt-1">
+          <div id="summaryContent" class="prose prose-sm prose-amber max-w-none text-slate-800 leading-relaxed bg-white/80 p-5 rounded-xl border border-amber-200/70 shadow-xs">
+            <!-- Contenido del resumen en markdown/html -->
+          </div>
         </div>
       </div>
 

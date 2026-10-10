@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Selector de Tipo de Audio
   const btnTypeClase = document.getElementById("btnTypeClase");
   const btnTypeEntrevista = document.getElementById("btnTypeEntrevista");
+  const btnTypeContinuo = document.getElementById("btnTypeContinuo");
 
   const progressCard = document.getElementById("progressCard");
   const progressTitle = document.getElementById("progressTitle");
@@ -47,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const streamingIndicator = document.getElementById("streamingIndicator");
   const transcriptContainer = document.getElementById("transcriptContainer");
   const transcriptContent = document.getElementById("transcriptContent");
+  const btnSummarize = document.getElementById("btnSummarize");
   const btnRenameSpeakers = document.getElementById("btnRenameSpeakers");
   const btnCopy = document.getElementById("btnCopy");
   const btnCopyLabel = document.getElementById("btnCopyLabel");
@@ -55,6 +57,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnDownloadMd = document.getElementById("btnDownloadMd");
   const searchTranscript = document.getElementById("searchTranscript");
   const searchCount = document.getElementById("searchCount");
+
+  // Sección de Resumen Ejecutivo
+  const summarySection = document.getElementById("summarySection");
+  const summaryHeader = document.getElementById("summaryHeader");
+  const summaryBody = document.getElementById("summaryBody");
+  const summaryContent = document.getElementById("summaryContent");
+  const btnToggleSummary = document.getElementById("btnToggleSummary");
+  const summaryChevron = document.getElementById("summaryChevron");
+  const btnCopySummary = document.getElementById("btnCopySummary");
 
   // Modal Renombrar Oradores
   const renameModal = document.getElementById("renameModal");
@@ -65,10 +76,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Estado de la app
   let currentFile = null;
-  let currentAudioType = "clase"; // 'clase' | 'entrevista'
+  let currentAudioType = "clase"; // 'clase' | 'entrevista' | 'continuo'
   let timerInterval = null;
   let startTime = null;
   let rawTranscriptText = "";
+  let rawSummaryText = "";
+  let isSummaryCollapsed = false;
   let hasServerApiKey = false;
 
   // 1. Cargar configuración inicial
@@ -223,28 +236,24 @@ document.addEventListener("DOMContentLoaded", () => {
   function setAudioType(type) {
     currentAudioType = type;
     const isClase = type === "clase";
+    const isEntrevista = type === "entrevista";
+    const isContinuo = type === "continuo";
 
-    if (btnTypeClase) {
-      const checkClase = btnTypeClase.querySelector(".check-icon");
-      if (isClase) {
-        btnTypeClase.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs";
-        if (checkClase) checkClase.classList.remove("hidden");
+    const updateBtn = (btn, isActive) => {
+      if (!btn) return;
+      const check = btn.querySelector(".check-icon");
+      if (isActive) {
+        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs";
+        if (check) check.classList.remove("hidden");
       } else {
-        btnTypeClase.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left";
-        if (checkClase) checkClase.classList.add("hidden");
+        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left";
+        if (check) check.classList.add("hidden");
       }
-    }
+    };
 
-    if (btnTypeEntrevista) {
-      const checkEntrevista = btnTypeEntrevista.querySelector(".check-icon");
-      if (!isClase) {
-        btnTypeEntrevista.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs";
-        if (checkEntrevista) checkEntrevista.classList.remove("hidden");
-      } else {
-        btnTypeEntrevista.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left";
-        if (checkEntrevista) checkEntrevista.classList.add("hidden");
-      }
-    }
+    updateBtn(btnTypeClase, isClase);
+    updateBtn(btnTypeEntrevista, isEntrevista);
+    updateBtn(btnTypeContinuo, isContinuo);
 
     if (window.lucide) window.lucide.createIcons();
   }
@@ -254,6 +263,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (btnTypeEntrevista) {
     btnTypeEntrevista.addEventListener("click", () => setAudioType("entrevista"));
+  }
+  if (btnTypeContinuo) {
+    btnTypeContinuo.addEventListener("click", () => setAudioType("continuo"));
   }
 
   // 3. Manejo de Errores
@@ -360,6 +372,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     hideError();
     resultSection.classList.add("hidden");
+    if (summarySection) summarySection.classList.add("hidden");
+    if (searchTranscript) searchTranscript.value = "";
+    if (searchCount) searchCount.classList.add("hidden");
+    rawSummaryText = "";
     progressCard.classList.remove("hidden");
     btnStartTranscribe.disabled = true;
 
@@ -693,9 +709,121 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 9. Búsqueda rápida en el texto
+  // 10. Resumen Ejecutivo (IA Síntesis)
+  function formatSummaryMarkdown(md) {
+    if (!md) return "";
+    let clean = md
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // Títulos Markdown ###
+    clean = clean.replace(/^### (.*$)/gim, '<h4 class="text-sm font-bold text-slate-900 mt-3 mb-1.5 flex items-center gap-1.5">$1</h4>');
+    clean = clean.replace(/^## (.*$)/gim, '<h3 class="text-base font-bold text-slate-900 mt-4 mb-2">$1</h3>');
+
+    // Negrita
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+    
+    // Viñetas * o -
+    clean = clean.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc text-xs text-slate-700 my-0.5">$1</li>');
+
+    // Párrafos
+    const paragraphs = clean.split(/\n\s*\n/);
+    return paragraphs.map((p) => {
+      if (p.startsWith("<h") || p.startsWith("<li")) return p;
+      return `<p class="text-xs text-slate-700 leading-relaxed mb-2">${p.replace(/\n/g, "<br>")}</p>`;
+    }).join("");
+  }
+
+  function toggleSummaryCollapse() {
+    isSummaryCollapsed = !isSummaryCollapsed;
+    if (isSummaryCollapsed) {
+      summaryBody.classList.add("hidden");
+      if (summaryChevron) summaryChevron.style.transform = "rotate(180deg)";
+    } else {
+      summaryBody.classList.remove("hidden");
+      if (summaryChevron) summaryChevron.style.transform = "rotate(0deg)";
+    }
+  }
+
+  if (summaryHeader) {
+    summaryHeader.addEventListener("click", (e) => {
+      // Evitar que el clic en copiar dispare el colapso
+      if (e.target.closest("#btnCopySummary")) return;
+      toggleSummaryCollapse();
+    });
+  }
+
+  if (btnCopySummary) {
+    btnCopySummary.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!rawSummaryText) return;
+      try {
+        await navigator.clipboard.writeText(rawSummaryText);
+        const originalHtml = btnCopySummary.innerHTML;
+        btnCopySummary.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> <span class="text-emerald-700 font-medium">¡Copiado!</span>';
+        setTimeout(() => {
+          btnCopySummary.innerHTML = originalHtml;
+          if (window.lucide) window.lucide.createIcons();
+        }, 2000);
+      } catch (err) {
+        alert("No se pudo copiar el resumen al portapapeles.");
+      }
+    });
+  }
+
+  if (btnSummarize) {
+    btnSummarize.addEventListener("click", async () => {
+      if (!rawTranscriptText || !rawTranscriptText.trim()) {
+        alert("Primero genera una transcripción para poder resumirla.");
+        return;
+      }
+
+      const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
+      const originalBtnHtml = btnSummarize.innerHTML;
+      btnSummarize.disabled = true;
+      btnSummarize.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div> <span>Generando resumen...</span>';
+
+      try {
+        const response = await fetch("/api/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript: rawTranscriptText,
+            api_key: apiKey || null,
+            model_name: "gemini-3.8-flash"
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.detail || "Error en el servidor al generar el resumen.");
+        }
+
+        const data = await response.json();
+        rawSummaryText = data.summary || "";
+
+        summaryContent.innerHTML = formatSummaryMarkdown(rawSummaryText);
+        summarySection.classList.remove("hidden");
+        summaryBody.classList.remove("hidden");
+        isSummaryCollapsed = false;
+        if (summaryChevron) summaryChevron.style.transform = "rotate(0deg)";
+
+        summarySection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+      } catch (err) {
+        alert("Error al generar resumen: " + err.message);
+      } finally {
+        btnSummarize.disabled = false;
+        btnSummarize.innerHTML = originalBtnHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
+  // 11. Búsqueda rápida con resaltado en amarillo
   searchTranscript.addEventListener("input", (e) => {
-    const query = e.target.value.trim().toLowerCase();
+    const query = e.target.value.trim();
     if (!rawTranscriptText) return;
 
     if (!query) {
@@ -705,14 +833,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const formatted = formatTranscript(rawTranscriptText);
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
-    
-    // Contar coincidencias
-    const matches = (rawTranscriptText.toLowerCase().match(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length;
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escapedQuery})`, "gi");
+
+    // Contar coincidencias en el texto plano
+    const matches = (rawTranscriptText.match(new RegExp(escapedQuery, "gi")) || []).length;
     searchCount.textContent = `${matches} ${matches === 1 ? 'coincidencia' : 'coincidencias'}`;
     searchCount.classList.remove("hidden");
 
-    // Resaltar
+    // Resaltar coincidencias en amarillo intenso
     transcriptContent.innerHTML = formatted.replace(regex, `<mark class="highlight">$1</mark>`);
   });
 

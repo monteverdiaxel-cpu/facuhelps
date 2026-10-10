@@ -48,7 +48,11 @@ MIME_MAP = {
 }
 
 def get_system_instruction(audio_type: str = "clase") -> str:
-    if audio_type == "entrevista":
+    if audio_type == "continuo":
+        speaker_rules = """3. SIN DIFERENCIAR HABLANTES (TEXTO CONTINUO EN PÁRRAFOS):
+   - NO incluyas NINGUNA etiqueta de orador bajo ninguna circunstancia (está terminantemente prohibido usar Docente, Estudiante, Hablante, Entrevistador, Entrevistado o nombres propios).
+   - Transcribe todo el texto de corrido organizado únicamente en párrafos limpios, legibles y naturales, con puntos y aparte claros ante cada cambio de tema o pausa temática, sin ningún prefijo ni número al inicio de los párrafos."""
+    elif audio_type == "entrevista":
         speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (ENTREVISTA):
    - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación.
    - Utiliza OBLIGATORIAMENTE de principio a fin las etiquetas en negrita:
@@ -82,7 +86,9 @@ REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
 8. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
 
 def get_user_prompt(audio_type: str = "clase") -> str:
-    if audio_type == "entrevista":
+    if audio_type == "continuo":
+        speaker_hint = """- Formato: SIN etiquetas de orador (nada de Docente, Estudiante ni Hablante). Transcribe el texto de corrido organizado únicamente en párrafos limpios con puntos y aparte claros."""
+    elif audio_type == "entrevista":
         speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Entrevistador:** y **Entrevistado:** (CERO nombres propios). Si habla una sola persona, párrafos limpios con puntos y aparte sin prefijos."""
     else:
         speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Docente:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**) (CERO nombres propios). Si es clase magistral individual, párrafos limpios con puntos y aparte sin prefijos."""
@@ -137,7 +143,7 @@ async def transcribe_audio(
     mime_type = MIME_MAP[file_ext]
     target_model_name = "gemini-3.8-flash"
     effective_audio_type = (audio_type or "clase").lower().strip()
-    if effective_audio_type not in ["clase", "entrevista"]:
+    if effective_audio_type not in ["clase", "entrevista", "continuo"]:
         effective_audio_type = "clase"
 
     system_instruction = get_system_instruction(effective_audio_type)
@@ -286,13 +292,18 @@ async def transcribe_audio(
                 if not last_text:
                     break
 
-                last_snippet = last_text[-120:].replace("\n", " ").strip()
-                speaker_summary = "**Docente:** y **Estudiante:**" if effective_audio_type == "clase" else "**Entrevistador:** y **Entrevistado:**"
+                if effective_audio_type == "continuo":
+                    speaker_summary = "SIN etiquetas de oradores (texto continuo en párrafos)"
+                elif effective_audio_type == "entrevista":
+                    speaker_summary = "**Entrevistador:** y **Entrevistado:**"
+                else:
+                    speaker_summary = "**Docente:** y **Estudiante:**"
+
                 continuation_prompt = (
                     f"Actúa como un taquígrafo profesional. Continúa la transcripción literal y fiel palabra por palabra "
                     f"inmediatamente después de este fragmento: '{last_snippet}'. "
-                    f"Mantén la uniformidad de oradores sin nombres propios ({speaker_summary}) o párrafos naturales sin números. "
-                    f"Aísla la voz del ruido/eco, limpia tartamudeos y muletillas ('eh', 'mmm'), usa comillas dobles estándar (\"...\") y nunca marcas de tiempo [mm:ss]. "
+                    f"Mantén la estructura ({speaker_summary}) organizada en párrafos naturales sin números ni marcas de tiempo [mm:ss]. "
+                    f"Aísla la voz del ruido/eco, limpia tartamudeos y muletillas ('eh', 'mmm') y usa comillas dobles estándar (\"...\"). "
                     f"Está estrictamente prohibido resumir, omitir frases o devolver bloques densos sin saltos de línea. "
                     f"Transcribe hasta la última palabra del archivo. "
                     f"Si ya transcribiste absolutamente todo el audio hasta el final, responde ÚNICAMENTE '[FIN_DE_AUDIO]'."
@@ -362,6 +373,69 @@ async def transcribe_audio(
             "X-Accel-Buffering": "no"
         }
     )
+
+class SummarizeRequest(BaseModel):
+    transcript: str
+    api_key: Optional[str] = None
+    model_name: Optional[str] = "gemini-3.8-flash"
+
+@app.post("/api/summarize")
+async def summarize_transcript(req: SummarizeRequest):
+    if not req.transcript or not req.transcript.strip():
+        raise HTTPException(status_code=400, detail="El texto de la transcripción está vacío.")
+
+    effective_key = (req.api_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
+    if not effective_key:
+        raise HTTPException(
+            status_code=400,
+            detail="No se encontró una API Key válida. Ingrésala en la interfaz o configúrala en el servidor."
+        )
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=effective_key)
+        target_model = "gemini-3.8-flash"
+
+        system_instruction = (
+            "Actúa como un analista y asistente pedagógico experto. "
+            "Tu tarea es generar un resumen ejecutivo conciso, estructurado y de alto valor pedagógico a partir de la transcripción provista. "
+            "Usa un tono profesional, claro y directo en español. "
+            "Sigue estrictamente la siguiente estructura utilizando formato Markdown con encabezados y viñetas:\n\n"
+            "### 🎯 Tema Central\n"
+            "(Síntesis clara en 1 o 2 oraciones del núcleo conceptual de la clase o charla)\n\n"
+            "### 💡 Conceptos Clave Discutidos\n"
+            "(Lista con viñetas destacando las ideas fuerza, teorías, definiciones o argumentos principales)\n\n"
+            "### 📌 Fechas, Compromisos y Tareas\n"
+            "(Lista de fechas límite, lecturas obligatorias, entregas o acuerdos acordados. Si no se mencionaron, indica explícitamente: 'No se mencionaron compromisos ni fechas específicas.')"
+        )
+
+        user_content = (
+            "A continuación tienes la transcripción completa para generar el resumen ejecutivo:\n\n"
+            f"{req.transcript}"
+        )
+
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.2,
+            max_output_tokens=8192
+        )
+
+        response = client.models.generate_content(
+            model=target_model,
+            contents=[user_content],
+            config=config
+        )
+
+        summary_text = response.text or ""
+        return JSONResponse({
+            "success": True,
+            "summary": summary_text
+        })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar el resumen: {str(e)}")
 
 class DocxExportRequest(BaseModel):
     filename: Optional[str] = "transcripcion"
