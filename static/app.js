@@ -267,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!isInline) stepCloud.classList.add("completed");
       stepGemini.classList.add("active");
       progressTitle.textContent = "Gemini Flash transcribiendo...";
-      progressSubtitle.textContent = "Transcribiendo palabra por palabra (verbatim) con marcas de tiempo.";
+      progressSubtitle.textContent = "Transcribiendo palabra por palabra (verbatim) de forma estructurada.";
     } else if (step === "done") {
       steps.forEach((s) => s.classList.add("completed"));
       progressTitle.textContent = "¡Transcripción completada!";
