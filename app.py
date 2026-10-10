@@ -292,6 +292,8 @@ async def transcribe_audio(
                 if not last_text:
                     break
 
+                last_snippet = last_text[-120:].replace("\n", " ").strip()
+
                 if effective_audio_type == "continuo":
                     speaker_summary = "SIN etiquetas de oradores (texto continuo en párrafos)"
                 elif effective_audio_type == "entrevista":
