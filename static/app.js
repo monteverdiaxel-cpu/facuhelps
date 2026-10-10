@@ -66,13 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
       updateApiKeyStatus(true, "Clave guardada");
     }
 
-    let savedModel = localStorage.getItem("gemini_model");
-    if (!savedModel || savedModel === "gemini-3.8-flash") {
-      savedModel = "gemini-2.5-flash";
-      localStorage.setItem("gemini_model", "gemini-2.5-flash");
-    }
+    let savedModel = "gemini-3.8-flash";
+    localStorage.setItem("gemini_model", "gemini-3.8-flash");
     if (selectModel) {
-      selectModel.value = savedModel;
+      selectModel.value = "gemini-3.8-flash";
     }
 
     try {
@@ -325,7 +322,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (apiKey) {
         formData.append("api_key", apiKey);
       }
-      formData.append("model_name", selectModel.value);
+      const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
+      formData.append("model_name", selectedModelName);
 
       const response = await fetch("/api/transcribe", {
         method: "POST",
@@ -346,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (completedBadge) completedBadge.classList.add("hidden");
       if (streamingIndicator) streamingIndicator.classList.remove("hidden");
       resultFileName.textContent = currentFile.name;
-      resultModelBadge.textContent = `${selectModel.value} • en vivo`;
+      resultModelBadge.textContent = `${selectedModelName} • en vivo`;
       transcriptContent.innerHTML = '<p class="text-slate-400 italic flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span> Conectando con Gemini Flash y transcribiendo en vivo...</p>';
       
       setTimeout(() => {

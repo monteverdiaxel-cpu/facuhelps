@@ -69,14 +69,14 @@ async def get_config():
     has_env_key = bool(os.getenv("GEMINI_API_KEY", "").strip())
     return {
         "has_server_api_key": has_env_key,
-        "default_model": os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        "default_model": os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     }
 
 @app.post("/api/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),
     api_key: Optional[str] = Form(None),
-    model_name: Optional[str] = Form("gemini-2.5-flash")
+    model_name: Optional[str] = Form("gemini-3.8-flash")
 ):
     # 1. Resolver API Key
     effective_key = (api_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
@@ -96,7 +96,7 @@ async def transcribe_audio(
         )
 
     mime_type = MIME_MAP[file_ext]
-    target_model_name = (model_name or "").strip() or "gemini-3.8-flash"
+    target_model_name = "gemini-3.8-flash"
 
     # Leer contenido del audio
     content_bytes = await file.read()
@@ -166,38 +166,25 @@ async def transcribe_audio(
                 audio_content = google_file
                 yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Iniciando streaming con Gemini Flash...', 'mode': 'files_api'})}\n\n"
 
-            # 3. Modelos candidatos con fallback en caso de alta demanda o saturación
-            candidate_models = []
-            for m in [target_model_name, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
-                if m and m not in candidate_models:
-                    candidate_models.append(m)
+            # 3. Modelo exclusivo gemini-3.8-flash
+            candidate_models = ["gemini-3.8-flash"]
 
             def build_generation_configs(m_name: str):
                 cfgs = []
-                # Para modelos 2.5, forzar thinking_budget=0 para que no piense/resuma internamente
-                if "2.5" in m_name:
-                    try:
-                        cfgs.append(types.GenerateContentConfig(
-                            system_instruction=SYSTEM_INSTRUCTION,
-                            temperature=0.0,
-                            max_output_tokens=65536,
-                            thinking_config=types.ThinkingConfig(thinking_budget=0)
-                        ))
-                    except Exception:
-                        pass
+                try:
+                    cfgs.append(types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.0,
+                        max_output_tokens=65536,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                    ))
+                except Exception:
+                    pass
 
-                # Configuración principal con temperatura 0.0 y tokens máximos (65536)
                 cfgs.append(types.GenerateContentConfig(
                     system_instruction=SYSTEM_INSTRUCTION,
                     temperature=0.0,
                     max_output_tokens=65536
-                ))
-
-                # Fallback con 8192 tokens en caso de que el modelo requiera límite menor
-                cfgs.append(types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0.0,
-                    max_output_tokens=8192
                 ))
                 return cfgs
 
