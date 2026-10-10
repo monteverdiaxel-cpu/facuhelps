@@ -23,6 +23,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRemoveFile = document.getElementById("btnRemoveFile");
   const btnStartTranscribe = document.getElementById("btnStartTranscribe");
 
+  // Selector de Tipo de Audio
+  const btnTypeClase = document.getElementById("btnTypeClase");
+  const btnTypeEntrevista = document.getElementById("btnTypeEntrevista");
+
   const progressCard = document.getElementById("progressCard");
   const progressTitle = document.getElementById("progressTitle");
   const progressSubtitle = document.getElementById("progressSubtitle");
@@ -43,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const streamingIndicator = document.getElementById("streamingIndicator");
   const transcriptContainer = document.getElementById("transcriptContainer");
   const transcriptContent = document.getElementById("transcriptContent");
+  const btnRenameSpeakers = document.getElementById("btnRenameSpeakers");
   const btnCopy = document.getElementById("btnCopy");
   const btnCopyLabel = document.getElementById("btnCopyLabel");
   const btnDownloadDocx = document.getElementById("btnDownloadDocx");
@@ -51,8 +56,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchTranscript = document.getElementById("searchTranscript");
   const searchCount = document.getElementById("searchCount");
 
+  // Modal Renombrar Oradores
+  const renameModal = document.getElementById("renameModal");
+  const btnCloseRenameModal = document.getElementById("btnCloseRenameModal");
+  const btnCancelRename = document.getElementById("btnCancelRename");
+  const btnSaveRename = document.getElementById("btnSaveRename");
+  const renameListContainer = document.getElementById("renameListContainer");
+
   // Estado de la app
   let currentFile = null;
+  let currentAudioType = "clase"; // 'clase' | 'entrevista'
   let timerInterval = null;
   let startTime = null;
   let rawTranscriptText = "";
@@ -206,6 +219,43 @@ document.addEventListener("DOMContentLoaded", () => {
     btnStartTranscribe.disabled = true;
   });
 
+  // Manejador del Selector de Tipo de Audio
+  function setAudioType(type) {
+    currentAudioType = type;
+    const isClase = type === "clase";
+
+    if (btnTypeClase) {
+      const checkClase = btnTypeClase.querySelector(".check-icon");
+      if (isClase) {
+        btnTypeClase.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs";
+        if (checkClase) checkClase.classList.remove("hidden");
+      } else {
+        btnTypeClase.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left";
+        if (checkClase) checkClase.classList.add("hidden");
+      }
+    }
+
+    if (btnTypeEntrevista) {
+      const checkEntrevista = btnTypeEntrevista.querySelector(".check-icon");
+      if (!isClase) {
+        btnTypeEntrevista.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs";
+        if (checkEntrevista) checkEntrevista.classList.remove("hidden");
+      } else {
+        btnTypeEntrevista.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left";
+        if (checkEntrevista) checkEntrevista.classList.add("hidden");
+      }
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  if (btnTypeClase) {
+    btnTypeClase.addEventListener("click", () => setAudioType("clase"));
+  }
+  if (btnTypeEntrevista) {
+    btnTypeEntrevista.addEventListener("click", () => setAudioType("entrevista"));
+  }
+
   // 3. Manejo de Errores
   function showError(title, msg) {
     errorTitle.textContent = title;
@@ -322,6 +372,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (apiKey) {
         formData.append("api_key", apiKey);
       }
+      formData.append("audio_type", currentAudioType || "clase");
       const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
       formData.append("model_name", selectedModelName);
 
@@ -516,6 +567,131 @@ document.addEventListener("DOMContentLoaded", () => {
   btnDownloadMd.addEventListener("click", () => {
     downloadFile(rawTranscriptText, "md", "text/markdown;charset=utf-8");
   });
+
+  // 9. Renombrar Oradores
+  function detectSpeakers(text) {
+    if (!text) return [];
+    // Busca patrones de oradores como **Docente:**, **Estudiante 1:**, **Entrevistador:**, etc.
+    const regex = /\*\*([^\*\n:]+?):?\*\*/g;
+    const speakers = new Set();
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const name = (match[1] || "").trim();
+      // Filtrar palabras que no son oradores o son muy largas
+      if (name && name.length <= 40 && !/^[\d\s]+$/.test(name)) {
+        speakers.add(name);
+      }
+    }
+    return Array.from(speakers);
+  }
+
+  function openRenameModal() {
+    if (!rawTranscriptText) {
+      alert("Aún no hay transcripción generada para renombrar oradores.");
+      return;
+    }
+
+    const detected = detectSpeakers(rawTranscriptText);
+    renameListContainer.innerHTML = "";
+
+    if (detected.length === 0) {
+      renameListContainer.innerHTML = `
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+          No se detectaron etiquetas de oradores en negrita (ej: **Docente:** o **Entrevistador:**).
+        </div>
+      `;
+      btnSaveRename.classList.add("hidden");
+    } else {
+      btnSaveRename.classList.remove("hidden");
+      detected.forEach((speaker, idx) => {
+        const item = document.createElement("div");
+        item.className = "p-3 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5";
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+              Orador detectado: <code class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-mono">${speaker}</code>
+            </span>
+          </div>
+          <input 
+            type="text" 
+            data-original-speaker="${speaker.replace(/"/g, '&quot;')}"
+            value="${speaker.replace(/"/g, '&quot;')}" 
+            placeholder="Nuevo nombre (ej: Rosana Guber)" 
+            class="rename-speaker-input w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+          >
+        `;
+        renameListContainer.appendChild(item);
+      });
+    }
+
+    renameModal.classList.remove("hidden");
+  }
+
+  function closeRenameModal() {
+    renameModal.classList.add("hidden");
+  }
+
+  if (btnRenameSpeakers) {
+    btnRenameSpeakers.addEventListener("click", openRenameModal);
+  }
+  if (btnCloseRenameModal) {
+    btnCloseRenameModal.addEventListener("click", closeRenameModal);
+  }
+  if (btnCancelRename) {
+    btnCancelRename.addEventListener("click", closeRenameModal);
+  }
+  if (renameModal) {
+    renameModal.addEventListener("click", (e) => {
+      if (e.target === renameModal) closeRenameModal();
+    });
+  }
+
+  if (btnSaveRename) {
+    btnSaveRename.addEventListener("click", () => {
+      const inputs = renameListContainer.querySelectorAll(".rename-speaker-input");
+      if (!inputs || inputs.length === 0) {
+        closeRenameModal();
+        return;
+      }
+
+      let updatedText = rawTranscriptText;
+      let changesCount = 0;
+
+      inputs.forEach((input) => {
+        const originalName = input.getAttribute("data-original-speaker");
+        const newName = input.value.trim();
+
+        if (originalName && newName && originalName !== newName) {
+          const escapedOrig = originalName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          // Reemplazar tanto **Orador:** como **Orador**:
+          const pattern1 = new RegExp(`\\*\\*${escapedOrig}:\\*\\*`, "g");
+          const pattern2 = new RegExp(`\\*\\*${escapedOrig}\\*\\*:`, "g");
+
+          if (pattern1.test(updatedText) || pattern2.test(updatedText)) {
+            updatedText = updatedText
+              .replace(pattern1, `**${newName}:**`)
+              .replace(pattern2, `**${newName}:**`);
+            changesCount++;
+          }
+        }
+      });
+
+      if (changesCount > 0) {
+        rawTranscriptText = updatedText;
+        transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+        // Feedback visual en el botón de renombrar
+        const originalLabel = btnRenameSpeakers.innerHTML;
+        btnRenameSpeakers.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> <span class="text-emerald-700">¡Nombres actualizados!</span>';
+        setTimeout(() => {
+          btnRenameSpeakers.innerHTML = originalLabel;
+          if (window.lucide) window.lucide.createIcons();
+        }, 2500);
+      }
+
+      closeRenameModal();
+    });
+  }
 
   // 9. Búsqueda rápida en el texto
   searchTranscript.addEventListener("input", (e) => {

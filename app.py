@@ -47,7 +47,23 @@ MIME_MAP = {
     ".wma": "audio/x-ms-wma",
 }
 
-SYSTEM_INSTRUCTION = """Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
+def get_system_instruction(audio_type: str = "clase") -> str:
+    if audio_type == "entrevista":
+        speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (ENTREVISTA):
+   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación.
+   - Utiliza OBLIGATORIAMENTE de principio a fin las etiquetas en negrita:
+     * **Entrevistador:** para quien realiza las preguntas.
+     * **Entrevistado:** (o **Entrevistado 1:**, **Entrevistado 2:** si hubiese varios) para quien responde.
+   - Si habla una sola persona (relato o monólogo): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
+    else:  # clase / teórico
+        speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (CLASE / TEÓRICO):
+   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación.
+   - Utiliza OBLIGATORIAMENTE de principio a fin las etiquetas en negrita:
+     * **Docente:** para quien enseña o expone la clase.
+     * **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:** si intervienen varios) para los alumnos que participan o preguntan.
+   - Si habla una sola persona (clase magistral o monólogo continuo): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
+
+    return f"""Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
 Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma fiel, con una estructura de lectura limpia, clara y sin marcas de tiempo.
 
 REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
@@ -55,14 +71,7 @@ REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
 2. FILTRO Y TOLERANCIA A AUDIOS DIFÍCILES (RUIDO Y ECO):
    - Si el audio presenta baja ganancia, eco de aula, murmullos de fondo o lejanía del micrófono, aísla la voz principal del orador e ignora el ruido ambiente.
    - Reconstruye con máxima fidelidad las palabras habladas apoyándote en el contexto semántico de la clase o conversación.
-3. UNIFORMIDAD TOTAL DE ORADORES (PROHIBIDOS NOMBRES PROPIOS):
-   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación (prohibido etiquetar con nombres como "Juan:", "María:", "Profesor Carlos:", etc.).
-   - Utiliza exclusivamente etiquetas genéricas uniformes en negrita de principio a fin:
-     * Si es una clase o ámbito académico: **Profesora:** (o **Profesor:**) y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:** si intervienen varios).
-     * Si es una entrevista: **Entrevistador:** y **Entrevistado:**.
-     * Si es un diálogo general: **Hablante 1:** y **Hablante 2:**.
-   - Mantén estrictamente el mismo criterio uniforme a lo largo de todo el texto.
-   - Si habla una sola persona (clase magistral, monólogo, conferencia): separa obligatoriamente el texto en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número ni prefijo al inicio de los párrafos.
+{speaker_rules}
 4. LIMPIEZA DE HABLA (FLUIDEZ):
    - Elimina repeticiones involuntarias y tartamudeos accidentales (ej.: "de de de" -> "de", "con- contrastivas" -> "contrastivas", "pe- presentar" -> "presentar").
    - Omite muletillas sonoras y vacilaciones como "eh", "mmm", "este...", manteniendo intactas todas las demás palabras pronunciadas.
@@ -72,12 +81,15 @@ REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
 7. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
 8. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
 
-USER_PROMPT = """Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
+def get_user_prompt(audio_type: str = "clase") -> str:
+    if audio_type == "entrevista":
+        speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Entrevistador:** y **Entrevistado:** (CERO nombres propios). Si habla una sola persona, párrafos limpios con puntos y aparte sin prefijos."""
+    else:
+        speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Docente:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**) (CERO nombres propios). Si es clase magistral individual, párrafos limpios con puntos y aparte sin prefijos."""
+
+    return f"""Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
 - Filtro de audio difícil: aísla la voz principal ante eco de aula, lejanía o ruido de fondo, reconstruyendo las palabras con fidelidad según el contexto temático.
-- Uniformidad total de oradores (CERO nombres propios): PROHIBIDO usar nombres propios como etiquetas. Usa siempre etiquetas uniformes en negrita:
-  * Si es clase: **Profesora:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**).
-  * Si es entrevista: **Entrevistador:** y **Entrevistado:**.
-  * Si es monólogo o clase individual: párrafos naturales con puntos y aparte sin prefijos ni números.
+{speaker_hint}
 - Limpieza de habla: elimina tartamudeos ("de de") y muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
 - Comillas: usa exclusivamente comillas dobles comunes ("..."), nunca angulares («...»).
 - PROHIBIDO incluir marcas de tiempo [mm:ss] o timestamps.
@@ -96,7 +108,8 @@ async def get_config():
 async def transcribe_audio(
     file: UploadFile = File(...),
     api_key: Optional[str] = Form(None),
-    model_name: Optional[str] = Form("gemini-3.8-flash")
+    model_name: Optional[str] = Form("gemini-3.8-flash"),
+    audio_type: Optional[str] = Form("clase")
 ):
     # 1. Resolver API Key
     effective_key = (api_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
@@ -123,6 +136,12 @@ async def transcribe_audio(
 
     mime_type = MIME_MAP[file_ext]
     target_model_name = "gemini-3.8-flash"
+    effective_audio_type = (audio_type or "clase").lower().strip()
+    if effective_audio_type not in ["clase", "entrevista"]:
+        effective_audio_type = "clase"
+
+    system_instruction = get_system_instruction(effective_audio_type)
+    user_prompt = get_user_prompt(effective_audio_type)
 
     # Streaming directo a disco en chunks de 1 MB para consumo mínimo de RAM (evita OOM en Render)
     temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
@@ -138,7 +157,7 @@ async def transcribe_audio(
 
             client = genai.Client(api_key=effective_key)
 
-            # 1. Guardar archivo en disco leyendo en bloques de 1 MB sin cargarlo completo en memoria
+            # 1. Guardar archivo en disco leyendo en bloques de 1 MB sin cargarlo completo en memoria RAM
             yield f"data: {json.dumps({'event': 'status', 'stage': 'local', 'message': 'Guardando audio en disco (consumo mínimo de RAM)...', 'mode': 'files_api'})}\n\n"
             await asyncio.sleep(0)
 
@@ -191,7 +210,7 @@ async def transcribe_audio(
                 cfgs = []
                 try:
                     cfgs.append(types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
+                        system_instruction=system_instruction,
                         temperature=0.0,
                         max_output_tokens=65536,
                         thinking_config=types.ThinkingConfig(thinking_budget=0)
@@ -200,7 +219,7 @@ async def transcribe_audio(
                     pass
 
                 cfgs.append(types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
+                    system_instruction=system_instruction,
                     temperature=0.0,
                     max_output_tokens=65536
                 ))
@@ -222,7 +241,7 @@ async def transcribe_audio(
                                 model=model_to_try,
                                 contents=[
                                     audio_content,
-                                    USER_PROMPT
+                                    user_prompt
                                 ],
                                 config=current_config
                             )
@@ -268,10 +287,11 @@ async def transcribe_audio(
                     break
 
                 last_snippet = last_text[-120:].replace("\n", " ").strip()
+                speaker_summary = "**Docente:** y **Estudiante:**" if effective_audio_type == "clase" else "**Entrevistador:** y **Entrevistado:**"
                 continuation_prompt = (
                     f"Actúa como un taquígrafo profesional. Continúa la transcripción literal y fiel palabra por palabra "
                     f"inmediatamente después de este fragmento: '{last_snippet}'. "
-                    f"Mantén la uniformidad de oradores sin nombres propios (**Profesora:**, **Estudiante:**, **Entrevistador:**, etc.) o párrafos naturales sin números. "
+                    f"Mantén la uniformidad de oradores sin nombres propios ({speaker_summary}) o párrafos naturales sin números. "
                     f"Aísla la voz del ruido/eco, limpia tartamudeos y muletillas ('eh', 'mmm'), usa comillas dobles estándar (\"...\") y nunca marcas de tiempo [mm:ss]. "
                     f"Está estrictamente prohibido resumir, omitir frases o devolver bloques densos sin saltos de línea. "
                     f"Transcribe hasta la última palabra del archivo. "

@@ -161,6 +161,46 @@
         </button>
       </div>
 
+      <!-- Selector de Tipo de Audio -->
+      <div class="mt-6 p-4 rounded-xl border border-slate-200/90 bg-slate-50/70">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+          Tipo de Audio
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="audioTypeGroup">
+          <button 
+            type="button" 
+            id="btnTypeClase" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs"
+            data-type="clase"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base">🎓</span>
+              <div>
+                <p class="font-semibold text-slate-900">Clase / Teórico</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Etiquetas: <strong class="text-indigo-600">Docente</strong> y <strong class="text-indigo-600">Estudiante</strong></p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon"></i>
+          </button>
+
+          <button 
+            type="button" 
+            id="btnTypeEntrevista" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left"
+            data-type="entrevista"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base">🎙️</span>
+              <div>
+                <p class="font-semibold text-slate-900">Entrevista</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">Etiquetas: <strong class="text-indigo-600">Entrevistador</strong> y <strong class="text-indigo-600">Entrevistado</strong></p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon hidden"></i>
+          </button>
+        </div>
+      </div>
+
       <!-- Action Button -->
       <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2 text-xs text-slate-500">
@@ -249,6 +289,10 @@
 
         <!-- Action buttons -->
         <div class="flex items-center flex-wrap gap-2">
+          <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-800 text-xs font-medium transition shadow-xs">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>👥 Renombrar oradores</span>
+          </button>
           <button id="btnCopy" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-xs">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             <span id="btnCopyLabel">Copiar texto</span>
@@ -294,6 +338,37 @@
   <footer class="border-t border-slate-200/80 py-4 text-center text-xs text-slate-400">
     FacuHelps • Transcripción inteligente potenciada por Google AI Studio Files API
   </footer>
+
+  <!-- Modal para Renombrar Oradores -->
+  <div id="renameModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2 text-slate-900 font-semibold text-base sm:text-lg">
+          <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
+          Renombrar Oradores
+        </div>
+        <button id="btnCloseRenameModal" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+        Personaliza los nombres de los interlocutores identificados. Se actualizarán automáticamente en la pantalla y en las descargas (.docx, .txt, .md).
+      </p>
+
+      <div id="renameListContainer" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+        <!-- Generado dinámicamente -->
+      </div>
+
+      <div class="pt-4 mt-4 border-t border-slate-100 flex justify-end items-center gap-2">
+        <button id="btnCancelRename" class="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium text-xs rounded-xl transition">
+          Cancelar
+        </button>
+        <button id="btnSaveRename" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          Aplicar cambios
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
