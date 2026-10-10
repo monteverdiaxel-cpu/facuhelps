@@ -49,22 +49,19 @@ MIME_MAP = {
 
 INLINE_SIZE_LIMIT = 20 * 1024 * 1024  # 20 MB
 
-SYSTEM_INSTRUCTION = """Actúa como un transcriptor judicial y motor de reconocimiento de voz (Speech-to-Text / ASR) de máxima fidelidad textual.
-Tu tarea es escribir EXACTAMENTE y ÚNICAMENTE lo que se dice en el audio, palabra por palabra (verbatim), desde el segundo inicial hasta el último segundo de la grabación.
+SYSTEM_INSTRUCTION = (
+    "Actúa como un taquígrafo profesional. Tu única tarea es transcribir exactamente cada palabra "
+    "pronunciada en el audio de principio a fin de forma literal (verbatim). "
+    "Está estrictamente prohibido resumir, omitir frases, filtrar repeticiones o acortar el contenido. "
+    "Transcribe hasta la última palabra del archivo."
+)
 
-INSTRUCCIONES CRÍTICAS OBLIGATORIAS:
-1. PROHIBIDO RESUMIR O SINTETIZAR: Bajo ninguna circunstancia resumas, simplifiques, omitas o parafrasees. No hagas un resumen de los temas ni selecciones ideas principales. Debes transcribir cada una de las oraciones completas de los hablantes.
-2. VERBATIM TOTAL: Transcribe cada palabra tal cual como fue dicha, incluyendo repeticiones, autocorrecciones del hablante y muletillas (ej: "eh", "este", "bueno", "o sea", "um", etc.).
-3. TRANSCRIPCIÓN ÍNTEGRA: Transcribe desde el principio hasta el final del audio sin truncar ni cortar nada.
-4. SIN TEXTO ADICIONAL: NO incluyas introducciones (ej: "Aquí está la transcripción:"), notas al pie ni conclusiones. El texto debe comenzar inmediatamente con la primera palabra hablada.
-5. FORMATO Y MARCAS DE TIEMPO:
-   - Organiza la transcripción en párrafos lógicos y naturales.
-   - Coloca marcas de tiempo en formato [hh:mm:ss] o [mm:ss] al inicio de los párrafos y en cada cambio temático o de intervención.
-   - Si se distinguen interlocutores, indica quién habla (ej: [00:01:15] Profesor: ..., [00:04:30] Alumno: ...).
-6. INAUDIBLE: Solo si una palabra o fragmento es ininteligible debido a ruido insuperable, escribe [inaudible].
-"""
-
-USER_PROMPT = """Transcribe absolutamente todo el audio adjunto palabra por palabra (verbatim) de principio a fin, sin resumir, sin sintetizar y sin omitir ninguna frase ni muletilla, hasta el último segundo del archivo. Escribe el texto literal exacto de todo lo hablado."""
+USER_PROMPT = (
+    "Actúa como un taquígrafo profesional. Tu única tarea es transcribir exactamente cada palabra "
+    "pronunciada en el audio de principio a fin de forma literal (verbatim). "
+    "Está estrictamente prohibido resumir, omitir frases, filtrar repeticiones o acortar el contenido. "
+    "Transcribe hasta la última palabra del archivo."
+)
 
 @app.get("/api/config")
 async def get_config():
@@ -72,14 +69,14 @@ async def get_config():
     has_env_key = bool(os.getenv("GEMINI_API_KEY", "").strip())
     return {
         "has_server_api_key": has_env_key,
-        "default_model": os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        "default_model": os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     }
 
 @app.post("/api/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),
     api_key: Optional[str] = Form(None),
-    model_name: Optional[str] = Form("gemini-3.8-flash")
+    model_name: Optional[str] = Form("gemini-2.5-flash")
 ):
     # 1. Resolver API Key
     effective_key = (api_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
@@ -169,41 +166,34 @@ async def transcribe_audio(
                 audio_content = google_file
                 yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Iniciando streaming con Gemini Flash...', 'mode': 'files_api'})}\n\n"
 
-            # 3. Modelos candidatos con fallback en caso de 503
-            candidate_models = [target_model_name]
-            for alt in ["gemini-2.5-flash", "gemini-2.0-flash"]:
-                if alt not in candidate_models:
-                    candidate_models.append(alt)
+            # 3. Modelos candidatos con fallback en caso de alta demanda o saturación
+            candidate_models = []
+            for m in [target_model_name, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
+                if m and m not in candidate_models:
+                    candidate_models.append(m)
 
-            def build_generation_configs():
+            def build_generation_configs(m_name: str):
                 cfgs = []
-                try:
-                    cfgs.append(types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0.0,
-                        max_output_tokens=65536,
-                        thinking_config=types.ThinkingConfig(thinking_budget=0),
-                        audio_transcription_config=types.AudioTranscriptionConfig(mode="VERBATIM")
-                    ))
-                except Exception:
-                    pass
+                # Para modelos 2.5, forzar thinking_budget=0 para que no piense/resuma internamente
+                if "2.5" in m_name:
+                    try:
+                        cfgs.append(types.GenerateContentConfig(
+                            system_instruction=SYSTEM_INSTRUCTION,
+                            temperature=0.0,
+                            max_output_tokens=65536,
+                            thinking_config=types.ThinkingConfig(thinking_budget=0)
+                        ))
+                    except Exception:
+                        pass
 
-                try:
-                    cfgs.append(types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0.0,
-                        max_output_tokens=65536,
-                        thinking_config=types.ThinkingConfig(thinking_budget=0)
-                    ))
-                except Exception:
-                    pass
-
+                # Configuración principal con temperatura 0.0 y tokens máximos (65536)
                 cfgs.append(types.GenerateContentConfig(
                     system_instruction=SYSTEM_INSTRUCTION,
                     temperature=0.0,
                     max_output_tokens=65536
                 ))
 
+                # Fallback con 8192 tokens en caso de que el modelo requiera límite menor
                 cfgs.append(types.GenerateContentConfig(
                     system_instruction=SYSTEM_INSTRUCTION,
                     temperature=0.0,
@@ -211,7 +201,6 @@ async def transcribe_audio(
                 ))
                 return cfgs
 
-            generation_configs = build_generation_configs()
             full_transcript_parts = []
             used_model = None
             used_config = None
@@ -219,6 +208,7 @@ async def transcribe_audio(
             last_error = None
 
             for model_to_try in candidate_models:
+                generation_configs = build_generation_configs(model_to_try)
                 for current_config in generation_configs:
                     for attempt in range(2):
                         try:
@@ -237,6 +227,7 @@ async def transcribe_audio(
                                     part_text += chunk.text
                                     stream_started = True
                                     yield f"data: {json.dumps({'event': 'chunk', 'text': chunk.text})}\n\n"
+                                    await asyncio.sleep(0)
 
                             if part_text:
                                 full_transcript_parts.append(part_text.strip())
@@ -273,9 +264,11 @@ async def transcribe_audio(
 
                 last_snippet = last_text[-120:].replace("\n", " ").strip()
                 continuation_prompt = (
-                    f"Continúa la transcripción literal palabra por palabra inmediatamente después de este fragmento: '{last_snippet}'. "
-                    f"Si ya transcribiste absolutamente todo el audio hasta el último segundo de la grabación, responde ÚNICAMENTE '[FIN_DE_AUDIO]'. "
-                    f"De lo contrario, transcribe la siguiente sección completa de forma textual sin resumir."
+                    f"Actúa como un taquígrafo profesional. Continúa la transcripción literal (verbatim) palabra por palabra "
+                    f"inmediatamente después de este fragmento: '{last_snippet}'. "
+                    f"Está estrictamente prohibido resumir, omitir frases, filtrar repeticiones o acortar el contenido. "
+                    f"Transcribe hasta la última palabra del archivo. "
+                    f"Si ya transcribiste absolutamente todo el audio hasta el final, responde ÚNICAMENTE '[FIN_DE_AUDIO]'."
                 )
 
                 continuation_attempts += 1
@@ -295,6 +288,7 @@ async def transcribe_audio(
                             if clean_chunk:
                                 cont_text += clean_chunk
                                 yield f"data: {json.dumps({'event': 'chunk', 'text': clean_chunk})}\n\n"
+                                await asyncio.sleep(0)
 
                     cont_text_stripped = cont_text.strip()
                     if "[FIN_DE_AUDIO]" in cont_text or not cont_text_stripped:

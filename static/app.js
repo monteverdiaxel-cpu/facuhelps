@@ -67,9 +67,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     let savedModel = localStorage.getItem("gemini_model");
-    if (!savedModel || savedModel === "gemini-1.5-flash" || savedModel === "gemini-2.5-flash") {
-      savedModel = "gemini-3.8-flash";
-      localStorage.setItem("gemini_model", "gemini-3.8-flash");
+    if (!savedModel || savedModel === "gemini-3.8-flash") {
+      savedModel = "gemini-2.5-flash";
+      localStorage.setItem("gemini_model", "gemini-2.5-flash");
     }
     if (selectModel) {
       selectModel.value = savedModel;
@@ -365,11 +365,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const blocks = buffer.split("\n\n");
+        const blocks = buffer.split(/\r?\n\r?\n/);
         buffer = blocks.pop(); // conservar resto incompleto
 
         for (const block of blocks) {
-          const lines = block.split("\n");
+          const lines = block.split(/\r?\n/);
           for (const line of lines) {
             if (!line.startsWith("data:")) continue;
             const jsonStr = line.slice(5).trim();
@@ -384,10 +384,11 @@ document.addEventListener("DOMContentLoaded", () => {
               } else if (msg.event === "chunk") {
                 if (!hasReceivedFirstChunk) {
                   hasReceivedFirstChunk = true;
-                  progressCard.classList.add("hidden"); // ocultar tarjeta de carga una vez empieza a fluir el texto
+                  progressCard.classList.add("hidden"); // Ocultar tarjeta de carga cuando fluye el texto
                 }
                 rawTranscriptText += msg.text;
-                transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+                // Renderizado en vivo con cursor pulsante
+                transcriptContent.innerHTML = formatTranscript(rawTranscriptText) + '<span class="inline-block w-1.5 h-4 bg-indigo-600 animate-pulse ml-0.5 align-middle"></span>';
                 if (transcriptContainer) {
                   transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
                 }
@@ -411,9 +412,28 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Finalizar visualización
+      // Procesar cualquier residuo en el buffer al cerrar el stream
+      if (buffer && buffer.trim()) {
+        const lines = buffer.split(/\r?\n/);
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          const jsonStr = line.slice(5).trim();
+          if (!jsonStr) continue;
+          try {
+            const msg = JSON.parse(jsonStr);
+            if (msg.event === "chunk") {
+              rawTranscriptText += msg.text;
+            } else if (msg.event === "done") {
+              rawTranscriptText = msg.transcript || rawTranscriptText;
+            }
+          } catch (e) {}
+        }
+      }
+
+      // Finalizar visualización limpia
       if (completedBadge) completedBadge.classList.remove("hidden");
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
+      transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
     } catch (err) {
       showError("Error al transcribir", err.message);
