@@ -47,6 +47,14 @@ MIME_MAP = {
     ".wma": "audio/x-ms-wma",
 }
 
+def is_retriable_error(exc: Exception) -> bool:
+    """Detecta si un error de Gemini es temporal/503/UNAVAILABLE para reintentar."""
+    err_str = str(exc).lower()
+    return any(keyword in err_str for keyword in [
+        "503", "unavailable", "servererror", "high demand", "overloaded",
+        "resource_exhausted", "temporary", "service unavailable"
+    ])
+
 def get_system_instruction(audio_type: str = "clase") -> str:
     if audio_type == "continuo":
         speaker_rules = """3. SIN DIFERENCIAR HABLANTES (TEXTO CONTINUO EN PÁRRAFOS):
@@ -209,7 +217,7 @@ async def transcribe_audio(
             yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Generando transcripción con Gemini Flash...', 'mode': 'files_api'})}\n\n"
             await asyncio.sleep(0)
 
-            # 3. Transcripción directa con gemini-3.8-flash sin demoras ni snippets
+            # 3. Transcripción directa con gemini-3.8-flash (con reintento automático ante 503/UNAVAILABLE)
             gen_config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.0,
@@ -217,16 +225,27 @@ async def transcribe_audio(
                 thinking_config=types.ThinkingConfig(thinking_budget=0)
             )
 
-            response = client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=[
-                    audio_content,
-                    user_prompt
-                ],
-                config=gen_config
-            )
+            response = None
+            max_attempts = 3
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=[
+                            audio_content,
+                            user_prompt
+                        ],
+                        config=gen_config
+                    )
+                    break
+                except Exception as api_err:
+                    if is_retriable_error(api_err) and attempt < max_attempts:
+                        yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Alta demanda en Gemini (503). Reintentando en 3s (intento {attempt}/{max_attempts})...', 'mode': 'files_api'})}\n\n"
+                        await asyncio.sleep(3)
+                    else:
+                        raise api_err
 
-            transcript_text = (response.text or "").strip()
+            transcript_text = (response.text or "").strip() if response else ""
 
             if not transcript_text:
                 yield f"data: {json.dumps({'event': 'error', 'message': 'La API devolvió una respuesta vacía.'})}\n\n"
@@ -314,13 +333,23 @@ async def summarize_transcript(req: SummarizeRequest):
             max_output_tokens=8192
         )
 
-        response = client.models.generate_content(
-            model=target_model,
-            contents=[user_content],
-            config=config
-        )
+        response = None
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = client.models.generate_content(
+                    model=target_model,
+                    contents=[user_content],
+                    config=config
+                )
+                break
+            except Exception as api_err:
+                if is_retriable_error(api_err) and attempt < max_attempts:
+                    await asyncio.sleep(3)
+                else:
+                    raise api_err
 
-        summary_text = response.text or ""
+        summary_text = (response.text or "").strip() if response else ""
         return JSONResponse({
             "success": True,
             "summary": summary_text
