@@ -48,24 +48,28 @@ MIME_MAP = {
 }
 
 SYSTEM_INSTRUCTION = """Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
-Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma literal (verbatim), con una estructura de lectura limpia, clara y sin marcas de tiempo.
+Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma fiel, con una estructura de lectura limpia, clara y sin marcas de tiempo.
 
 REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
-1. VERBATIM TOTAL: Transcribe cada palabra hablada palabra por palabra sin resumir, sin sintetizar, sin omitir frases ni filtrar repeticiones. Transcribe hasta la última palabra del archivo.
-2. PROHIBIDAS LAS MARCAS DE TIEMPO: Está terminantemente prohibido incluir marcas de tiempo, timestamps, segundos o minutos (nada de [mm:ss], [hh:mm:ss] ni numeración de tiempo en ninguna parte).
-3. ESTRUCTURA SEGÚN INTERLOCUTORES:
-   - Si hay múltiples interlocutores (entrevistas, debates, diálogos): inicia cada cambio de turno directamente con el nombre del orador en negrita y salto de línea, sin ningún número al inicio.
-     Ejemplo:
-     **Hablante 1:** Primera intervención literal del orador...
-     **Hablante 2:** Respuesta literal del segundo interlocutor...
+1. FIDELIDAD TEXTUAL SIN RESUMIR: Transcribe el contenido íntegro del audio de principio a fin sin resumir, sin sintetizar y sin omitir frases ni explicaciones. Transcribe hasta la última palabra del archivo.
+2. LIMPIEZA DE HABLA (FLUIDEZ):
+   - Elimina repeticiones involuntarias y tartamudeos accidentales (por ejemplo: "de de de" -> "de", "con- contrastivas" -> "contrastivas", "pe- presentar" -> "presentar").
+   - Omite muletillas sonoras y vacilaciones como "eh", "mmm", "este...", manteniendo intactas todas las demás palabras pronunciadas.
+3. USO DE COMILLAS:
+   - No utilices comillas angulares («...»). Emplea exclusivamente comillas dobles estándar ("...") para citas, términos específicos o ejemplos mencionados.
+4. PROHIBIDAS LAS MARCAS DE TIEMPO: Está terminantemente prohibido incluir marcas de tiempo, timestamps, segundos o minutos (nada de [mm:ss], [hh:mm:ss] ni numeración de tiempo en ninguna parte).
+5. ESTRUCTURA SEGÚN INTERLOCUTORES:
+   - Si hay múltiples interlocutores (entrevistas, debates, diálogos): inicia cada cambio de turno directamente con el nombre del orador en negrita y salto de línea (ejemplo: **Hablante 1:** texto / **Hablante 2:** texto), sin ningún número al inicio.
    - Si habla una sola persona (clases magistrales, monólogos, discursos): separa obligatoriamente el texto en párrafos naturales y legibles con puntos y aparte ante cada cambio de idea o pausa temática, sin ningún número ni prefijo al inicio de los párrafos.
-4. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
-5. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
+6. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
+7. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
 
-USER_PROMPT = """Transcribe todo el audio adjunto de principio a fin de forma 100% literal (verbatim), palabra por palabra y sin resumir nada:
+USER_PROMPT = """Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
+- Limpieza de habla: elimina tartamudeos y repeticiones accidentales (ej.: "de de de" -> "de", "pe- presentar" -> "presentar") y omite muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
+- Comillas: no uses comillas angulares («...»), usa comillas dobles comunes ("...") para citas o ejemplos.
 - PROHIBIDO incluir marcas de tiempo o timestamps (nada de [mm:ss] ni números de tiempo).
 - Si hay múltiples interlocutores: inicia cada cambio de turno directamente con el nombre del orador en negrita y salto de línea (ejemplo: **Hablante 1:** texto / **Hablante 2:** texto).
-- Si habla una sola persona: separa el texto en párrafos naturales con puntos y aparte claros ante cada cambio de tema o idea, sin ningún número al inicio.
+- Si habla una sola persona: separa el texto en párrafos naturales con puntos y aparte claros ante cada cambio de tema o idea, sin números al inicio.
 - Prohibido devolver bloques densos de texto sin saltos de línea."""
 
 @app.get("/api/config")
@@ -254,8 +258,9 @@ async def transcribe_audio(
 
                 last_snippet = last_text[-120:].replace("\n", " ").strip()
                 continuation_prompt = (
-                    f"Actúa como un taquígrafo profesional. Continúa la transcripción literal (verbatim) palabra por palabra "
+                    f"Actúa como un taquígrafo profesional. Continúa la transcripción literal y fiel palabra por palabra "
                     f"inmediatamente después de este fragmento: '{last_snippet}'. "
+                    f"Aplica limpieza de habla (sin tartamudeos ni muletillas como 'eh', 'mmm'), usa comillas dobles estándar (\"...\") y nunca comillas angulares. "
                     f"Está terminantemente prohibido incluir marcas de tiempo o timestamps. "
                     f"Mantén la misma estructura limpia con oradores en negrita (**Hablante X:**) o división en párrafos naturales sin números al inicio. "
                     f"Está estrictamente prohibido resumir, omitir frases o devolver bloques densos sin saltos de línea. "
