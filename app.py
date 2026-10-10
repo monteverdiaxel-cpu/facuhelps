@@ -52,24 +52,35 @@ Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio 
 
 REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
 1. FIDELIDAD TEXTUAL SIN RESUMIR: Transcribe el contenido íntegro del audio de principio a fin sin resumir, sin sintetizar y sin omitir frases ni explicaciones. Transcribe hasta la última palabra del archivo.
-2. LIMPIEZA DE HABLA (FLUIDEZ):
-   - Elimina repeticiones involuntarias y tartamudeos accidentales (por ejemplo: "de de de" -> "de", "con- contrastivas" -> "contrastivas", "pe- presentar" -> "presentar").
+2. FILTRO Y TOLERANCIA A AUDIOS DIFÍCILES (RUIDO Y ECO):
+   - Si el audio presenta baja ganancia, eco de aula, murmullos de fondo o lejanía del micrófono, aísla la voz principal del orador e ignora el ruido ambiente.
+   - Reconstruye con máxima fidelidad las palabras habladas apoyándote en el contexto semántico de la clase o conversación.
+3. UNIFORMIDAD TOTAL DE ORADORES (PROHIBIDOS NOMBRES PROPIOS):
+   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación (prohibido etiquetar con nombres como "Juan:", "María:", "Profesor Carlos:", etc.).
+   - Utiliza exclusivamente etiquetas genéricas uniformes en negrita de principio a fin:
+     * Si es una clase o ámbito académico: **Profesora:** (o **Profesor:**) y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:** si intervienen varios).
+     * Si es una entrevista: **Entrevistador:** y **Entrevistado:**.
+     * Si es un diálogo general: **Hablante 1:** y **Hablante 2:**.
+   - Mantén estrictamente el mismo criterio uniforme a lo largo de todo el texto.
+   - Si habla una sola persona (clase magistral, monólogo, conferencia): separa obligatoriamente el texto en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número ni prefijo al inicio de los párrafos.
+4. LIMPIEZA DE HABLA (FLUIDEZ):
+   - Elimina repeticiones involuntarias y tartamudeos accidentales (ej.: "de de de" -> "de", "con- contrastivas" -> "contrastivas", "pe- presentar" -> "presentar").
    - Omite muletillas sonoras y vacilaciones como "eh", "mmm", "este...", manteniendo intactas todas las demás palabras pronunciadas.
-3. USO DE COMILLAS:
+5. USO DE COMILLAS:
    - No utilices comillas angulares («...»). Emplea exclusivamente comillas dobles estándar ("...") para citas, términos específicos o ejemplos mencionados.
-4. PROHIBIDAS LAS MARCAS DE TIEMPO: Está terminantemente prohibido incluir marcas de tiempo, timestamps, segundos o minutos (nada de [mm:ss], [hh:mm:ss] ni numeración de tiempo en ninguna parte).
-5. ESTRUCTURA SEGÚN INTERLOCUTORES:
-   - Si hay múltiples interlocutores (entrevistas, debates, diálogos): inicia cada cambio de turno directamente con el nombre del orador en negrita y salto de línea (ejemplo: **Hablante 1:** texto / **Hablante 2:** texto), sin ningún número al inicio.
-   - Si habla una sola persona (clases magistrales, monólogos, discursos): separa obligatoriamente el texto en párrafos naturales y legibles con puntos y aparte ante cada cambio de idea o pausa temática, sin ningún número ni prefijo al inicio de los párrafos.
-6. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
-7. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
+6. PROHIBIDAS LAS MARCAS DE TIEMPO: Está terminantemente prohibido incluir marcas de tiempo, timestamps, segundos o minutos (nada de [mm:ss], [hh:mm:ss] ni numeración de tiempo en ninguna parte).
+7. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
+8. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
 
 USER_PROMPT = """Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
-- Limpieza de habla: elimina tartamudeos y repeticiones accidentales (ej.: "de de de" -> "de", "pe- presentar" -> "presentar") y omite muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
-- Comillas: no uses comillas angulares («...»), usa comillas dobles comunes ("...") para citas o ejemplos.
-- PROHIBIDO incluir marcas de tiempo o timestamps (nada de [mm:ss] ni números de tiempo).
-- Si hay múltiples interlocutores: inicia cada cambio de turno directamente con el nombre del orador en negrita y salto de línea (ejemplo: **Hablante 1:** texto / **Hablante 2:** texto).
-- Si habla una sola persona: separa el texto en párrafos naturales con puntos y aparte claros ante cada cambio de tema o idea, sin números al inicio.
+- Filtro de audio difícil: aísla la voz principal ante eco de aula, lejanía o ruido de fondo, reconstruyendo las palabras con fidelidad según el contexto temático.
+- Uniformidad total de oradores (CERO nombres propios): PROHIBIDO usar nombres propios como etiquetas. Usa siempre etiquetas uniformes en negrita:
+  * Si es clase: **Profesora:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**).
+  * Si es entrevista: **Entrevistador:** y **Entrevistado:**.
+  * Si es monólogo o clase individual: párrafos naturales con puntos y aparte sin prefijos ni números.
+- Limpieza de habla: elimina tartamudeos ("de de") y muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
+- Comillas: usa exclusivamente comillas dobles comunes ("..."), nunca angulares («...»).
+- PROHIBIDO incluir marcas de tiempo [mm:ss] o timestamps.
 - Prohibido devolver bloques densos de texto sin saltos de línea."""
 
 @app.get("/api/config")
@@ -260,9 +271,8 @@ async def transcribe_audio(
                 continuation_prompt = (
                     f"Actúa como un taquígrafo profesional. Continúa la transcripción literal y fiel palabra por palabra "
                     f"inmediatamente después de este fragmento: '{last_snippet}'. "
-                    f"Aplica limpieza de habla (sin tartamudeos ni muletillas como 'eh', 'mmm'), usa comillas dobles estándar (\"...\") y nunca comillas angulares. "
-                    f"Está terminantemente prohibido incluir marcas de tiempo o timestamps. "
-                    f"Mantén la misma estructura limpia con oradores en negrita (**Hablante X:**) o división en párrafos naturales sin números al inicio. "
+                    f"Mantén la uniformidad de oradores sin nombres propios (**Profesora:**, **Estudiante:**, **Entrevistador:**, etc.) o párrafos naturales sin números. "
+                    f"Aísla la voz del ruido/eco, limpia tartamudeos y muletillas ('eh', 'mmm'), usa comillas dobles estándar (\"...\") y nunca marcas de tiempo [mm:ss]. "
                     f"Está estrictamente prohibido resumir, omitir frases o devolver bloques densos sin saltos de línea. "
                     f"Transcribe hasta la última palabra del archivo. "
                     f"Si ya transcribiste absolutamente todo el audio hasta el final, responde ÚNICAMENTE '[FIN_DE_AUDIO]'."
