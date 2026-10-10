@@ -39,6 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultSection = document.getElementById("resultSection");
   const resultFileName = document.getElementById("resultFileName");
   const resultModelBadge = document.getElementById("resultModelBadge");
+  const completedBadge = document.getElementById("completedBadge");
+  const streamingIndicator = document.getElementById("streamingIndicator");
+  const transcriptContainer = document.getElementById("transcriptContainer");
   const transcriptContent = document.getElementById("transcriptContent");
   const btnCopy = document.getElementById("btnCopy");
   const btnCopyLabel = document.getElementById("btnCopyLabel");
@@ -316,22 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
     startTimer();
     setProgressStep("local", isInline);
 
-    let cloudTimer = null;
-    let geminiTimer = null;
-
-    if (isInline) {
-      geminiTimer = setTimeout(() => {
-        setProgressStep("gemini", true);
-      }, 800);
-    } else {
-      cloudTimer = setTimeout(() => {
-        setProgressStep("cloud", false);
-      }, 1500);
-      geminiTimer = setTimeout(() => {
-        setProgressStep("gemini", false);
-      }, 4500);
-    }
-
     try {
       const formData = new FormData();
       formData.append("file", currentFile);
@@ -345,32 +332,90 @@ document.addEventListener("DOMContentLoaded", () => {
         body: formData,
       });
 
-      if (cloudTimer) clearTimeout(cloudTimer);
-      if (geminiTimer) clearTimeout(geminiTimer);
-
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.detail || "Error en el servidor al transcribir el audio.");
+        const errorText = await response.text();
+        let errMsg = "Error en el servidor al procesar el audio.";
+        try {
+          errMsg = JSON.parse(errorText).detail || errMsg;
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
-      setProgressStep("done", isInline);
-      rawTranscriptText = data.transcript || "";
-
-      // Mostrar resultados
-      resultFileName.textContent = data.filename || currentFile.name;
-      resultModelBadge.textContent = `${data.model_used || selectModel.value} • ${data.processing_mode || 'completado'}`;
-      transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+      // Preparar visor en vivo
       resultSection.classList.remove("hidden");
-
-      // Scroll suave hacia los resultados
+      if (completedBadge) completedBadge.classList.add("hidden");
+      if (streamingIndicator) streamingIndicator.classList.remove("hidden");
+      resultFileName.textContent = currentFile.name;
+      resultModelBadge.textContent = `${selectModel.value} • en vivo`;
+      transcriptContent.innerHTML = '<p class="text-slate-400 italic flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span> Conectando con Gemini Flash y transcribiendo en vivo...</p>';
+      
       setTimeout(() => {
         resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 300);
+      }, 200);
+
+      // Leer el stream SSE mediante ReadableStream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      rawTranscriptText = "";
+      let hasReceivedFirstChunk = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop(); // conservar resto incompleto
+
+        for (const block of blocks) {
+          const lines = block.split("\n");
+          for (const line of lines) {
+            if (!line.startsWith("data:")) continue;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr) continue;
+
+            try {
+              const msg = JSON.parse(jsonStr);
+
+              if (msg.event === "status") {
+                setProgressStep(msg.stage, msg.mode === "inline");
+                if (msg.message) progressSubtitle.textContent = msg.message;
+              } else if (msg.event === "chunk") {
+                if (!hasReceivedFirstChunk) {
+                  hasReceivedFirstChunk = true;
+                  progressCard.classList.add("hidden"); // ocultar tarjeta de carga una vez empieza a fluir el texto
+                }
+                rawTranscriptText += msg.text;
+                transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+                if (transcriptContainer) {
+                  transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+                }
+              } else if (msg.event === "done") {
+                setProgressStep("done", isInline);
+                if (completedBadge) completedBadge.classList.remove("hidden");
+                if (streamingIndicator) streamingIndicator.classList.add("hidden");
+                rawTranscriptText = msg.transcript || rawTranscriptText;
+                resultFileName.textContent = msg.filename || currentFile.name;
+                resultModelBadge.textContent = `${msg.model_used || selectModel.value} • ${msg.processing_mode || 'completado'}`;
+                transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+              } else if (msg.event === "error") {
+                throw new Error(msg.message);
+              }
+            } catch (err) {
+              if (err.message && err.message !== "Unexpected end of JSON input") {
+                throw err;
+              }
+            }
+          }
+        }
+      }
+
+      // Finalizar visualización
+      if (completedBadge) completedBadge.classList.remove("hidden");
+      if (streamingIndicator) streamingIndicator.classList.add("hidden");
 
     } catch (err) {
-      clearTimeout(cloudTimer);
-      clearTimeout(geminiTimer);
       showError("Error al transcribir", err.message);
     } finally {
       stopTimer();

@@ -238,12 +238,15 @@
       <div class="border-b border-slate-200/80 px-6 py-4 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2">
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+            <span id="completedBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
               Completado
             </span>
-            <span id="resultModelBadge" class="text-xs font-mono text-slate-500">gemini-2.5-flash</span>
+            <span id="streamingIndicator" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-100 text-indigo-700 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> Escribiendo en vivo...
+            </span>
+            <span id="resultModelBadge" class="text-xs font-mono text-slate-500">gemini-3.8-flash</span>
           </div>
-          <p id="resultFileName" class="text-xs text-slate-500 mt-1 font-medium">clase_historia_01.mp3</p>
+          <p id="resultFileName" class="text-xs text-slate-500 mt-1 font-medium">audio.mp3</p>
         </div>
 
         <!-- Action buttons -->
@@ -280,7 +283,7 @@
       </div>
 
       <!-- Transcript Reader -->
-      <div class="p-6 sm:p-8 max-h-[650px] overflow-y-auto custom-scrollbar">
+      <div id="transcriptContainer" class="p-6 sm:p-8 max-h-[650px] overflow-y-auto custom-scrollbar">
         <div id="transcriptContent" class="prose prose-slate prose-sm sm:prose-base max-w-none text-slate-700 leading-relaxed font-sans space-y-4">
           <!-- Text will be rendered here -->
         </div>

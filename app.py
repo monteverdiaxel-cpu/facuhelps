@@ -1,4 +1,6 @@
+import asyncio
 import io
+import json
 import os
 import re
 import shutil
@@ -12,7 +14,7 @@ from docx.shared import Inches, Pt, RGBColor
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -97,252 +99,243 @@ async def transcribe_audio(
         )
 
     mime_type = MIME_MAP[file_ext]
-    temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
-    local_temp_path = TEMP_DIR / temp_filename
+    target_model_name = (model_name or "").strip() or "gemini-3.8-flash"
 
-    google_file = None
-    client = None
+    # Leer contenido del audio
+    content_bytes = await file.read()
+    file_size = len(content_bytes)
+    use_inline = file_size < INLINE_SIZE_LIMIT
 
-    try:
-        # Import diferido para capturar errores de instalación si los hubiera
-        from google import genai
-        from google.genai import types
+    async def generate_events():
+        google_file = None
+        client = None
+        local_temp_path = None
 
-        client = genai.Client(api_key=effective_key)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al inicializar el cliente de Google GenAI: {str(e)}"
-        )
+        try:
+            from google import genai
+            from google.genai import types
 
-    try:
-        # 3. Guardar archivo temporal en chunks (evita desbordar memoria RAM con audios de cientos de MB)
-        with open(local_temp_path, "wb") as buffer:
-            chunk_size = 1024 * 1024  # 1MB por chunk
-            while True:
-                chunk = await file.read(chunk_size)
-                if not chunk:
-                    break
-                buffer.write(chunk)
+            client = genai.Client(api_key=effective_key)
 
-        # Determinar si el archivo es menor a 20 MB para procesarlo inline (rápido)
-        file_size = local_temp_path.stat().st_size
-        use_inline = file_size < INLINE_SIZE_LIMIT
-        audio_content = None
+            # Notificar fase de preparación
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'local', 'message': 'Audio preparado...', 'mode': 'inline' if use_inline else 'files_api'})}\n\n"
 
-        if use_inline:
-            # Procesamiento inline directo en memoria para audios menores a 20 MB (pocos segundos)
-            with open(local_temp_path, "rb") as f:
-                audio_bytes = f.read()
-            audio_content = types.Part.from_bytes(
-                data=audio_bytes,
-                mime_type=mime_type
-            )
-            processing_mode = "inline (< 20 MB)"
-        else:
-            # Para audios de 20 MB o más (hasta 2 horas), usar Google Files API
-            processing_mode = "files_api (>= 20 MB)"
-            try:
-                google_file = client.files.upload(
-                    file=str(local_temp_path),
-                    config=types.UploadFileConfig(
-                        mime_type=mime_type,
-                        display_name=file.filename
-                    )
+            if use_inline:
+                # 1. OPTIMIZACIÓN: Modo inline directo en memoria (< 20 MB) sin tocar disco ni Files API
+                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Modo rápido inline (< 20 MB) en memoria activado...', 'mode': 'inline'})}\n\n"
+                audio_content = types.Part.from_bytes(
+                    data=content_bytes,
+                    mime_type=mime_type
                 )
-            except Exception as e:
-                error_msg = str(e)
-                if "API_KEY_INVALID" in error_msg or "400" in error_msg and "key" in error_msg.lower():
-                    raise HTTPException(status_code=401, detail="API Key de Google AI Studio inválida o sin permisos.")
-                raise HTTPException(status_code=500, detail=f"Error al subir el audio a Google Files API: {error_msg}")
+                processing_mode = "inline (< 20 MB)"
+            else:
+                # 2. OPTIMIZACIÓN: Modo Files API (>= 20 MB) con polling cada 2 segundos
+                processing_mode = "files_api (>= 20 MB)"
+                temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
+                local_temp_path = TEMP_DIR / temp_filename
 
-            # Esperar a que el archivo esté listo (ACTIVE) en Google AI Studio
-            max_wait_seconds = 180
-            start_time = time.time()
-            while google_file.state.name == "PROCESSING":
-                if time.time() - start_time > max_wait_seconds:
-                    raise HTTPException(
-                        status_code=504,
-                        detail="Tiempo de espera agotado mientras Google procesaba el archivo de audio."
-                    )
-                time.sleep(2)
-                google_file = client.files.get(name=google_file.name)
+                with open(local_temp_path, "wb") as f:
+                    f.write(content_bytes)
 
-            if google_file.state.name != "ACTIVE":
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Google no pudo procesar el archivo. Estado: {google_file.state.name}"
-                )
+                yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Subiendo {file_size / (1024*1024):.1f} MB a Google Files API...', 'mode': 'files_api'})}\n\n"
 
-            audio_content = google_file
-
-        # Generar transcripción estricta verbatim con temperature=0 y max_output_tokens
-        primary_model = (model_name or "").strip() or "gemini-3.8-flash"
-        
-        # Lista ordenada de modelos a intentar en caso de saturación o error 503
-        candidate_models = [primary_model]
-        for alt in ["gemini-2.5-flash", "gemini-2.0-flash"]:
-            if alt not in candidate_models:
-                candidate_models.append(alt)
-
-        # Configuraciones de generación priorizando desactivación de thinking (para evitar síntesis) y modo verbatim
-        def build_generation_configs():
-            cfgs = []
-            try:
-                cfgs.append(types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0.0,
-                    max_output_tokens=65536,
-                    thinking_config=types.ThinkingConfig(thinking_budget=0),
-                    audio_transcription_config=types.AudioTranscriptionConfig(mode="VERBATIM")
-                ))
-            except Exception:
-                pass
-
-            try:
-                cfgs.append(types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0.0,
-                    max_output_tokens=65536,
-                    thinking_config=types.ThinkingConfig(thinking_budget=0)
-                ))
-            except Exception:
-                pass
-
-            cfgs.append(types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-                temperature=0.0,
-                max_output_tokens=65536
-            ))
-
-            cfgs.append(types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-                temperature=0.0,
-                max_output_tokens=8192
-            ))
-            return cfgs
-
-        response = None
-        used_model = None
-        last_error = None
-        generation_configs = build_generation_configs()
-
-        for model_to_try in candidate_models:
-            for current_config in generation_configs:
-                # Intentar hasta 2 veces por modelo/config en caso de 503
-                for attempt in range(2):
-                    try:
-                        response = client.models.generate_content(
-                            model=model_to_try,
-                            contents=[
-                                audio_content,
-                                USER_PROMPT
-                            ],
-                            config=current_config
+                try:
+                    google_file = client.files.upload(
+                        file=str(local_temp_path),
+                        config=types.UploadFileConfig(
+                            mime_type=mime_type,
+                            display_name=file.filename
                         )
-                        used_model = model_to_try
-                        break
-                    except Exception as e:
-                        err_str = str(e)
-                        last_error = err_str
+                    )
+                except Exception as e:
+                    yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(e)}'})}\n\n"
+                    return
 
-                        # Si es error 503 (alta demanda) o 429, esperar brevemente y reintentar
-                        is_overloaded = any(kw in err_str for kw in ["503", "UNAVAILABLE", "high demand", "429", "RESOURCE_EXHAUSTED"])
-                        if is_overloaded and attempt == 0:
-                            time.sleep(2)
-                            continue
-                        else:
-                            # Pasar a la siguiente configuración o modelo
+                # Sondeo optimizado a cada 2 segundos
+                max_wait_seconds = 180
+                start_time = time.time()
+                while google_file.state.name == "PROCESSING":
+                    if time.time() - start_time > max_wait_seconds:
+                        yield f"data: {json.dumps({'event': 'error', 'message': 'Tiempo de espera agotado mientras Google procesaba el audio.'})}\n\n"
+                        return
+                    yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 2s)...', 'mode': 'files_api'})}\n\n"
+                    await asyncio.sleep(2)
+                    google_file = client.files.get(name=google_file.name)
+
+                if google_file.state.name != "ACTIVE":
+                    yield f"data: {json.dumps({'event': 'error', 'message': f'Google no pudo procesar el archivo. Estado: {google_file.state.name}'})}\n\n"
+                    return
+
+                audio_content = google_file
+                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Iniciando streaming con Gemini Flash...', 'mode': 'files_api'})}\n\n"
+
+            # 3. Modelos candidatos con fallback en caso de 503
+            candidate_models = [target_model_name]
+            for alt in ["gemini-2.5-flash", "gemini-2.0-flash"]:
+                if alt not in candidate_models:
+                    candidate_models.append(alt)
+
+            def build_generation_configs():
+                cfgs = []
+                try:
+                    cfgs.append(types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.0,
+                        max_output_tokens=65536,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        audio_transcription_config=types.AudioTranscriptionConfig(mode="VERBATIM")
+                    ))
+                except Exception:
+                    pass
+
+                try:
+                    cfgs.append(types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.0,
+                        max_output_tokens=65536,
+                        thinking_config=types.ThinkingConfig(thinking_budget=0)
+                    ))
+                except Exception:
+                    pass
+
+                cfgs.append(types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.0,
+                    max_output_tokens=65536
+                ))
+
+                cfgs.append(types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    temperature=0.0,
+                    max_output_tokens=8192
+                ))
+                return cfgs
+
+            generation_configs = build_generation_configs()
+            full_transcript_parts = []
+            used_model = None
+            used_config = None
+            stream_started = False
+            last_error = None
+
+            for model_to_try in candidate_models:
+                for current_config in generation_configs:
+                    for attempt in range(2):
+                        try:
+                            # STREAMING EN VIVO con generate_content_stream
+                            stream = client.models.generate_content_stream(
+                                model=model_to_try,
+                                contents=[
+                                    audio_content,
+                                    USER_PROMPT
+                                ],
+                                config=current_config
+                            )
+                            part_text = ""
+                            for chunk in stream:
+                                if chunk.text:
+                                    part_text += chunk.text
+                                    stream_started = True
+                                    yield f"data: {json.dumps({'event': 'chunk', 'text': chunk.text})}\n\n"
+
+                            if part_text:
+                                full_transcript_parts.append(part_text.strip())
+                            used_model = model_to_try
+                            used_config = current_config
                             break
+                        except Exception as e:
+                            err_str = str(e)
+                            last_error = err_str
+                            is_overloaded = any(kw in err_str for kw in ["503", "UNAVAILABLE", "high demand", "429", "RESOURCE_EXHAUSTED"])
+                            if is_overloaded and attempt == 0 and not stream_started:
+                                await asyncio.sleep(2)
+                                continue
+                            else:
+                                break
 
-                if response:
-                    break
-            if response:
-                break
-
-        if not response:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Los servidores de Google AI Studio están experimentando alta demanda temporal. Detalle: {last_error}"
-            )
-
-        full_transcript_parts = []
-        if response and response.text:
-            full_transcript_parts.append(response.text.strip())
-
-        # Bucle de continuación automática para audios largos (hasta 2 horas)
-        cand = response.candidates[0] if (response and response.candidates) else None
-        finish_reason = getattr(cand, "finish_reason", None)
-        finish_reason_name = getattr(finish_reason, "name", str(finish_reason)) if finish_reason else ""
-
-        continuation_attempts = 0
-        max_continuations = 8
-
-        while continuation_attempts < max_continuations:
-            last_text = full_transcript_parts[-1] if full_transcript_parts else ""
-            if not last_text:
-                break
-
-            last_snippet = last_text[-120:].replace("\n", " ").strip()
-            continuation_prompt = (
-                f"Continúa la transcripción literal palabra por palabra inmediatamente después de este fragmento: '{last_snippet}'. "
-                f"Si ya transcribiste absolutamente todo el audio hasta el último segundo de la grabación, responde ÚNICAMENTE '[FIN_DE_AUDIO]'. "
-                f"De lo contrario, transcribe la siguiente sección completa de forma textual sin resumir."
-            )
-
-            continuation_attempts += 1
-            try:
-                from google.genai import types
-                cont_response = client.models.generate_content(
-                    model=used_model,
-                    contents=[
-                        audio_content,
-                        types.Part.from_text(text=continuation_prompt)
-                    ],
-                    config=current_config
-                )
-                if cont_response and cont_response.text:
-                    new_text = cont_response.text.strip()
-                    if "[FIN_DE_AUDIO]" in new_text:
-                        cleaned_final = new_text.replace("[FIN_DE_AUDIO]", "").strip()
-                        if cleaned_final and cleaned_final not in full_transcript_parts:
-                            full_transcript_parts.append(cleaned_final)
+                    if stream_started:
                         break
-                    
-                    if new_text and new_text not in full_transcript_parts:
-                        full_transcript_parts.append(new_text)
+                if stream_started:
+                    break
+
+            if not stream_started and not full_transcript_parts:
+                yield f"data: {json.dumps({'event': 'error', 'message': f'Error al generar la transcripción: {last_error}'})}\n\n"
+                return
+
+            # 4. Bucle de continuación activa en streaming para audios extensos
+            continuation_attempts = 0
+            max_continuations = 8
+
+            while continuation_attempts < max_continuations:
+                last_text = full_transcript_parts[-1] if full_transcript_parts else ""
+                if not last_text:
+                    break
+
+                last_snippet = last_text[-120:].replace("\n", " ").strip()
+                continuation_prompt = (
+                    f"Continúa la transcripción literal palabra por palabra inmediatamente después de este fragmento: '{last_snippet}'. "
+                    f"Si ya transcribiste absolutamente todo el audio hasta el último segundo de la grabación, responde ÚNICAMENTE '[FIN_DE_AUDIO]'. "
+                    f"De lo contrario, transcribe la siguiente sección completa de forma textual sin resumir."
+                )
+
+                continuation_attempts += 1
+                try:
+                    cont_stream = client.models.generate_content_stream(
+                        model=used_model,
+                        contents=[
+                            audio_content,
+                            types.Part.from_text(text=continuation_prompt)
+                        ],
+                        config=used_config
+                    )
+                    cont_text = ""
+                    for chunk in cont_stream:
+                        if chunk.text:
+                            clean_chunk = chunk.text.replace("[FIN_DE_AUDIO]", "")
+                            if clean_chunk:
+                                cont_text += clean_chunk
+                                yield f"data: {json.dumps({'event': 'chunk', 'text': clean_chunk})}\n\n"
+
+                    cont_text_stripped = cont_text.strip()
+                    if "[FIN_DE_AUDIO]" in cont_text or not cont_text_stripped:
+                        break
+
+                    if cont_text_stripped and cont_text_stripped not in full_transcript_parts:
+                        full_transcript_parts.append(cont_text_stripped)
                     else:
                         break
-                else:
+                except Exception:
                     break
-            except Exception:
-                break
 
-        transcript_text = "\n\n".join(full_transcript_parts)
+            final_full_text = "\n\n".join(full_transcript_parts)
+            yield f"data: {json.dumps({'event': 'done', 'filename': file.filename, 'model_used': used_model, 'processing_mode': processing_mode, 'transcript': final_full_text})}\n\n"
 
-        return {
-            "success": True,
-            "filename": file.filename,
-            "model_used": used_model,
-            "processing_mode": processing_mode,
-            "transcript": transcript_text
+        except Exception as global_err:
+            yield f"data: {json.dumps({'event': 'error', 'message': f'Error en el proceso: {str(global_err)}'})}\n\n"
+
+        finally:
+            # 5. Limpieza garantizada
+            if local_temp_path and local_temp_path.exists():
+                try:
+                    local_temp_path.unlink()
+                except Exception:
+                    pass
+
+            if client and google_file and getattr(google_file, "name", None):
+                try:
+                    client.files.delete(name=google_file.name)
+                except Exception:
+                    pass
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
         }
-
-    finally:
-        # 7. Limpieza garantizada
-        # Eliminar archivo temporal local
-        if local_temp_path.exists():
-            try:
-                local_temp_path.unlink()
-            except Exception:
-                pass
-
-        # Eliminar archivo en Google Files API para no consumir espacio
-        if client and google_file and getattr(google_file, "name", None):
-            try:
-                client.files.delete(name=google_file.name)
-            except Exception:
-                pass
+    )
 
 class DocxExportRequest(BaseModel):
     filename: Optional[str] = "transcripcion"
