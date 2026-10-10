@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnToggleSummary = document.getElementById("btnToggleSummary");
   const summaryChevron = document.getElementById("summaryChevron");
   const btnCopySummary = document.getElementById("btnCopySummary");
+  const btnDownloadSummaryDocx = document.getElementById("btnDownloadSummaryDocx");
 
   // Modal Renombrar Oradores
   const renameModal = document.getElementById("renameModal");
@@ -748,8 +749,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (summaryHeader) {
     summaryHeader.addEventListener("click", (e) => {
-      // Evitar que el clic en copiar dispare el colapso
-      if (e.target.closest("#btnCopySummary")) return;
+      // Evitar que el clic en botones dispare el colapso
+      if (e.target.closest("#btnCopySummary") || e.target.closest("#btnDownloadSummaryDocx")) return;
       toggleSummaryCollapse();
     });
   }
@@ -768,6 +769,49 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 2000);
       } catch (err) {
         alert("No se pudo copiar el resumen al portapapeles.");
+      }
+    });
+  }
+
+  if (btnDownloadSummaryDocx) {
+    btnDownloadSummaryDocx.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!rawSummaryText) {
+        alert("Aún no hay resumen generado para descargar.");
+        return;
+      }
+      const baseName = (currentFile ? currentFile.name.replace(/\.[^/.]+$/, "") : "resumen");
+      const originalText = btnDownloadSummaryDocx.innerHTML;
+
+      try {
+        btnDownloadSummaryDocx.disabled = true;
+        btnDownloadSummaryDocx.innerHTML = '<div class="w-3 h-3 border-2 border-amber-700 border-t-transparent rounded-full animate-spin"></div> <span>Generando .docx...</span>';
+
+        const res = await fetch("/api/export-summary-docx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: currentFile ? currentFile.name : "resumen",
+            summary: rawSummaryText
+          })
+        });
+
+        if (!res.ok) throw new Error("Error en el servidor al exportar el resumen a Word.");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${baseName}_resumen.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("No se pudo generar el archivo Word del resumen: " + err.message);
+      } finally {
+        btnDownloadSummaryDocx.disabled = false;
+        btnDownloadSummaryDocx.innerHTML = originalText;
+        if (window.lucide) window.lucide.createIcons();
       }
     });
   }

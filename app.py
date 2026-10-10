@@ -189,15 +189,15 @@ async def transcribe_audio(
                 yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(e)}'})}\n\n"
                 return
 
-            # Sondeo optimizado a cada 2 segundos
+            # Sondeo optimizado a cada 1 segundo (rápido y sin demoras)
             max_wait_seconds = 180
             start_time = time.time()
             while google_file.state.name == "PROCESSING":
                 if time.time() - start_time > max_wait_seconds:
                     yield f"data: {json.dumps({'event': 'error', 'message': 'Tiempo de espera agotado mientras Google procesaba el audio.'})}\n\n"
                     return
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 2s)...', 'mode': 'files_api'})}\n\n"
-                await asyncio.sleep(2)
+                yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 1s)...', 'mode': 'files_api'})}\n\n"
+                await asyncio.sleep(1)
                 google_file = client.files.get(name=google_file.name)
 
             if google_file.state.name != "ACTIVE":
@@ -206,143 +206,35 @@ async def transcribe_audio(
 
             audio_content = google_file
             processing_mode = "files_api (disco)"
-            yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Iniciando streaming con Gemini Flash...', 'mode': 'files_api'})}\n\n"
+            yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Generando transcripción con Gemini Flash...', 'mode': 'files_api'})}\n\n"
             await asyncio.sleep(0)
 
-            # 3. Modelo exclusivo gemini-3.8-flash
-            candidate_models = ["gemini-3.8-flash"]
+            # 3. Transcripción directa con gemini-3.8-flash sin demoras ni snippets
+            gen_config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.0,
+                max_output_tokens=65536,
+                thinking_config=types.ThinkingConfig(thinking_budget=0)
+            )
 
-            def build_generation_configs(m_name: str):
-                cfgs = []
-                try:
-                    cfgs.append(types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.0,
-                        max_output_tokens=65536,
-                        thinking_config=types.ThinkingConfig(thinking_budget=0)
-                    ))
-                except Exception:
-                    pass
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=[
+                    audio_content,
+                    user_prompt
+                ],
+                config=gen_config
+            )
 
-                cfgs.append(types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.0,
-                    max_output_tokens=65536
-                ))
-                return cfgs
+            transcript_text = (response.text or "").strip()
 
-            full_transcript_parts = []
-            used_model = None
-            used_config = None
-            stream_started = False
-            last_error = None
-
-            for model_to_try in candidate_models:
-                generation_configs = build_generation_configs(model_to_try)
-                for current_config in generation_configs:
-                    for attempt in range(2):
-                        try:
-                            # STREAMING EN VIVO con generate_content_stream
-                            stream = client.models.generate_content_stream(
-                                model=model_to_try,
-                                contents=[
-                                    audio_content,
-                                    user_prompt
-                                ],
-                                config=current_config
-                            )
-                            part_text = ""
-                            for chunk in stream:
-                                if chunk.text:
-                                    part_text += chunk.text
-                                    stream_started = True
-                                    yield f"data: {json.dumps({'event': 'chunk', 'text': chunk.text})}\n\n"
-                                    await asyncio.sleep(0)
-
-                            if part_text:
-                                full_transcript_parts.append(part_text.strip())
-                            used_model = model_to_try
-                            used_config = current_config
-                            break
-                        except Exception as e:
-                            err_str = str(e)
-                            last_error = err_str
-                            is_overloaded = any(kw in err_str for kw in ["503", "UNAVAILABLE", "high demand", "429", "RESOURCE_EXHAUSTED"])
-                            if is_overloaded and attempt == 0 and not stream_started:
-                                await asyncio.sleep(2)
-                                continue
-                            else:
-                                break
-
-                    if stream_started:
-                        break
-                if stream_started:
-                    break
-
-            if not stream_started and not full_transcript_parts:
-                yield f"data: {json.dumps({'event': 'error', 'message': f'Error al generar la transcripción: {last_error}'})}\n\n"
+            if not transcript_text:
+                yield f"data: {json.dumps({'event': 'error', 'message': 'La API devolvió una respuesta vacía.'})}\n\n"
                 return
 
-            # 4. Bucle de continuación activa en streaming para audios extensos
-            continuation_attempts = 0
-            max_continuations = 8
-
-            while continuation_attempts < max_continuations:
-                last_text = full_transcript_parts[-1] if full_transcript_parts else ""
-                if not last_text:
-                    break
-
-                last_snippet = last_text[-120:].replace("\n", " ").strip()
-
-                if effective_audio_type == "continuo":
-                    speaker_summary = "SIN etiquetas de oradores (texto continuo en párrafos)"
-                elif effective_audio_type == "entrevista":
-                    speaker_summary = "**Entrevistador:** y **Entrevistado:**"
-                else:
-                    speaker_summary = "**Docente:** y **Estudiante:**"
-
-                continuation_prompt = (
-                    f"Actúa como un taquígrafo profesional. Continúa la transcripción literal y fiel palabra por palabra "
-                    f"inmediatamente después de este fragmento: '{last_snippet}'. "
-                    f"Mantén la estructura ({speaker_summary}) organizada en párrafos naturales sin números ni marcas de tiempo [mm:ss]. "
-                    f"Aísla la voz del ruido/eco, limpia tartamudeos y muletillas ('eh', 'mmm') y usa comillas dobles estándar (\"...\"). "
-                    f"Está estrictamente prohibido resumir, omitir frases o devolver bloques densos sin saltos de línea. "
-                    f"Transcribe hasta la última palabra del archivo. "
-                    f"Si ya transcribiste absolutamente todo el audio hasta el final, responde ÚNICAMENTE '[FIN_DE_AUDIO]'."
-                )
-
-                continuation_attempts += 1
-                try:
-                    cont_stream = client.models.generate_content_stream(
-                        model=used_model,
-                        contents=[
-                            audio_content,
-                            types.Part.from_text(text=continuation_prompt)
-                        ],
-                        config=used_config
-                    )
-                    cont_text = ""
-                    for chunk in cont_stream:
-                        if chunk.text:
-                            clean_chunk = chunk.text.replace("[FIN_DE_AUDIO]", "")
-                            if clean_chunk:
-                                cont_text += clean_chunk
-                                yield f"data: {json.dumps({'event': 'chunk', 'text': clean_chunk})}\n\n"
-                                await asyncio.sleep(0)
-
-                    cont_text_stripped = cont_text.strip()
-                    if "[FIN_DE_AUDIO]" in cont_text or not cont_text_stripped:
-                        break
-
-                    if cont_text_stripped and cont_text_stripped not in full_transcript_parts:
-                        full_transcript_parts.append(cont_text_stripped)
-                    else:
-                        break
-                except Exception:
-                    break
-
-            final_full_text = "\n\n".join(full_transcript_parts)
-            yield f"data: {json.dumps({'event': 'done', 'filename': file.filename, 'model_used': used_model, 'processing_mode': processing_mode, 'transcript': final_full_text})}\n\n"
+            # Emitir texto y evento de finalización
+            yield f"data: {json.dumps({'event': 'chunk', 'text': transcript_text})}\n\n"
+            yield f"data: {json.dumps({'event': 'done', 'filename': file.filename, 'model_used': 'gemini-3.8-flash', 'processing_mode': processing_mode, 'transcript': transcript_text})}\n\n"
 
         except Exception as global_err:
             yield f"data: {json.dumps({'event': 'error', 'message': f'Error en el proceso: {str(global_err)}'})}\n\n"
@@ -402,25 +294,23 @@ async def summarize_transcript(req: SummarizeRequest):
 
         system_instruction = (
             "Actúa como un analista y asistente pedagógico experto. "
-            "Tu tarea es generar un resumen ejecutivo conciso, estructurado y de alto valor pedagógico a partir de la transcripción provista. "
-            "Usa un tono profesional, claro y directo en español. "
-            "Sigue estrictamente la siguiente estructura utilizando formato Markdown con encabezados y viñetas:\n\n"
-            "### 🎯 Tema Central\n"
-            "(Síntesis clara en 1 o 2 oraciones del núcleo conceptual de la clase o charla)\n\n"
-            "### 💡 Conceptos Clave Discutidos\n"
-            "(Lista con viñetas destacando las ideas fuerza, teorías, definiciones o argumentos principales)\n\n"
-            "### 📌 Fechas, Compromisos y Tareas\n"
-            "(Lista de fechas límite, lecturas obligatorias, entregas o acuerdos acordados. Si no se mencionaron, indica explícitamente: 'No se mencionaron compromisos ni fechas específicas.')"
+            "A partir de la transcripción completa provista, genera un resumen estructurado, riguroso y sin omitir información explícita:\n\n"
+            "### 💡 Conceptos Teóricos Clave y Autores Citados\n"
+            "(Sintetiza las ideas fuerza, teorías, definiciones principales y enumera todos los autores, investigadores o textos citados)\n\n"
+            "### 📌 Fechas, Plazos y Compromisos\n"
+            "(Extrae TODAS las fechas explícitas mencionadas en el audio: días del mes, días de la semana, horarios, exámenes, parciales, entregas, recuperatorios y lecturas. No afirmes que no hay fechas si fueron nombradas en la conversación. Si y solo si no existe absolutamente ninguna mención temporal, acláralo)\n\n"
+            "### 📝 Consignas del Trabajo Práctico y Tareas\n"
+            "(Detalla con viñetas claras las consignas, pautas de evaluación, formato solicitado o pasos requeridos para trabajos prácticos y tareas)."
         )
 
         user_content = (
-            "A continuación tienes la transcripción completa para generar el resumen ejecutivo:\n\n"
+            "A continuación tienes la transcripción completa para generar el resumen estructurado:\n\n"
             f"{req.transcript}"
         )
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
-            temperature=0.2,
+            temperature=0.1,
             max_output_tokens=8192
         )
 
@@ -438,6 +328,125 @@ async def summarize_transcript(req: SummarizeRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el resumen: {str(e)}")
+
+class SummaryDocxExportRequest(BaseModel):
+    filename: Optional[str] = "resumen"
+    summary: str
+
+@app.post("/api/export-summary-docx")
+async def export_summary_docx(req: SummaryDocxExportRequest):
+    if not req.summary or not req.summary.strip():
+        raise HTTPException(status_code=400, detail="El contenido del resumen está vacío.")
+
+    doc = docx.Document()
+
+    for section in doc.sections:
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
+
+    clean_base = Path(req.filename).stem if req.filename else "resumen"
+
+    # Título principal
+    title = doc.add_paragraph()
+    title_run = title.add_run(f"Resumen Ejecutivo: {clean_base}")
+    title_run.font.name = "Calibri"
+    title_run.font.size = Pt(18)
+    title_run.font.bold = True
+    title_run.font.color.rgb = RGBColor(180, 83, 9)  # Ámbar elegante
+    title.paragraph_format.space_after = Pt(2)
+
+    # Subtítulo
+    sub = doc.add_paragraph()
+    sub_run = sub.add_run("Síntesis pedagógica generada por FacuHelps con Gemini Flash")
+    sub_run.font.name = "Calibri"
+    sub_run.font.size = Pt(9.5)
+    sub_run.font.italic = True
+    sub_run.font.color.rgb = RGBColor(100, 116, 139)
+    sub.paragraph_format.space_after = Pt(14)
+
+    # Procesar líneas de Markdown del resumen
+    lines = req.summary.split("\n")
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        if line.startswith("### "):
+            header_text = line[4:].strip()
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(10)
+            p.paragraph_format.space_after = Pt(4)
+            run = p.add_run(header_text)
+            run.font.name = "Calibri"
+            run.font.size = Pt(13)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(15, 23, 42)
+        elif line.startswith("## "):
+            header_text = line[3:].strip()
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(12)
+            p.paragraph_format.space_after = Pt(4)
+            run = p.add_run(header_text)
+            run.font.name = "Calibri"
+            run.font.size = Pt(14)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(15, 23, 42)
+        elif line.startswith("- ") or line.startswith("* "):
+            bullet_text = line[2:].strip()
+            p = doc.add_paragraph(style='List Bullet')
+            p.paragraph_format.space_after = Pt(3)
+            p.paragraph_format.line_spacing = 1.15
+
+            # Procesar negritas dentro de la viñeta
+            subparts = re.split(r'(\*\*.*?\*\*)', bullet_text)
+            for subpart in subparts:
+                if not subpart:
+                    continue
+                if subpart.startswith("**") and subpart.endswith("**") and len(subpart) >= 4:
+                    b_run = p.add_run(subpart[2:-2])
+                    b_run.font.name = "Calibri"
+                    b_run.font.size = Pt(11)
+                    b_run.font.bold = True
+                    b_run.font.color.rgb = RGBColor(15, 23, 42)
+                else:
+                    norm_run = p.add_run(subpart)
+                    norm_run.font.name = "Calibri"
+                    norm_run.font.size = Pt(11)
+                    norm_run.font.color.rgb = RGBColor(51, 65, 85)
+        else:
+            p = doc.add_paragraph()
+            p.paragraph_format.space_after = Pt(5)
+            p.paragraph_format.line_spacing = 1.15
+
+            subparts = re.split(r'(\*\*.*?\*\*)', line)
+            for subpart in subparts:
+                if not subpart:
+                    continue
+                if subpart.startswith("**") and subpart.endswith("**") and len(subpart) >= 4:
+                    b_run = p.add_run(subpart[2:-2])
+                    b_run.font.name = "Calibri"
+                    b_run.font.size = Pt(11)
+                    b_run.font.bold = True
+                    b_run.font.color.rgb = RGBColor(15, 23, 42)
+                else:
+                    norm_run = p.add_run(subpart)
+                    norm_run.font.name = "Calibri"
+                    norm_run.font.size = Pt(11)
+                    norm_run.font.color.rgb = RGBColor(51, 65, 85)
+
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{clean_base}_resumen.docx"'
+        }
+    )
 
 class DocxExportRequest(BaseModel):
     filename: Optional[str] = "transcripcion"
