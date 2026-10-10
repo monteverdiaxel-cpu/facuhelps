@@ -150,11 +150,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleFileSelected(file) {
     if (!file) return;
 
-    const validExtensions = [".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac", ".webm"];
+    const validExtensions = [".mp3", ".m4a", ".aac", ".ogg", ".flac", ".webm"];
     const ext = "." + file.name.split(".").pop().toLowerCase();
 
+    if (ext === ".wav") {
+      showError("Formato WAV no admitido", "No se admite WAV por tamaño excesivo. Por favor conviértelo a MP3 o M4A para transcribir.");
+      return;
+    }
+
     if (!validExtensions.includes(ext)) {
-      showError("Formato de audio no compatible", `Selecciona un archivo compatible: ${validExtensions.join(", ")}`);
+      showError("Formato de audio no compatible", "Formatos compatibles: MP3, M4A, AAC, OGG (no se admite WAV por tamaño excesivo).");
       return;
     }
 
@@ -281,17 +286,20 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
+    // Reemplazar negrita de Markdown **texto** (oradores y énfasis)
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+
     // Reemplazar timestamps tipo [00:01:23] o [01:23]
     clean = clean.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, (match, p1) => {
       return `<span class="timestamp-tag">[${p1}]</span>`;
     });
 
-    // Reemplazar indicadores de hablantes en negrita o inicio de frase (ej. Docente:, Alumno:, Profesor:)
+    // Reemplazar indicadores de hablantes en negrita si no vinieron en markdown
     clean = clean.replace(/(?:^|\n)(Docente|Profesor|Profesora|Alumno|Alumna|Estudiante|Entrevistador|Entrevistadora|Entrevistado|Orador|Hablante\s*\d*):/gi, (match, p1) => {
-      return `\n<strong class="speaker-tag text-slate-900">${p1}:</strong>`;
+      return `\n<strong class="speaker-tag font-semibold text-slate-900">${p1}:</strong>`;
     });
 
-    // Convertir saltos de línea en párrafos
+    // Convertir saltos de línea en párrafos legibles
     const paragraphs = clean.split(/\n\s*\n/);
     return paragraphs.map((p) => `<p class="mb-3 text-slate-700 leading-relaxed">${p.replace(/\n/g, "<br>")}</p>`).join("");
   }

@@ -35,11 +35,10 @@ app.add_middleware(
 TEMP_DIR = Path("temp_uploads")
 TEMP_DIR.mkdir(exist_ok=True)
 
-# Mapeo de extensiones comunes a MIME types para Google Files API
+# Mapeo de extensiones comunes a MIME types para Google Files API (se excluye .wav por tamaño excesivo)
 MIME_MAP = {
     ".mp3": "audio/mp3",
     ".m4a": "audio/mp4",
-    ".wav": "audio/wav",
     ".aac": "audio/aac",
     ".ogg": "audio/ogg",
     ".flac": "audio/flac",
@@ -49,19 +48,28 @@ MIME_MAP = {
 
 INLINE_SIZE_LIMIT = 20 * 1024 * 1024  # 20 MB
 
-SYSTEM_INSTRUCTION = (
-    "Actúa como un taquígrafo profesional. Tu única tarea es transcribir exactamente cada palabra "
-    "pronunciada en el audio de principio a fin de forma literal (verbatim). "
-    "Está estrictamente prohibido resumir, omitir frases, filtrar repeticiones o acortar el contenido. "
-    "Transcribe hasta la última palabra del archivo."
-)
+SYSTEM_INSTRUCTION = """Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
+Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma literal (verbatim), con una estructura de lectura clara e impecable.
 
-USER_PROMPT = (
-    "Actúa como un taquígrafo profesional. Tu única tarea es transcribir exactamente cada palabra "
-    "pronunciada en el audio de principio a fin de forma literal (verbatim). "
-    "Está estrictamente prohibido resumir, omitir frases, filtrar repeticiones o acortar el contenido. "
-    "Transcribe hasta la última palabra del archivo."
-)
+REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y ESTRUCTURA:
+1. VERBATIM TOTAL: Transcribe cada palabra hablada sin resumir, sin sintetizar, sin omitir frases ni filtrar repeticiones. Transcribe hasta la última palabra del archivo.
+2. ESTRUCTURA POR ORADORES O PÁRRAFOS:
+   - Si hay múltiples personas (entrevista, debate o diálogo): separa cada intervención con salto de línea e identifica a los oradores en negrita con marca de tiempo al inicio.
+     Ejemplo:
+     [00:00] **Hablante 1:** Primera intervención literal...
+     [00:45] **Hablante 2:** Respuesta literal de la otra persona...
+   - Si habla una sola persona (clase magistral, monólogo o conferencia): divide obligatoriamente el texto en párrafos legibles con puntos y aparte cada vez que cambie de idea o haga pausas temáticas. Coloca la marca de tiempo [mm:ss] al inicio de cada nuevo párrafo.
+     Ejemplo:
+     [00:00] Comenzamos la clase explicando el primer concepto fundamental...
+     [02:15] Pasando al siguiente punto temático sobre esta cuestión...
+3. PROHIBIDO DEVOLVER BLOQUES DENSOS: Está terminantemente prohibido generar bloques continuos o densos de texto sin saltos de línea ni marcas de tiempo.
+4. SIN INTRODUCCIONES NI NOTAS: No agregues saludos, notas explicativas ni comentarios. Comienza directamente con la transcripción."""
+
+USER_PROMPT = """Transcribe todo el audio de principio a fin de forma literal (verbatim), palabra por palabra y sin resumir nada:
+- Si intervienen varias personas (entrevista o diálogo): separa cada intervención con salto de línea e identifica los oradores en negrita (ej.: [mm:ss] **Hablante 1:** texto / [mm:ss] **Hablante 2:** texto).
+- Si es un único orador (clase magistral): divide obligatoriamente en párrafos legibles con puntos y aparte cada vez que cambie de idea o haga pausas temáticas, incluyendo la marca de tiempo [mm:ss] al inicio de cada párrafo.
+- Prohibido devolver bloques densos de texto sin saltos de línea.
+- Mantené la transcripción 100% literal y completa palabra por palabra."""
 
 @app.get("/api/config")
 async def get_config():
@@ -88,11 +96,17 @@ async def transcribe_audio(
 
     # 2. Validar extensión de archivo
     file_ext = Path(file.filename).suffix.lower()
+    if file_ext == ".wav":
+        raise HTTPException(
+            status_code=400,
+            detail="No se admite el formato WAV debido a su tamaño excesivo. Por favor utiliza MP3, M4A o AAC."
+        )
+
     if file_ext not in MIME_MAP:
         supported = ", ".join(MIME_MAP.keys())
         raise HTTPException(
             status_code=400,
-            detail=f"Formato de archivo no soportado ({file_ext}). Formatos permitidos: {supported}"
+            detail=f"Formato de archivo no soportado ({file_ext}). Formatos permitidos: {supported} (WAV no admitido)."
         )
 
     mime_type = MIME_MAP[file_ext]
@@ -253,7 +267,8 @@ async def transcribe_audio(
                 continuation_prompt = (
                     f"Actúa como un taquígrafo profesional. Continúa la transcripción literal (verbatim) palabra por palabra "
                     f"inmediatamente después de este fragmento: '{last_snippet}'. "
-                    f"Está estrictamente prohibido resumir, omitir frases, filtrar repeticiones o acortar el contenido. "
+                    f"Mantén la misma estructura clara con marcas de tiempo [mm:ss], separación de párrafos u oradores en negrita (**Hablante X:**). "
+                    f"Está estrictamente prohibido resumir, omitir frases o devolver bloques densos sin saltos de línea. "
                     f"Transcribe hasta la última palabra del archivo. "
                     f"Si ya transcribiste absolutamente todo el audio hasta el final, responde ÚNICAMENTE '[FIN_DE_AUDIO]'."
                 )
@@ -356,11 +371,11 @@ async def export_docx(req: DocxExportRequest):
     sub_run.font.color.rgb = RGBColor(100, 116, 139)  # Slate
     sub.paragraph_format.space_after = Pt(14)
     
-    # Párrafos de la transcripción
-    raw_paras = [p.strip() for p in req.transcript.split("\n\n") if p.strip()]
+    # Párrafos e intervenciones de la transcripción
+    raw_paras = [p.strip() for p in req.transcript.split("\n") if p.strip()]
     for p_text in raw_paras:
         p = doc.add_paragraph()
-        p.paragraph_format.space_after = Pt(8)
+        p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.line_spacing = 1.15
         
         # Segmentar marcas de tiempo tipo [00:01:23] o [01:23]
@@ -375,27 +390,23 @@ async def export_docx(req: DocxExportRequest):
                 run.font.bold = True
                 run.font.color.rgb = RGBColor(79, 70, 229)
             else:
-                # Detección de oradores (ej. Profesor:, Docente:, etc.)
-                speaker_match = re.match(r'^(Docente|Profesor|Profesora|Alumno|Alumna|Estudiante|Entrevistador|Entrevistadora|Entrevistado|Orador|Hablante\s*\d*):(.*)', part, re.DOTALL | re.IGNORECASE)
-                if speaker_match:
-                    sp_label = speaker_match.group(1) + ":"
-                    rest = speaker_match.group(2)
-                    
-                    sp_run = p.add_run(sp_label)
-                    sp_run.font.name = "Calibri"
-                    sp_run.font.size = Pt(11)
-                    sp_run.font.bold = True
-                    sp_run.font.color.rgb = RGBColor(15, 23, 42)
-                    
-                    text_run = p.add_run(rest)
-                    text_run.font.name = "Calibri"
-                    text_run.font.size = Pt(11)
-                    text_run.font.color.rgb = RGBColor(51, 65, 85)
-                else:
-                    text_run = p.add_run(part)
-                    text_run.font.name = "Calibri"
-                    text_run.font.size = Pt(11)
-                    text_run.font.color.rgb = RGBColor(51, 65, 85)
+                # Segmentar negrita Markdown **...** para oradores y énfasis
+                subparts = re.split(r'(\*\*.*?\*\*)', part)
+                for subpart in subparts:
+                    if not subpart:
+                        continue
+                    if subpart.startswith("**") and subpart.endswith("**") and len(subpart) >= 4:
+                        bold_text = subpart[2:-2]
+                        run = p.add_run(bold_text)
+                        run.font.name = "Calibri"
+                        run.font.size = Pt(11)
+                        run.font.bold = True
+                        run.font.color.rgb = RGBColor(15, 23, 42)
+                    else:
+                        run = p.add_run(subpart)
+                        run.font.name = "Calibri"
+                        run.font.size = Pt(11)
+                        run.font.color.rgb = RGBColor(51, 65, 85)
 
     buffer = io.BytesIO()
     doc.save(buffer)
