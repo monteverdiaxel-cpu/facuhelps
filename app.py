@@ -226,57 +226,6 @@ async def transcribe_audio(
             while chunk := await file.read(1024 * 1024):
                 f.write(chunk)
 
-        # Subir a Google Files API probando con el pool de API keys si hay 429
-        upload_success = False
-        last_upload_err = None
-        key_index_used = 0
-
-        for k_idx, current_key in enumerate(key_pool):
-            try:
-                client = genai.Client(api_key=current_key)
-                google_file = client.files.upload(
-                    file=str(local_temp_path),
-                    config=types.UploadFileConfig(
-                        mime_type=mime_type,
-                        display_name=safe_filename
-                    )
-                )
-                upload_success = True
-                key_index_used = k_idx
-                break
-            except Exception as up_err:
-                last_upload_err = up_err
-                if is_rate_limit_error(up_err) and k_idx + 1 < len(key_pool):
-                    time.sleep(1)
-                    continue
-                else:
-                    break
-
-        if not upload_success or not google_file:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error al subir el archivo de audio: {str(last_upload_err)}"
-            )
-
-        # Polling rápido cada 1 segundo exacto hasta que esté ACTIVE
-        max_wait_seconds = 180
-        start_time = time.time()
-        while google_file.state.name == "PROCESSING":
-            if time.time() - start_time > max_wait_seconds:
-                raise HTTPException(
-                    status_code=504,
-                    detail="Tiempo de espera agotado mientras Google procesaba el audio."
-                )
-            time.sleep(1)
-            google_file = client.files.get(name=google_file.name)
-
-        if google_file.state.name != "ACTIVE":
-            raise HTTPException(
-                status_code=500,
-                detail=f"Google no pudo procesar el archivo. Estado: {google_file.state.name}"
-            )
-
-        # Transcripción directa con gemini-3.8-flash de una sola vez
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
@@ -284,52 +233,93 @@ async def transcribe_audio(
             thinking_config=types.ThinkingConfig(thinking_level="LOW")
         )
 
-        response = None
-        current_k_idx = key_index_used
+        transcript_text = ""
+        last_error = None
 
-        while current_k_idx < len(key_pool):
-            curr_key = key_pool[current_k_idx]
-            curr_client = genai.Client(api_key=curr_key)
-            should_rotate = False
+        # Bucle de rotación de claves completo: cada clave sube su propio archivo, espera y transcribe
+        for k_idx, current_key in enumerate(key_pool):
+            client = None
+            google_file = None
+            try:
+                # 1. Instanciar client con la clave actual
+                client = genai.Client(api_key=current_key)
 
-            for attempt in range(1, 4):
-                try:
-                    response = curr_client.models.generate_content(
-                        model=target_model_name,
-                        contents=[
-                            google_file,
-                            user_prompt
-                        ],
-                        config=gen_config
+                # 2. Subir el archivo local temporal con ese mismo client
+                google_file = client.files.upload(
+                    file=str(local_temp_path),
+                    config=types.UploadFileConfig(
+                        mime_type=mime_type,
+                        display_name=safe_filename
                     )
-                    break
-                except Exception as api_err:
-                    if is_rate_limit_error(api_err):
-                        if current_k_idx + 1 < len(key_pool):
-                            should_rotate = True
-                            break
+                )
+
+                # 3. Esperar a que pase a ACTIVE con ese mismo client
+                max_wait_seconds = 180
+                start_time = time.time()
+                while google_file.state.name == "PROCESSING":
+                    if time.time() - start_time > max_wait_seconds:
+                        raise HTTPException(
+                            status_code=504,
+                            detail="Tiempo de espera agotado mientras Google procesaba el audio."
+                        )
+                    time.sleep(1)
+                    google_file = client.files.get(name=google_file.name)
+
+                if google_file.state.name != "ACTIVE":
+                    raise Exception(f"Google no pudo procesar el archivo. Estado: {google_file.state.name}")
+
+                # 4. Ejecutar generate_content con ese mismo client (hasta 3 reintentos si hay 503)
+                response = None
+                for attempt in range(1, 4):
+                    try:
+                        response = client.models.generate_content(
+                            model=target_model_name,
+                            contents=[
+                                google_file,
+                                user_prompt
+                            ],
+                            config=gen_config
+                        )
+                        break
+                    except Exception as gen_err:
+                        if is_retriable_error(gen_err) and attempt < 3:
+                            time.sleep(3)
                         else:
-                            raise api_err
-                    elif is_retriable_error(api_err) and attempt < 3:
-                        time.sleep(3)
-                    else:
-                        raise api_err
+                            raise gen_err
 
-            if response is not None:
+                transcript_text = (response.text or "").strip() if response else ""
+                if not transcript_text:
+                    raise Exception("La API de Gemini devolvió una transcripción vacía.")
+
+                # Transcripción exitosa conseguida con esta clave
                 break
 
-            if should_rotate:
-                current_k_idx += 1
-                time.sleep(1)
-            else:
-                break
+            except Exception as exc:
+                last_error = exc
+                # Si ocurre 429 o RESOURCE_EXHAUSTED y hay más claves disponibles, rotar a la siguiente
+                if is_rate_limit_error(exc) and k_idx + 1 < len(key_pool):
+                    time.sleep(1)
+                    continue
+                # Si no es error de cuota o es la última clave, propagar el error
+                if isinstance(exc, HTTPException):
+                    raise exc
+                if k_idx + 1 >= len(key_pool):
+                    raise exc
+                # Para cualquier otro error irrecuperable en esta key si no es 429, relanzar
+                raise exc
 
-        transcript_text = (response.text or "").strip() if response else ""
+            finally:
+                # 5. Limpiar inmediatamente el archivo en Google Files API para esta clave
+                if client and google_file and getattr(google_file, "name", None):
+                    try:
+                        client.files.delete(name=google_file.name)
+                    except Exception:
+                        pass
 
         if not transcript_text:
             raise HTTPException(
                 status_code=500,
-                detail="La API de Gemini devolvió una transcripción vacía."
+                detail=f"No se pudo completar la transcripción con ninguna de las claves disponibles: {str(last_error)}"
             )
 
         return JSONResponse({
@@ -346,16 +336,10 @@ async def transcribe_audio(
             detail=f"Error durante la transcripción: {str(e)}"
         )
     finally:
-        # Limpieza de archivo local y remoto en Google Files API
+        # Limpieza garantizada del archivo temporal local en disco
         if local_temp_path and os.path.exists(local_temp_path):
             try:
                 os.remove(local_temp_path)
-            except Exception:
-                pass
-
-        if client and google_file and getattr(google_file, "name", None):
-            try:
-                client.files.delete(name=google_file.name)
             except Exception:
                 pass
 
