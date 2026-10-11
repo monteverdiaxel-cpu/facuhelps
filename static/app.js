@@ -99,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Estado de la app
   let currentFile = null;
+  let currentActiveFileName = ""; // Guarda el nombre del archivo activo (cargado de subida o del historial)
   let currentAudioType = "clase"; // 'clase' | 'entrevista' | 'continuo' | 'radio'
   let timerInterval = null;
   let startTime = null;
@@ -106,6 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
   let rawSummaryText = "";
   let isSummaryCollapsed = false;
   let hasServerApiKey = false;
+
+  function getActiveBaseName() {
+    let name = currentActiveFileName || (currentFile ? currentFile.name : "") || "transcripcion";
+    return name.replace(/\.[^/.]+$/, "");
+  }
+
+  function getActiveFullName() {
+    return currentActiveFileName || (currentFile ? currentFile.name : "") || "transcripcion.mp3";
+  }
 
   // 0. Modo Oscuro (Dark Mode)
   function initTheme() {
@@ -289,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     currentFile = file;
+    currentActiveFileName = file.name;
     fileName.textContent = file.name;
     fileDetails.textContent = `${formatBytes(file.size)} • Listo para transcribir`;
     
@@ -330,6 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnRemoveFile.addEventListener("click", () => {
     currentFile = null;
+    currentActiveFileName = "";
     fileInput.value = "";
     filePreview.classList.add("hidden");
     btnStartTranscribe.disabled = true;
@@ -532,7 +544,8 @@ document.addEventListener("DOMContentLoaded", () => {
       resultSection.classList.remove("hidden");
       if (completedBadge) completedBadge.classList.remove("hidden");
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
-      resultFileName.textContent = data.filename || currentFile.name;
+      currentActiveFileName = data.filename || (currentFile ? currentFile.name : "") || "audio.mp3";
+      resultFileName.textContent = currentActiveFileName;
       resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
@@ -542,7 +555,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Guardar automáticamente en el historial local ("Mis Transcripciones")
       saveToHistory({
-        filename: data.filename || currentFile.name,
+        filename: currentActiveFileName,
         audioType: currentAudioType || "clase",
         transcript: rawTranscriptText,
         timestamp: Date.now()
@@ -631,7 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function downloadFile(content, extension, mime) {
     if (!content) return;
-    const baseName = (currentFile ? currentFile.name.replace(/\.[^/.]+$/, "") : "transcripcion");
+    const baseName = getActiveBaseName();
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -646,7 +659,8 @@ document.addEventListener("DOMContentLoaded", () => {
   btnDownloadDocx.addEventListener("click", async () => {
     const textToExport = getCurrentTranscriptText();
     if (!textToExport) return;
-    const baseName = (currentFile ? currentFile.name.replace(/\.[^/.]+$/, "") : "transcripcion");
+    const baseName = getActiveBaseName();
+    const fullName = getActiveFullName();
     try {
       btnDownloadDocx.disabled = true;
       const originalText = btnDownloadDocx.innerHTML;
@@ -656,7 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filename: currentFile ? currentFile.name : "transcripcion",
+          filename: fullName,
           transcript: textToExport
         })
       });
@@ -686,7 +700,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const textToExport = getCurrentTranscriptText();
       if (!textToExport) return;
 
-      const baseName = (currentFile ? currentFile.name.replace(/\.[^/.]+$/, "") : "transcripcion");
+      const baseName = getActiveBaseName();
       const originalHtml = btnDownloadPdf.innerHTML;
       btnDownloadPdf.disabled = true;
       btnDownloadPdf.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div> <span>Generando PDF...</span>';
@@ -707,7 +721,7 @@ document.addEventListener("DOMContentLoaded", () => {
         headerDiv.style.paddingBottom = "12px";
         headerDiv.style.marginBottom = "20px";
         headerDiv.innerHTML = `
-          <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${currentFile ? currentFile.name : 'Documento'}</h1>
+          <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${baseName}</h1>
           <p style="font-size: 9pt; color: #64748b; margin: 0; font-style: italic;">Registro textual académico • FacuHelps</p>
         `;
         printContainer.appendChild(headerDiv);
@@ -1105,6 +1119,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function deleteFromHistory(index) {
+    try {
+      let list = getHistory();
+      if (index >= 0 && index < list.length) {
+        list.splice(index, 1);
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+        updateHistoryBadge();
+        renderHistoryList();
+      }
+    } catch (e) {
+      console.warn("Error al eliminar del historial:", e);
+    }
+  }
+
   function updateHistoryBadge() {
     const list = getHistory();
     if (historyBadgeCount) {
@@ -1194,6 +1222,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <button type="button" class="btn-download-pdf-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 transition" title="Descargar PDF" data-index="${index}">
               <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
             </button>
+            <button type="button" class="btn-delete-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-rose-600 hover:border-rose-300 dark:hover:border-rose-800 transition" title="Eliminar de historial" data-index="${index}">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
         </div>
 
@@ -1205,7 +1236,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Cargar en visor
       card.querySelector(".btn-load-history").addEventListener("click", () => {
         rawTranscriptText = item.transcript || "";
-        resultFileName.textContent = item.filename || "audio.mp3";
+        currentActiveFileName = item.filename || "audio.mp3";
+        resultFileName.textContent = currentActiveFileName;
         resultModelBadge.textContent = "Historial local";
         transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
         resultSection.classList.remove("hidden");
@@ -1241,7 +1273,7 @@ document.addEventListener("DOMContentLoaded", () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              filename: item.filename || "transcripcion",
+              filename: item.filename || "transcripcion.mp3",
               transcript: item.transcript || ""
             })
           });
@@ -1273,7 +1305,7 @@ document.addEventListener("DOMContentLoaded", () => {
           printContainer.style.background = "#ffffff";
           printContainer.innerHTML = `
             <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px;">
-              <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${item.filename || 'Documento'}</h1>
+              <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${baseName}</h1>
               <p style="font-size: 9pt; color: #64748b; margin: 0; font-style: italic;">Registro textual académico • FacuHelps</p>
             </div>
             <div>${formatTranscript(item.transcript || '')}</div>
@@ -1295,6 +1327,15 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("Error al descargar PDF: " + err.message);
         }
       });
+
+      // Borrar elemento individual del historial
+      const btnDelete = card.querySelector(".btn-delete-history");
+      if (btnDelete) {
+        btnDelete.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteFromHistory(index);
+        });
+      }
 
       historyListContainer.appendChild(card);
     });

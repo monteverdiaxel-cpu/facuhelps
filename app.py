@@ -599,7 +599,7 @@ async def export_docx(req: DocxExportRequest):
     
     # Encabezado / Título principal
     title = doc.add_paragraph()
-    title_run = title.add_run(f"Transcripción: {req.filename}")
+    title_run = title.add_run(f"Transcripción: {clean_base}")
     title_run.font.name = "Calibri"
     title_run.font.size = Pt(16)
     title_run.font.bold = True
