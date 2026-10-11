@@ -1616,6 +1616,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const orgPdfEmpty = document.getElementById("orgPdfEmpty");
   const orgPdfCountLabel = document.getElementById("orgPdfCountLabel");
 
+  // Elementos del Bloc de Notas de la Cursada
+  const orgSubjectNotesCard = document.getElementById("orgSubjectNotesCard");
+  const subjectNotesTextarea = document.getElementById("subjectNotesTextarea");
+  const btnSaveSubjectNotes = document.getElementById("btnSaveSubjectNotes");
+  const subjectNotesSavedBadge = document.getElementById("subjectNotesSavedBadge");
+  let subjectNotesSaveTimeout = null;
+  let subjectNotesBadgeTimeout = null;
+
   // Elementos del Visor de PDF Integrado
   const modalPdfViewer = document.getElementById("modalPdfViewer");
   const pdfViewerFrame = document.getElementById("pdfViewerFrame");
@@ -1735,6 +1743,38 @@ document.addEventListener("DOMContentLoaded", () => {
         putReq.onsuccess = () => resolve(putReq.result);
         putReq.onerror = () => reject(putReq.error);
       };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
+  async function dbUpdateSubjectNotes(subjectId, text) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("subjects", "readwrite");
+      const store = tx.objectStore("subjects");
+      const getReq = store.get(Number(subjectId));
+      getReq.onsuccess = () => {
+        const item = getReq.result;
+        if (!item) {
+          reject(new Error("Materia no encontrada"));
+          return;
+        }
+        item.notes = text;
+        const putReq = store.put(item);
+        putReq.onsuccess = () => resolve(putReq.result);
+        putReq.onerror = () => reject(putReq.error);
+      };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
+  async function dbGetSubject(subjectId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("subjects", "readonly");
+      const store = tx.objectStore("subjects");
+      const getReq = store.get(Number(subjectId));
+      getReq.onsuccess = () => resolve(getReq.result || null);
       getReq.onerror = () => reject(getReq.error);
     });
   }
@@ -1970,6 +2010,16 @@ document.addEventListener("DOMContentLoaded", () => {
       orgSubjectDetailView.classList.remove("hidden");
       btnNewSubjectModal.classList.add("hidden");
       btnNewFolderModal.classList.remove("hidden");
+
+      // Cargar bloc de notas de la materia actual
+      if (subjectNotesTextarea) {
+        // Asegurarse de tener el registro actualizado de la materia
+        const freshSubj = await dbGetSubject(currentSubject.id);
+        if (freshSubj) {
+          currentSubject = freshSubj;
+        }
+        subjectNotesTextarea.value = (currentSubject && currentSubject.notes) ? currentSubject.notes : "";
+      }
 
       if (!currentFolder) {
         // Vista directa de la Materia
@@ -2432,6 +2482,54 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       modalEditFolder.classList.add("hidden");
       renderOrganizerView();
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Eventos: Bloc de Notas de la Cursada
+  // ─────────────────────────────────────────────────────────────
+  async function saveCurrentSubjectNotes() {
+    if (!currentSubject || !subjectNotesTextarea) return;
+    const text = subjectNotesTextarea.value;
+    try {
+      await dbUpdateSubjectNotes(currentSubject.id, text);
+      currentSubject.notes = text;
+
+      // Feedback visual temporal
+      if (subjectNotesSavedBadge) {
+        subjectNotesSavedBadge.classList.remove("hidden");
+        subjectNotesSavedBadge.classList.add("inline-flex");
+        if (subjectNotesBadgeTimeout) clearTimeout(subjectNotesBadgeTimeout);
+        subjectNotesBadgeTimeout = setTimeout(() => {
+          subjectNotesSavedBadge.classList.add("hidden");
+          subjectNotesSavedBadge.classList.remove("inline-flex");
+        }, 2200);
+      }
+    } catch (err) {
+      console.error("Error al guardar notas de la materia:", err);
+    }
+  }
+
+  if (btnSaveSubjectNotes) {
+    btnSaveSubjectNotes.addEventListener("click", () => {
+      if (subjectNotesSaveTimeout) clearTimeout(subjectNotesSaveTimeout);
+      saveCurrentSubjectNotes();
+    });
+  }
+
+  if (subjectNotesTextarea) {
+    // Guardado al perder el foco (blur)
+    subjectNotesTextarea.addEventListener("blur", () => {
+      if (subjectNotesSaveTimeout) clearTimeout(subjectNotesSaveTimeout);
+      saveCurrentSubjectNotes();
+    });
+
+    // Guardado automático con debounce (1000ms tras dejar de escribir)
+    subjectNotesTextarea.addEventListener("input", () => {
+      if (subjectNotesSaveTimeout) clearTimeout(subjectNotesSaveTimeout);
+      subjectNotesSaveTimeout = setTimeout(() => {
+        saveCurrentSubjectNotes();
+      }, 1000);
     });
   }
 
