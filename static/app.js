@@ -3787,6 +3787,59 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.lucide) window.lucide.createIcons();
   }
 
+  // Matriz de afinidad de materias para recomendación de orientaciones
+  const ORIENTATION_AFFINITIES = {
+    periodismo: ["p1", "p2", "p3", "p4"],
+    opinion_publica: ["c3", "s3", "c8"],
+    politicas: ["c7", "c9", "s1"],
+    comunitaria: ["s4", "c6", "pr3"],
+    educacion: ["s5", "c1", "c2"],
+    digital: ["pr2", "c4", "p4"]
+  };
+
+  // Cálculo inteligente de recomendaciones
+  function getRecommendedOrientations() {
+    const recommended = new Set();
+    const scores = {};
+
+    Object.entries(ORIENTATION_AFFINITIES).forEach(([oriId, subjects]) => {
+      let passedCount = 0;
+      let totalGrade = 0;
+      let countWithGrade = 0;
+
+      subjects.forEach(subId => {
+        const gradeObj = careerPlanData.grades[subId];
+        if (gradeObj) {
+          const evalRes = calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade);
+          if (evalRes.isPassed) {
+            passedCount++;
+            if (evalRes.score !== null) {
+              totalGrade += evalRes.score;
+              countWithGrade++;
+            }
+          }
+        }
+      });
+
+      const avg = countWithGrade > 0 ? (totalGrade / countWithGrade) : (passedCount > 0 ? 7 : 0);
+      const score = passedCount > 0 ? (passedCount * 10 + avg) : 0;
+      scores[oriId] = { passedCount, avg, score };
+    });
+
+    const maxScore = Math.max(...Object.values(scores).map(s => s.score));
+
+    if (maxScore > 0) {
+      Object.entries(scores).forEach(([oriId, s]) => {
+        // Recomendada si tiene 2 o más materias clave aprobadas, o 1 con nota destacada (>= 7), o puntaje más alto
+        if (s.passedCount >= 2 || (s.passedCount >= 1 && s.avg >= 7) || (s.score === maxScore && s.passedCount > 0)) {
+          recommended.add(oriId);
+        }
+      });
+    }
+
+    return recommended;
+  }
+
   function renderCareerOrientations() {
     const grid = document.getElementById("careerOrientationsGrid");
     const badge = document.getElementById("careerCurrentOrientationBadge");
@@ -3801,22 +3854,30 @@ document.addEventListener("DOMContentLoaded", () => {
       label.textContent = `Orientación: ${currentOri.name}`;
     }
 
+    const recommendedOrientations = getRecommendedOrientations();
+
     CAREER_ORIENTATIONS.forEach(ori => {
       const isSelected = ori.id === careerPlanData.selectedOrientation;
+      const isRecommended = recommendedOrientations.has(ori.id);
       const card = document.createElement("div");
       card.className = `p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer ${
         isSelected 
           ? "border-[#ffc700] bg-blue-50/70 dark:bg-blue-950/40 shadow-sm ring-1 ring-[#ffc700]" 
-          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
+          : isRecommended
+            ? "border-amber-300 dark:border-amber-600/70 bg-amber-50/25 dark:bg-amber-950/20 hover:border-amber-400 shadow-2xs"
+            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
       }`;
 
       card.innerHTML = `
         <div>
-          <div class="flex items-center justify-between gap-2 mb-2.5">
-            <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-[#001b44] text-[#ffc700]' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'} flex items-center justify-center shrink-0">
+          <div class="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
+            <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-[#001b44] text-[#ffc700]' : isRecommended ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'} flex items-center justify-center shrink-0">
               <i data-lucide="${ori.icon}" class="w-4 h-4"></i>
             </div>
-            ${isSelected ? '<span class="text-[10px] bg-[#001b44] text-[#ffc700] font-bold px-2 py-0.5 rounded-full">Seleccionada</span>' : ''}
+            <div class="flex items-center gap-1.5 flex-wrap justify-end">
+              ${isRecommended ? '<span class="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-600/80 flex items-center gap-1">💡 Recomendada según tus materias y notas</span>' : ''}
+              ${isSelected ? '<span class="text-[10px] bg-[#001b44] text-[#ffc700] font-bold px-2 py-0.5 rounded-full">Seleccionada</span>' : ''}
+            </div>
           </div>
           <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100">${ori.name}</h4>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">${ori.description}</p>
@@ -3843,6 +3904,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       grid.appendChild(card);
     });
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   function createSubjectCardElement(subject) {
@@ -3945,6 +4008,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }`;
 
       updateCareerMetrics();
+      renderCareerOrientations();
     };
 
     inputP1.addEventListener("change", handleGradeChange);
