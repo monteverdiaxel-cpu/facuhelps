@@ -72,11 +72,16 @@ def parse_api_keys(key_string: Optional[str]) -> list[str]:
             result.append(k)
     return result
 
-def is_rate_limit_error(exc: Exception) -> bool:
-    """Detecta si un error es de cuota/tasa excedida (429 / RESOURCE_EXHAUSTED)."""
+def is_rotatable_error(exc: Exception) -> bool:
+    """Detecta si un error amerita rotar a la siguiente API Key del pool:
+    - Cuota o tasa excedida: 429, RESOURCE_EXHAUSTED, quota, rate limit
+    - Clave inválida, mal copiada o revocada: 400, 403, API_KEY_INVALID, PERMISSION_DENIED, invalid api key
+    """
     err_str = str(exc).lower()
     return any(keyword in err_str for keyword in [
-        "429", "resource_exhausted", "quota", "rate limit", "ratelimit"
+        "429", "resource_exhausted", "quota", "rate limit", "ratelimit",
+        "400", "403", "api_key_invalid", "permission_denied", "invalid api key",
+        "api key not valid", "unauthenticated", "forbidden"
     ])
 
 def is_retriable_error(exc: Exception) -> bool:
@@ -296,16 +301,16 @@ async def transcribe_audio(
 
             except Exception as exc:
                 last_error = exc
-                # Si ocurre 429 o RESOURCE_EXHAUSTED y hay más claves disponibles, rotar a la siguiente
-                if is_rate_limit_error(exc) and k_idx + 1 < len(key_pool):
+                # Si ocurre 429, 400, 403, cuota agotada o clave inválida y hay más claves disponibles, rotar a la siguiente
+                if is_rotatable_error(exc) and k_idx + 1 < len(key_pool):
                     time.sleep(1)
                     continue
-                # Si no es error de cuota o es la última clave, propagar el error
+                # Si no es error rotativo o es la última clave, propagar el error
                 if isinstance(exc, HTTPException):
                     raise exc
                 if k_idx + 1 >= len(key_pool):
                     raise exc
-                # Para cualquier otro error irrecuperable en esta key si no es 429, relanzar
+                # Para cualquier otro error irrecuperable en esta key si no es rotativo, relanzar
                 raise exc
 
             finally:
@@ -410,7 +415,7 @@ async def summarize_transcript(req: SummarizeRequest):
                     )
                     break
                 except Exception as api_err:
-                    if is_rate_limit_error(api_err):
+                    if is_rotatable_error(api_err):
                         if current_k_idx + 1 < len(key_pool):
                             should_rotate = True
                             break

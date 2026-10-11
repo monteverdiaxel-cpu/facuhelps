@@ -1161,6 +1161,9 @@ document.addEventListener("DOMContentLoaded", () => {
         isSummaryCollapsed = false;
         if (summaryChevron) summaryChevron.style.transform = "rotate(0deg)";
 
+        // Persistir el resumen en el historial local asociado al archivo activo
+        updateHistorySummary(currentActiveFileName, rawSummaryText);
+
         summarySection.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
       } catch (err) {
@@ -1224,6 +1227,26 @@ document.addEventListener("DOMContentLoaded", () => {
       updateHistoryBadge();
     } catch (e) {
       console.warn("Error al guardar en historial:", e);
+    }
+  }
+
+  function updateHistorySummary(targetFilename, summaryText) {
+    if (!targetFilename || !summaryText) return;
+    try {
+      let list = getHistory();
+      let updated = false;
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].filename === targetFilename) {
+          list[i].summary = summaryText;
+          updated = true;
+          break;
+        }
+      }
+      if (updated) {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+      }
+    } catch (e) {
+      console.warn("Error al actualizar resumen en historial:", e);
     }
   }
 
@@ -1308,6 +1331,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
               <i data-lucide="file-audio" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0"></i>
               <span class="truncate">${item.filename || 'audio.mp3'}</span>
+              ${item.summary ? '<span class="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded-md shrink-0">⚡ Con resumen</span>' : ''}
             </h4>
             <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
               <span>${dateStr}</span>
@@ -1351,7 +1375,20 @@ document.addEventListener("DOMContentLoaded", () => {
         resultSection.classList.remove("hidden");
         if (completedBadge) completedBadge.classList.remove("hidden");
         if (streamingIndicator) streamingIndicator.classList.add("hidden");
-        if (summarySection) summarySection.classList.add("hidden");
+
+        // Si ya cuenta con un resumen previo guardado en el historial, cargarlo directamente
+        if (item.summary && item.summary.trim()) {
+          rawSummaryText = item.summary;
+          summaryContent.innerHTML = formatSummaryMarkdown(rawSummaryText);
+          summarySection.classList.remove("hidden");
+          summaryBody.classList.remove("hidden");
+          isSummaryCollapsed = false;
+          if (summaryChevron) summaryChevron.style.transform = "rotate(0deg)";
+        } else {
+          rawSummaryText = "";
+          if (summarySection) summarySection.classList.add("hidden");
+        }
+
         historyModal.classList.add("hidden");
         resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
       });
