@@ -51,15 +51,19 @@
 
 /* Estilos de los pasos del proceso */
 .step-item.active .step-icon {
-  background-color: #e0e7ff;
-  color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background-color: #1e3a8a;
+  color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
   animation: pulseIcon 1.5s infinite;
 }
 
 .step-item.active .step-text {
-  color: #1e1b4b;
+  color: #172554;
   font-weight: 600;
+}
+
+.dark .step-item.active .step-text {
+  color: #fde047;
 }
 
 .step-item.completed .step-icon {

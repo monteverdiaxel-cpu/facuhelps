@@ -1511,20 +1511,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setTabButtonState(btn, isActive, activeTitle, inactiveSub, activeSub) {
     if (!btn) return;
-    const activeClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs transition-all shadow-xs text-left";
+    const activeClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-amber-400/60 dark:border-amber-400/50 bg-blue-950/10 dark:bg-blue-950/40 text-blue-950 dark:text-amber-200 font-semibold text-xs transition-all shadow-xs text-left";
     const inactiveClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
 
     btn.className = isActive ? activeClasses : inactiveClasses;
     const iconContainer = btn.querySelector("div");
     if (iconContainer) {
       iconContainer.className = isActive
-        ? "w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"
+        ? "w-8 h-8 rounded-lg bg-blue-900/10 dark:bg-blue-900/40 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0"
         : "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
     }
     const subText = btn.querySelector("div.text-\\[11px\\]");
     if (subText) {
       subText.className = isActive
-        ? "hidden lg:block text-[11px] text-indigo-600/70 dark:text-indigo-400/70 font-normal truncate"
+        ? "hidden lg:block text-[11px] text-blue-900/70 dark:text-amber-300/70 font-normal truncate"
         : "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
     }
   }
