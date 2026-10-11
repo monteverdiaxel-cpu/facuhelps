@@ -1662,6 +1662,18 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentViewerFileItem = null;
   let currentPdfSummaryText = "";
 
+  // Modal Dedicado de Resumen Académico a Ancho Completo
+  const modalSummaryViewer = document.getElementById("modalSummaryViewer");
+  const summaryViewerDocTitle = document.getElementById("summaryViewerDocTitle");
+  const btnSummaryModalCopy = document.getElementById("btnSummaryModalCopy");
+  const btnSummaryModalDownloadDocx = document.getElementById("btnSummaryModalDownloadDocx");
+  const btnSummaryModalDownloadPdf = document.getElementById("btnSummaryModalDownloadPdf");
+  const btnSummaryModalClose = document.getElementById("btnSummaryModalClose");
+  const summaryModalLoading = document.getElementById("summaryModalLoading");
+  const summaryModalContent = document.getElementById("summaryModalContent");
+  let currentSummaryViewerFileItem = null;
+  let currentSummaryViewerText = "";
+
   // Modales del Organizador
   const modalSubject = document.getElementById("modalSubject");
   const formNewSubject = document.getElementById("formNewSubject");
@@ -2292,11 +2304,12 @@ document.addEventListener("DOMContentLoaded", () => {
       format: "a4"
     });
 
+    // Dimensiones A4 en mm: 210 x 297, márgenes estándar de 20 mm
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
-    const bottomMargin = margin;
+    const bottomMargin = 20;
 
     let y = margin;
 
@@ -2309,112 +2322,172 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
 
-    // Encabezado institucional
+    // Filtro de caracteres rotos y emojis (🎯, 💡, 🧭, 📌, ❓, etc.)
+    function sanitizeText(str) {
+      if (!str) return "";
+      return str
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1FA00}-\u{1FAFF}]|[\u{FE00}-\u{FE0F}]/gu, "")
+        .replace(/[🎯💡🧭📌❓⚡📖📄📑✓✔✕✖•]/g, "")
+        .replace(/[^\x00-\x7F\u00C0-\u017F\s.,;:!?¿¡'"`()\[\]\-_+\/=%$@#&]/g, "")
+        .trim();
+    }
+
+    const cleanDocTitle = sanitizeText(docTitle) || "Lectura Académica";
+    const cleanSubject = sanitizeText(subjectName) || "";
+
+    // --- ENCABEZADO INSTITUCIONAL ---
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(15);
     doc.setTextColor(0, 27, 68); // #001b44 Azul Xeneize
-    const titleLines = doc.splitTextToSize(`Resumen Académico: ${docTitle}`, contentWidth);
-    doc.text(titleLines, margin, y + 4);
-    y += (titleLines.length * 6);
+    const headerTitleLines = doc.splitTextToSize(`Resumen Académico: ${cleanDocTitle}`, contentWidth);
+    doc.text(headerTitleLines, margin, y + 2);
+    y += (headerTitleLines.length * 6.5);
 
     doc.setFont("helvetica", "italic");
-    doc.setFontSize(9);
+    doc.setFontSize(9.5);
     doc.setTextColor(100, 116, 139); // slate-500
-    const metaText = subjectName ? `Comu UBA • Materia: ${subjectName} • FacuHelps` : "Comu UBA • Análisis Académico • FacuHelps";
-    doc.text(metaText, margin, y + 2);
-    y += 5;
+    const metaText = cleanSubject 
+      ? `Comu UBA - Materia: ${cleanSubject} - FacuHelps` 
+      : "Comu UBA - Análisis Académico - FacuHelps";
+    doc.text(metaText, margin, y + 1);
+    y += 5.5;
 
-    // Línea divisoria
+    // Línea divisoria sobria
     doc.setDrawColor(203, 213, 225); // slate-300
     doc.setLineWidth(0.4);
-    doc.line(margin, y + 2, margin + contentWidth, y + 2);
+    doc.line(margin, y + 1, margin + contentWidth, y + 1);
     y += 8;
 
-    // Parsear líneas del resumen en markdown
-    const lines = (summaryMarkdown || "").split("\n");
-    const normalLineHeight = 5.2;
+    // --- PARSEO Y MAQUETACIÓN DEL CONTENIDO ---
+    const rawLines = (summaryMarkdown || "").split("\n");
+    const normalLineHeight = 5.3;
 
-    for (let i = 0; i < lines.length; i++) {
-      let rawLine = lines[i].trim();
+    for (let i = 0; i < rawLines.length; i++) {
+      let rawLine = rawLines[i].trim();
       if (!rawLine) {
         y += 2.5;
         continue;
       }
 
-      // Título sección ###
-      if (rawLine.startsWith("###")) {
-        const headerText = rawLine.replace(/^###\s*/, "").replace(/\*\*/g, "").trim();
+      // 1. Títulos de sección ### o ##
+      if (rawLine.startsWith("###") || rawLine.startsWith("##")) {
+        // Remover numerales, emojis y asteriscos
+        let headerText = rawLine.replace(/^#+\s*/, "").replace(/\*\*/g, "");
+        headerText = sanitizeText(headerText);
+        if (!headerText) continue;
+
+        checkPageBreak(15);
+        y += 4; // Espaciado previo antes de una sección nueva
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11.5);
+        doc.setTextColor(0, 27, 68); // #001b44 Azul Xeneize
+        const hLines = doc.splitTextToSize(headerText, contentWidth);
+        doc.text(hLines, margin, y);
+        y += (hLines.length * 5.8) + 2;
+        continue;
+      }
+
+      // 2. Preguntas de parcial numeradas (ej: "1. Pregunta...", "**1. Pregunta...**")
+      const questionMatch = rawLine.match(/^(\*{0,2}(\d+[\.\)]\s*[^\n:]+:?)\*{0,2})\s*(.*)$/);
+      if (questionMatch && (questionMatch[2].length > 10 || rawLine.toLowerCase().includes("pregunta") || rawLine.toLowerCase().includes("respuesta"))) {
+        const qTitle = sanitizeText(questionMatch[1].replace(/\*\*/g, ""));
+        const qRest = sanitizeText(questionMatch[3].replace(/\*\*/g, ""));
+
         checkPageBreak(12);
-        y += 3;
+        y += 2.5;
+
+        // Pregunta en negrita
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(0, 27, 68); // #001b44
-        const hLines = doc.splitTextToSize(headerText, contentWidth);
-        doc.text(hLines, margin, y);
-        y += (hLines.length * 5.5) + 1.5;
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42); // slate-900
+        const qLines = doc.splitTextToSize(qTitle, contentWidth);
+        doc.text(qLines, margin, y);
+        y += (qLines.length * normalLineHeight);
+
+        // Si la respuesta venía en la misma línea
+        if (qRest) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9.5);
+          doc.setTextColor(51, 65, 85); // slate-700
+          const indent = 5;
+          const aLines = doc.splitTextToSize(qRest, contentWidth - indent);
+          checkPageBreak(aLines.length * normalLineHeight);
+          doc.text(aLines, margin + indent, y);
+          y += (aLines.length * normalLineHeight) + 1.5;
+        }
         continue;
       }
 
-      // Título sección ##
-      if (rawLine.startsWith("##")) {
-        const headerText = rawLine.replace(/^##\s*/, "").replace(/\*\*/g, "").trim();
-        checkPageBreak(14);
-        y += 4;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(0, 27, 68);
-        const hLines = doc.splitTextToSize(headerText, contentWidth);
-        doc.text(hLines, margin, y);
-        y += (hLines.length * 6) + 2;
+      // 3. Respuesta esperada identificada en línea propia (ej: "- Respuesta esperada: ...")
+      if (/^[-*]?\s*(?:Respuesta(?:\s+sintética|\s+esperada)?|Rta):/i.test(rawLine)) {
+        let cleanAns = rawLine.replace(/^[-*]\s*/, "").replace(/\*\*/g, "");
+        cleanAns = sanitizeText(cleanAns);
+        if (!cleanAns) continue;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(51, 65, 85); // slate-700
+        const indent = 5;
+        const ansLines = doc.splitTextToSize(cleanAns, contentWidth - indent);
+        checkPageBreak(ansLines.length * normalLineHeight);
+        doc.text(ansLines, margin + indent, y);
+        y += (ansLines.length * normalLineHeight) + 2;
         continue;
       }
 
-      // Viñeta - o *
+      // 4. Viñeta - o *
       const bulletMatch = rawLine.match(/^[-*]\s+(.*)$/);
       if (bulletMatch) {
-        const bulletText = bulletMatch[1].replace(/\*\*/g, "").replace(/\*/g, "").trim();
+        let bulletText = bulletMatch[1].replace(/\*\*/g, "").replace(/\*/g, "");
+        bulletText = sanitizeText(bulletText);
+        if (!bulletText) continue;
+
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
+        doc.setFontSize(9.8);
         doc.setTextColor(30, 41, 59);
 
         const bLines = doc.splitTextToSize(bulletText, contentWidth - 6);
         checkPageBreak(bLines.length * normalLineHeight);
 
-        // Dibujar viñeta
-        doc.circle(margin + 2, y - 1, 0.6, "F");
-        doc.text(bLines, margin + 6, y);
-        y += (bLines.length * normalLineHeight) + 1;
+        // Viñeta geométrica limpia
+        doc.circle(margin + 2, y - 1, 0.55, "F");
+        doc.text(bLines, margin + 5.5, y);
+        y += (bLines.length * normalLineHeight) + 1.2;
         continue;
       }
 
-      // Párrafo normal
-      const cleanLine = rawLine.replace(/\*\*/g, "").replace(/\*/g, "");
+      // 5. Párrafo común
+      let cleanP = rawLine.replace(/\*\*/g, "").replace(/\*/g, "");
+      cleanP = sanitizeText(cleanP);
+      if (!cleanP) continue;
+
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
+      doc.setFontSize(9.8);
       doc.setTextColor(30, 41, 59);
 
-      const pLines = doc.splitTextToSize(cleanLine, contentWidth);
+      const pLines = doc.splitTextToSize(cleanP, contentWidth);
       checkPageBreak(pLines.length * normalLineHeight);
       doc.text(pLines, margin, y);
       y += (pLines.length * normalLineHeight) + 1.5;
     }
 
-    // Pie de página con numeración
+    // Pie de página con numeración elegante
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(8.5);
       doc.setTextColor(148, 163, 184); // slate-400
       doc.text(
-        `Página ${p} de ${totalPages} • Resumen Académico Comu UBA`,
+        `Página ${p} de ${totalPages} - Resumen Académico Comu UBA`,
         pageWidth / 2,
-        pageHeight - 8,
+        pageHeight - 10,
         { align: "center" }
       );
     }
 
-    const safeFilename = `${docTitle}_resumen_academico.pdf`.replace(/[\\/:*?"<>|]/g, "_");
+    const safeFilename = `${cleanDocTitle.replace(/\s+/g, "_")}_resumen_academico.pdf`.replace(/[\\/:*?"<>|]/g, "_");
     doc.save(safeFilename);
   }
 
@@ -2485,10 +2558,220 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Modal Dedicado de Resumen Académico a Ancho Completo
+  // ─────────────────────────────────────────────────────────────
+  function openSummaryDedicatedViewer(fileItem) {
+    if (!fileItem) return;
+    currentSummaryViewerFileItem = fileItem;
+    currentSummaryViewerText = (fileItem.summary && fileItem.summary.trim()) ? fileItem.summary : "";
+
+    if (summaryViewerDocTitle) {
+      const parentName = currentFolder 
+        ? `${currentSubject ? currentSubject.name + ' > ' : ''}${currentFolder.name}` 
+        : (currentSubject ? currentSubject.name : 'Materia');
+      summaryViewerDocTitle.textContent = `${fileItem.name} • ${parentName}`;
+    }
+
+    if (modalSummaryViewer) {
+      modalSummaryViewer.classList.remove("hidden");
+    }
+
+    if (currentSummaryViewerText) {
+      if (summaryModalLoading) summaryModalLoading.classList.add("hidden");
+      if (summaryModalContent) {
+        summaryModalContent.classList.remove("hidden");
+        summaryModalContent.innerHTML = formatSummaryMarkdown(currentSummaryViewerText);
+      }
+    } else {
+      // Si aún no tiene resumen, generarlo de inmediato
+      generateSummaryForDedicatedViewer(fileItem);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function closeSummaryDedicatedViewer() {
+    if (modalSummaryViewer) {
+      modalSummaryViewer.classList.add("hidden");
+    }
+    if (summaryModalContent) {
+      summaryModalContent.innerHTML = "";
+    }
+    currentSummaryViewerFileItem = null;
+    currentSummaryViewerText = "";
+  }
+
+  async function generateSummaryForDedicatedViewer(fileItem) {
+    if (!fileItem || !fileItem.blob) {
+      alert("No se encontró el archivo para generar el resumen.");
+      closeSummaryDedicatedViewer();
+      return;
+    }
+
+    if (summaryModalLoading) summaryModalLoading.classList.remove("hidden");
+    if (summaryModalContent) {
+      summaryModalContent.classList.add("hidden");
+      summaryModalContent.innerHTML = "";
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutos
+
+    try {
+      const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
+      const formData = new FormData();
+      formData.append("file", fileItem.blob, fileItem.name);
+      if (apiKey) formData.append("api_key", apiKey);
+
+      const res = await fetch("/api/summarize-pdf", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Error del servidor HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const summaryText = data.summary || "";
+
+      // Persistir resumen en IndexedDB
+      fileItem.summary = summaryText;
+      await dbUpdateFileSummary(fileItem.id, summaryText);
+
+      currentSummaryViewerText = summaryText;
+
+      if (summaryModalLoading) summaryModalLoading.classList.add("hidden");
+      if (summaryModalContent) {
+        summaryModalContent.classList.remove("hidden");
+        summaryModalContent.innerHTML = formatSummaryMarkdown(summaryText);
+      }
+
+      // Actualizar listado de archivos en la materia
+      renderFilesList();
+
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (summaryModalLoading) summaryModalLoading.classList.add("hidden");
+
+      if (err.name === "AbortError") {
+        alert("El documento es muy extenso o el servidor demoró en responder. Por favor reintentá.");
+      } else {
+        alert("Error al generar resumen académico: " + err.message);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  if (btnSummaryModalClose) {
+    btnSummaryModalClose.addEventListener("click", closeSummaryDedicatedViewer);
+  }
+
+  if (modalSummaryViewer) {
+    modalSummaryViewer.addEventListener("click", (e) => {
+      if (e.target === modalSummaryViewer) closeSummaryDedicatedViewer();
+    });
+  }
+
+  if (btnSummaryModalCopy) {
+    btnSummaryModalCopy.addEventListener("click", async () => {
+      if (!currentSummaryViewerText) return;
+      try {
+        await navigator.clipboard.writeText(currentSummaryViewerText);
+        const originalHtml = btnSummaryModalCopy.innerHTML;
+        btnSummaryModalCopy.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> <span class="text-emerald-700 font-medium">¡Copiado!</span>';
+        setTimeout(() => {
+          btnSummaryModalCopy.innerHTML = originalHtml;
+          if (window.lucide) window.lucide.createIcons();
+        }, 2000);
+      } catch (err) {
+        alert("No se pudo copiar el resumen al portapapeles.");
+      }
+    });
+  }
+
+  if (btnSummaryModalDownloadDocx) {
+    btnSummaryModalDownloadDocx.addEventListener("click", async () => {
+      if (!currentSummaryViewerText) {
+        alert("Aún no hay resumen generado para descargar.");
+        return;
+      }
+      const baseName = (currentSummaryViewerFileItem ? currentSummaryViewerFileItem.name.replace(/\.[^/.]+$/, "") : "resumen_academico");
+      const originalText = btnSummaryModalDownloadDocx.innerHTML;
+
+      try {
+        btnSummaryModalDownloadDocx.disabled = true;
+        btnSummaryModalDownloadDocx.innerHTML = '<div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div> <span>Exportando...</span>';
+
+        const res = await fetch("/api/export-summary-docx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: `${baseName}_resumen_academico`,
+            summary: currentSummaryViewerText
+          })
+        });
+
+        if (!res.ok) throw new Error("Error en el servidor al exportar el resumen a Word.");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${baseName}_resumen_academico.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("No se pudo exportar a Word: " + err.message);
+      } finally {
+        btnSummaryModalDownloadDocx.disabled = false;
+        btnSummaryModalDownloadDocx.innerHTML = originalText;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
+  if (btnSummaryModalDownloadPdf) {
+    btnSummaryModalDownloadPdf.addEventListener("click", () => {
+      if (!currentSummaryViewerText) {
+        alert("Aún no hay resumen generado para descargar.");
+        return;
+      }
+      const baseName = (currentSummaryViewerFileItem ? currentSummaryViewerFileItem.name.replace(/\.[^/.]+$/, "") : "resumen_academico");
+      const subjectName = (currentSubject ? currentSubject.name : "");
+      const originalText = btnSummaryModalDownloadPdf.innerHTML;
+
+      try {
+        btnSummaryModalDownloadPdf.disabled = true;
+        btnSummaryModalDownloadPdf.innerHTML = '<div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div> <span>Exportando...</span>';
+
+        generateAcademicSummaryPdf(currentSummaryViewerText, baseName, subjectName);
+      } catch (err) {
+        alert("No se pudo generar el archivo PDF del resumen: " + err.message);
+      } finally {
+        btnSummaryModalDownloadPdf.disabled = false;
+        btnSummaryModalDownloadPdf.innerHTML = originalText;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
   // Cerrar visor con tecla Escape
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modalPdfViewer && !modalPdfViewer.classList.contains("hidden")) {
-      closeEmbeddedPdfViewer();
+    if (e.key === "Escape") {
+      if (modalSummaryViewer && !modalSummaryViewer.classList.contains("hidden")) {
+        closeSummaryDedicatedViewer();
+      } else if (modalPdfViewer && !modalPdfViewer.classList.contains("hidden")) {
+        closeEmbeddedPdfViewer();
+      }
     }
   });
 
@@ -2927,12 +3210,9 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-      // Resumen IA desde la tarjeta del PDF
+      // Resumen IA desde la tarjeta del PDF (Abre el Modal Dedicado de Resumen a Ancho Completo)
       row.querySelector(".btn-summarize-pdf-card").addEventListener("click", () => {
-        openEmbeddedPdfViewer(fileItem, true);
-        if (!fileItem.summary) {
-          generateAcademicSummaryForCurrentPdf();
-        }
+        openSummaryDedicatedViewer(fileItem);
       });
 
       // Ver / Leer PDF dentro del visor embebido integrado

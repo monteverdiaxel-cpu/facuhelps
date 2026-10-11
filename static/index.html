@@ -1294,6 +1294,91 @@
     </div>
   </div>
 
+  <!-- Modal Dedicado de Resumen Académico a Ancho Completo (Lectura Cómoda y Estudio) -->
+  <div id="modalSummaryViewer" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col p-2 sm:p-4 animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col flex-1 overflow-hidden w-full max-w-5xl mx-auto">
+      
+      <!-- Cabecera del Modal de Resumen -->
+      <div class="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/90 shrink-0">
+        <!-- Izquierda: '📖 Resumen Académico' con la insignia 'Comu UBA' y nombre de la lectura -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
+            <i data-lucide="book-open" class="w-4 h-4 text-[#ffc700]"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
+                <span>📖 Resumen Académico</span>
+                <span class="bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full text-[11px]">Comu UBA</span>
+              </h3>
+            </div>
+            <p id="summaryViewerDocTitle" class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+              Lectura académica
+            </p>
+          </div>
+        </div>
+
+        <!-- Derecha: Botonera unificada en blanco/neutro: 1. Copiar, 2. Word, 3. PDF, 4. Cerrar -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button 
+            id="btnSummaryModalCopy" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Copiar texto del resumen"
+          >
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">📋 Copiar</span>
+            <span class="sm:hidden">Copiar</span>
+          </button>
+          <button 
+            id="btnSummaryModalDownloadDocx" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Descargar resumen académico en Word (.docx)"
+          >
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+            <span class="hidden sm:inline">📄 Descargar Word (.docx)</span>
+            <span class="sm:hidden">Word</span>
+          </button>
+          <button 
+            id="btnSummaryModalDownloadPdf" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Descargar resumen académico en PDF"
+          >
+            <i data-lucide="file-down" class="w-3.5 h-3.5 text-slate-600 dark:text-slate-300"></i>
+            <span class="hidden sm:inline">📑 Descargar PDF</span>
+            <span class="sm:hidden">PDF</span>
+          </button>
+          <button 
+            id="btnSummaryModalClose" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Cerrar resumen"
+          >
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <span>✕ Cerrar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Estado de carga en caso de generar a demanda -->
+      <div id="summaryModalLoading" class="hidden p-12 flex flex-col items-center justify-center text-center my-auto">
+        <div class="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Generando análisis académico...</h4>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+          Extrayendo tesis central, categorías teóricas, citas textuales y preguntas de examen tipo parcial con Gemini Flash.
+        </p>
+      </div>
+
+      <!-- Cuerpo del Resumen Académico a Ancho Completo (Tipografía cómoda para estudiar) -->
+      <div id="summaryModalContent" class="flex-1 overflow-y-auto p-6 sm:p-10 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed space-y-4 font-sans max-w-4xl mx-auto w-full custom-scrollbar">
+        <!-- Renderizado dinámico de Markdown -->
+      </div>
+
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
