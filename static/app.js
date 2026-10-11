@@ -334,10 +334,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!btn) return;
       const check = btn.querySelector(".check-icon");
       if (isActive) {
-        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs";
+        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 transition font-medium text-xs text-left shadow-xs";
         if (check) check.classList.remove("hidden");
       } else {
-        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left";
+        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 transition font-medium text-xs text-left";
         if (check) check.classList.add("hidden");
       }
     };
