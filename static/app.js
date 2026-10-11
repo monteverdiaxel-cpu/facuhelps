@@ -694,7 +694,175 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Exportación directa a PDF con tipografía académica y márgenes limpios
+  // Exportación directa a PDF vectorial con jsPDF nativo y tipografía académica
+  function generateVectorPdf(transcriptText, baseName) {
+    // Verificar disponibilidad de jsPDF (vía window.jspdf.jsPDF o window.jsPDF)
+    const { jsPDF } = window.jspdf || window;
+    if (!jsPDF) {
+      throw new Error("La librería jsPDF no está disponible en este momento.");
+    }
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    // Dimensiones A4 en mm: 210 x 297
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15; // 15 mm estándar
+    const contentWidth = pageWidth - (margin * 2);
+    const bottomMargin = margin;
+
+    let y = margin;
+
+    // Helper para verificar y agregar salto de página si es necesario
+    function checkPageBreak(neededHeight) {
+      if (y + neededHeight > pageHeight - bottomMargin) {
+        doc.addPage();
+        y = margin;
+        return true;
+      }
+      return false;
+    }
+
+    // --- ENCABEZADO DE LA PÁGINA 1 (Exactamente en el margen superior de 15 mm) ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42); // slate-900
+
+    // Dividir título si excede el ancho disponible
+    const titleLines = doc.splitTextToSize(`Transcripción: ${baseName}`, contentWidth);
+    doc.text(titleLines, margin, y + 4);
+    y += (titleLines.length * 7);
+
+    // Subtítulo con metadata
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9.5);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text("Registro textual académico • FacuHelps", margin, y + 2);
+    y += 5;
+
+    // Línea separadora sutil
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.4);
+    doc.line(margin, y + 2, margin + contentWidth, y + 2);
+    y += 8;
+
+    // --- RENDERIZADO DEL CUERPO DE LA TRANSCRIPCIÓN ---
+    doc.setFontSize(10.5);
+    const lineHeight = 5.2;
+    const paragraphSpacing = 3.5;
+
+    const rawParas = (transcriptText || "").split("\n").map(p => p.trim()).filter(p => p.length > 0);
+
+    for (const pText of rawParas) {
+      // Analizar si el párrafo comienza con una etiqueta de orador (ej: **Docente:**, **Persona 1:**)
+      const speakerMatch = pText.match(/^(\*\*[^\*]+?\*\*:?|\b[A-Za-zÁÉÍÓÚáéíóúñÑ0-9\s]+:)\s*(.*)$/);
+
+      if (speakerMatch) {
+        let speakerLabel = speakerMatch[1].replace(/\*\*/g, "").trim();
+        if (!speakerLabel.endsWith(":")) speakerLabel += ":";
+        const speechContent = (speakerMatch[2] || "").replace(/\*\*/g, "").trim();
+
+        // Calcular ancho del prefijo del orador
+        doc.setFont("helvetica", "bold");
+        const speakerWidth = doc.getTextWidth(speakerLabel + " ");
+
+        // Primer intento: imprimir orador y medir texto restante
+        doc.setFont("helvetica", "normal");
+        const availableFirstLineWidth = contentWidth - speakerWidth;
+
+        // Comprobar si cabe al menos una línea
+        checkPageBreak(lineHeight * 2);
+
+        if (availableFirstLineWidth > 35 && speechContent) {
+          // Imprimir etiqueta de orador
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(15, 23, 42);
+          doc.text(speakerLabel, margin, y);
+
+          // Texto complementario en la misma línea y subsecuentes
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(30, 41, 59);
+
+          // Dividir palabras para colocar la primera parte al lado del orador
+          const words = speechContent.split(" ");
+          let firstLine = "";
+          let remainingIndex = 0;
+
+          for (let i = 0; i < words.length; i++) {
+            const test = firstLine ? (firstLine + " " + words[i]) : words[i];
+            if (doc.getTextWidth(test) <= availableFirstLineWidth) {
+              firstLine = test;
+              remainingIndex = i + 1;
+            } else {
+              break;
+            }
+          }
+
+          if (firstLine) {
+            doc.text(firstLine, margin + speakerWidth, y);
+            y += lineHeight;
+
+            const remainingText = words.slice(remainingIndex).join(" ").trim();
+            if (remainingText) {
+              const remainingLines = doc.splitTextToSize(remainingText, contentWidth);
+              for (const line of remainingLines) {
+                checkPageBreak(lineHeight);
+                doc.text(line, margin, y);
+                y += lineHeight;
+              }
+            }
+          } else {
+            y += lineHeight;
+            const fullLines = doc.splitTextToSize(speechContent, contentWidth);
+            for (const line of fullLines) {
+              checkPageBreak(lineHeight);
+              doc.text(line, margin, y);
+              y += lineHeight;
+            }
+          }
+        } else {
+          // Si el orador ocupa casi todo el renglón, poner orador en su propia línea
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(15, 23, 42);
+          doc.text(speakerLabel, margin, y);
+          y += lineHeight;
+
+          if (speechContent) {
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(30, 41, 59);
+            const remainingLines = doc.splitTextToSize(speechContent, contentWidth);
+            for (const line of remainingLines) {
+              checkPageBreak(lineHeight);
+              doc.text(line, margin, y);
+              y += lineHeight;
+            }
+          }
+        }
+      } else {
+        // Párrafo sin etiqueta de orador: texto corrido en párrafos limpios
+        const cleanP = pText.replace(/\*\*/g, "");
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(30, 41, 59);
+
+        const lines = doc.splitTextToSize(cleanP, contentWidth);
+        for (const line of lines) {
+          checkPageBreak(lineHeight);
+          doc.text(line, margin, y);
+          y += lineHeight;
+        }
+      }
+
+      // Espaciado entre párrafos
+      y += paragraphSpacing;
+    }
+
+    doc.save(`${baseName}_transcripcion.pdf`);
+  }
+
   if (btnDownloadPdf) {
     btnDownloadPdf.addEventListener("click", async () => {
       const textToExport = getCurrentTranscriptText();
@@ -706,67 +874,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnDownloadPdf.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div> <span>Generando PDF...</span>';
 
       try {
-        // Crear contenedor temporal para el renderizado del PDF con estilo académico
-        const printContainer = document.createElement("div");
-        printContainer.style.fontFamily = "'Calibri', 'Arial', sans-serif";
-        printContainer.style.fontSize = "11pt";
-        printContainer.style.lineHeight = "1.35";
-        printContainer.style.color = "#0f172a";
-        printContainer.style.padding = "20px";
-        printContainer.style.background = "#ffffff";
-
-        // Título del documento
-        const headerDiv = document.createElement("div");
-        headerDiv.style.borderBottom = "2px solid #e2e8f0";
-        headerDiv.style.paddingBottom = "12px";
-        headerDiv.style.marginBottom = "20px";
-        headerDiv.innerHTML = `
-          <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${baseName}</h1>
-          <p style="font-size: 9pt; color: #64748b; margin: 0; font-style: italic;">Registro textual académico • FacuHelps</p>
-        `;
-        printContainer.appendChild(headerDiv);
-
-        // Contenido de la transcripción
-        const bodyDiv = document.createElement("div");
-        bodyDiv.innerHTML = formatTranscript(textToExport);
-        // Asegurar estilos de lectura limpia en párrafos
-        bodyDiv.querySelectorAll("p").forEach((p) => {
-          p.style.marginBottom = "10px";
-          p.style.lineHeight = "1.35";
-        });
-        printContainer.appendChild(bodyDiv);
-
-        if (window.html2pdf) {
-          const opt = {
-            margin: [15, 15, 15, 15], // mm
-            filename: `${baseName}_transcripcion.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          };
-          await window.html2pdf().set(opt).from(printContainer).save();
-        } else {
-          // Fallback a ventana de impresión nativa si no cargó la biblioteca
-          const printWindow = window.open("", "_blank");
-          printWindow.document.write(`
-            <html>
-              <head>
-                <title>${baseName}_transcripcion</title>
-                <style>
-                  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.35; padding: 25mm 20mm; color: #0f172a; }
-                  h1 { font-size: 16pt; margin-bottom: 4px; }
-                  p { margin-bottom: 8px; }
-                  strong { font-weight: bold; }
-                </style>
-              </head>
-              <body>
-                ${printContainer.innerHTML}
-                <script>window.onload = function() { window.print(); window.close(); }<\/script>
-              </body>
-            </html>
-          `);
-          printWindow.document.close();
-        }
+        generateVectorPdf(textToExport, baseName);
       } catch (err) {
         alert("No se pudo generar el archivo PDF: " + err.message);
       } finally {
@@ -1293,36 +1401,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       // Descargar PDF
-      card.querySelector(".btn-download-pdf-history").addEventListener("click", async () => {
+      card.querySelector(".btn-download-pdf-history").addEventListener("click", () => {
         const baseName = (item.filename || "transcripcion").replace(/\.[^/.]+$/, "");
         try {
-          const printContainer = document.createElement("div");
-          printContainer.style.fontFamily = "'Calibri', 'Arial', sans-serif";
-          printContainer.style.fontSize = "11pt";
-          printContainer.style.lineHeight = "1.35";
-          printContainer.style.color = "#0f172a";
-          printContainer.style.padding = "20px";
-          printContainer.style.background = "#ffffff";
-          printContainer.innerHTML = `
-            <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px;">
-              <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${baseName}</h1>
-              <p style="font-size: 9pt; color: #64748b; margin: 0; font-style: italic;">Registro textual académico • FacuHelps</p>
-            </div>
-            <div>${formatTranscript(item.transcript || '')}</div>
-          `;
-
-          if (window.html2pdf) {
-            const opt = {
-              margin: [15, 15, 15, 15],
-              filename: `${baseName}_transcripcion.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            await window.html2pdf().set(opt).from(printContainer).save();
-          } else {
-            downloadFile(item.transcript || "", "txt", "text/plain;charset=utf-8");
-          }
+          generateVectorPdf(item.transcript || "", baseName);
         } catch (err) {
           alert("Error al descargar PDF: " + err.message);
         }
