@@ -73,21 +73,23 @@ def parse_api_keys(key_string: Optional[str]) -> list[str]:
     return result
 
 def is_rotatable_error(exc: Exception) -> bool:
-    """Detecta si un error amerita rotar a la siguiente API Key del pool:
+    """Detecta si un error amerita rotar a la siguiente API Key del pool inmediatamente:
     - Cuota o tasa excedida: 429, RESOURCE_EXHAUSTED, quota, rate limit
     - Clave inválida, mal copiada o revocada: 400, 403, API_KEY_INVALID, PERMISSION_DENIED, invalid api key
-    - Errores de servidor de Google AI Studio: 500, INTERNAL
+    - Errores de servidor y sobrecarga de Google AI Studio: 500, 503, INTERNAL, UNAVAILABLE, high demand, overloaded
     """
     err_str = str(exc).lower()
     return any(keyword in err_str for keyword in [
         "429", "resource_exhausted", "quota", "rate limit", "ratelimit",
         "400", "403", "api_key_invalid", "permission_denied", "invalid api key",
         "api key not valid", "unauthenticated", "forbidden",
-        "500", "internal"
+        "500", "internal",
+        "503", "unavailable", "servererror", "high demand", "overloaded",
+        "temporary", "service unavailable"
     ])
 
 def is_retriable_error(exc: Exception) -> bool:
-    """Detecta si un error de Gemini es temporal/500/503/UNAVAILABLE/INTERNAL para reintentar con backoff."""
+    """Detecta si un error de Gemini es temporal/500/503/UNAVAILABLE/INTERNAL para reintentar localmente si no hay más claves."""
     err_str = str(exc).lower()
     return any(keyword in err_str for keyword in [
         "503", "unavailable", "servererror", "high demand", "overloaded",
@@ -276,9 +278,12 @@ async def transcribe_audio(
                 if google_file.state.name != "ACTIVE":
                     raise Exception(f"Google no pudo procesar el archivo. Estado: {google_file.state.name}")
 
-                # 4. Ejecutar generate_content con ese mismo client (hasta 3 reintentos si hay 503)
+                # 4. Ejecutar generate_content con ese mismo client
+                # Si hay más claves en el pool y ocurre sobrecarga/error de servidor (503/500), rotar de inmediato
+                has_next_key = (k_idx + 1 < len(key_pool))
+                max_attempts = 1 if has_next_key else 3
                 response = None
-                for attempt in range(1, 4):
+                for attempt in range(1, max_attempts + 1):
                     try:
                         response = client.models.generate_content(
                             model=target_model_name,
@@ -290,8 +295,10 @@ async def transcribe_audio(
                         )
                         break
                     except Exception as gen_err:
-                        if is_retriable_error(gen_err) and attempt < 3:
-                            time.sleep(3)
+                        if is_rotatable_error(gen_err) and has_next_key:
+                            raise gen_err
+                        if is_retriable_error(gen_err) and attempt < max_attempts:
+                            time.sleep(2)
                         else:
                             raise gen_err
 
@@ -304,7 +311,7 @@ async def transcribe_audio(
 
             except Exception as exc:
                 last_error = exc
-                # Si ocurre 429, 400, 403, cuota agotada o clave inválida y hay más claves disponibles, rotar a la siguiente
+                # Si ocurre 429, 400, 403, 500, 503, cuota agotada, sobrecarga o error de servidor y hay más claves, rotar de inmediato
                 if is_rotatable_error(exc) and k_idx + 1 < len(key_pool):
                     time.sleep(1)
                     continue
@@ -408,8 +415,10 @@ async def summarize_transcript(req: SummarizeRequest):
             curr_key = key_pool[current_k_idx]
             curr_client = genai.Client(api_key=curr_key)
             should_rotate = False
+            has_next = (current_k_idx + 1 < len(key_pool))
+            max_attempts = 1 if has_next else 3
 
-            for attempt in range(1, 4):
+            for attempt in range(1, max_attempts + 1):
                 try:
                     response = curr_client.models.generate_content(
                         model=target_model,
@@ -419,13 +428,13 @@ async def summarize_transcript(req: SummarizeRequest):
                     break
                 except Exception as api_err:
                     if is_rotatable_error(api_err):
-                        if current_k_idx + 1 < len(key_pool):
+                        if has_next:
                             should_rotate = True
                             break
                         else:
                             raise api_err
-                    elif is_retriable_error(api_err) and attempt < 3:
-                        await asyncio.sleep(3)
+                    elif is_retriable_error(api_err) and attempt < max_attempts:
+                        await asyncio.sleep(2)
                     else:
                         raise api_err
 
