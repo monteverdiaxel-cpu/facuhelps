@@ -5,6 +5,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Elementos DOM
+  const btnHistoryToggle = document.getElementById("btnHistoryToggle");
+  const historyBadgeCount = document.getElementById("historyBadgeCount");
+  const historyModal = document.getElementById("historyModal");
+  const btnCloseHistoryModal = document.getElementById("btnCloseHistoryModal");
+  const btnClearHistory = document.getElementById("btnClearHistory");
+  const historyListContainer = document.getElementById("historyListContainer");
+
   const btnThemeToggle = document.getElementById("btnThemeToggle");
   const themeIcon = document.getElementById("themeIcon");
 
@@ -24,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileName = document.getElementById("fileName");
   const fileDetails = document.getElementById("fileDetails");
   const btnRemoveFile = document.getElementById("btnRemoveFile");
+  const inputKeywords = document.getElementById("inputKeywords");
   const btnStartTranscribe = document.getElementById("btnStartTranscribe");
 
   // Reproductor de Audio Integrado
@@ -63,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCopy = document.getElementById("btnCopy");
   const btnCopyLabel = document.getElementById("btnCopyLabel");
   const btnDownloadDocx = document.getElementById("btnDownloadDocx");
+  const btnDownloadPdf = document.getElementById("btnDownloadPdf");
   const btnDownloadTxt = document.getElementById("btnDownloadTxt");
   const btnDownloadMd = document.getElementById("btnDownloadMd");
   const searchTranscript = document.getElementById("searchTranscript");
@@ -87,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Estado de la app
   let currentFile = null;
-  let currentAudioType = "clase"; // 'clase' | 'entrevista' | 'continuo'
+  let currentAudioType = "clase"; // 'clase' | 'entrevista' | 'continuo' | 'radio'
   let timerInterval = null;
   let startTime = null;
   let rawTranscriptText = "";
@@ -488,6 +497,9 @@ document.addEventListener("DOMContentLoaded", () => {
       formData.append("audio_type", currentAudioType || "clase");
       const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
       formData.append("model_name", selectedModelName);
+      if (inputKeywords && inputKeywords.value.trim()) {
+        formData.append("keywords", inputKeywords.value.trim());
+      }
 
       const response = await fetch("/api/transcribe", {
         method: "POST",
@@ -597,6 +609,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
+      // Guardar automáticamente en el historial local ("Mis Transcripciones")
+      if (rawTranscriptText && rawTranscriptText.trim()) {
+        saveToHistory({
+          filename: (currentFile ? currentFile.name : "audio_transcripcion.mp3"),
+          audioType: currentAudioType || "clase",
+          transcript: rawTranscriptText,
+          timestamp: Date.now()
+        });
+      }
+
     } catch (err) {
       showError("Error al transcribir", err.message);
     } finally {
@@ -607,11 +629,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Obtener el texto actual de la transcripción (refleja ediciones directas del usuario)
+  function getCurrentTranscriptText() {
+    if (transcriptContent && transcriptContent.innerText) {
+      const text = transcriptContent.innerText.trim();
+      if (text) return text;
+    }
+    return rawTranscriptText || "";
+  }
+
   // 8. Acciones de Exportación
   btnCopy.addEventListener("click", async () => {
-    if (!rawTranscriptText) return;
+    const textToCopy = getCurrentTranscriptText();
+    if (!textToCopy) return;
     try {
-      await navigator.clipboard.writeText(rawTranscriptText);
+      await navigator.clipboard.writeText(textToCopy);
       btnCopyLabel.textContent = "¡Copiado!";
       btnCopy.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-200");
       setTimeout(() => {
@@ -638,7 +670,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btnDownloadDocx.addEventListener("click", async () => {
-    if (!rawTranscriptText) return;
+    const textToExport = getCurrentTranscriptText();
+    if (!textToExport) return;
     const baseName = (currentFile ? currentFile.name.replace(/\.[^/.]+$/, "") : "transcripcion");
     try {
       btnDownloadDocx.disabled = true;
@@ -650,7 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           filename: currentFile ? currentFile.name : "transcripcion",
-          transcript: rawTranscriptText
+          transcript: textToExport
         })
       });
 
@@ -673,12 +706,95 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Exportación directa a PDF con tipografía académica y márgenes limpios
+  if (btnDownloadPdf) {
+    btnDownloadPdf.addEventListener("click", async () => {
+      const textToExport = getCurrentTranscriptText();
+      if (!textToExport) return;
+
+      const baseName = (currentFile ? currentFile.name.replace(/\.[^/.]+$/, "") : "transcripcion");
+      const originalHtml = btnDownloadPdf.innerHTML;
+      btnDownloadPdf.disabled = true;
+      btnDownloadPdf.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div> <span>Generando PDF...</span>';
+
+      try {
+        // Crear contenedor temporal para el renderizado del PDF con estilo académico
+        const printContainer = document.createElement("div");
+        printContainer.style.fontFamily = "'Calibri', 'Arial', sans-serif";
+        printContainer.style.fontSize = "11pt";
+        printContainer.style.lineHeight = "1.35";
+        printContainer.style.color = "#0f172a";
+        printContainer.style.padding = "20px";
+        printContainer.style.background = "#ffffff";
+
+        // Título del documento
+        const headerDiv = document.createElement("div");
+        headerDiv.style.borderBottom = "2px solid #e2e8f0";
+        headerDiv.style.paddingBottom = "12px";
+        headerDiv.style.marginBottom = "20px";
+        headerDiv.innerHTML = `
+          <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${currentFile ? currentFile.name : 'Documento'}</h1>
+          <p style="font-size: 9pt; color: #64748b; margin: 0; font-style: italic;">Registro textual académico • FacuHelps</p>
+        `;
+        printContainer.appendChild(headerDiv);
+
+        // Contenido de la transcripción
+        const bodyDiv = document.createElement("div");
+        bodyDiv.innerHTML = formatTranscript(textToExport);
+        // Asegurar estilos de lectura limpia en párrafos
+        bodyDiv.querySelectorAll("p").forEach((p) => {
+          p.style.marginBottom = "10px";
+          p.style.lineHeight = "1.35";
+        });
+        printContainer.appendChild(bodyDiv);
+
+        if (window.html2pdf) {
+          const opt = {
+            margin: [15, 15, 15, 15], // mm
+            filename: `${baseName}_transcripcion.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          await window.html2pdf().set(opt).from(printContainer).save();
+        } else {
+          // Fallback a ventana de impresión nativa si no cargó la biblioteca
+          const printWindow = window.open("", "_blank");
+          printWindow.document.write(`
+            <html>
+              <head>
+                <title>${baseName}_transcripcion</title>
+                <style>
+                  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.35; padding: 25mm 20mm; color: #0f172a; }
+                  h1 { font-size: 16pt; margin-bottom: 4px; }
+                  p { margin-bottom: 8px; }
+                  strong { font-weight: bold; }
+                </style>
+              </head>
+              <body>
+                ${printContainer.innerHTML}
+                <script>window.onload = function() { window.print(); window.close(); }<\/script>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+        }
+      } catch (err) {
+        alert("No se pudo generar el archivo PDF: " + err.message);
+      } finally {
+        btnDownloadPdf.disabled = false;
+        btnDownloadPdf.innerHTML = originalHtml;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
   btnDownloadTxt.addEventListener("click", () => {
-    downloadFile(rawTranscriptText, "txt", "text/plain;charset=utf-8");
+    downloadFile(getCurrentTranscriptText(), "txt", "text/plain;charset=utf-8");
   });
 
   btnDownloadMd.addEventListener("click", () => {
-    downloadFile(rawTranscriptText, "md", "text/markdown;charset=utf-8");
+    downloadFile(getCurrentTranscriptText(), "md", "text/markdown;charset=utf-8");
   });
 
   // 9. Renombrar Oradores
@@ -985,6 +1101,265 @@ document.addEventListener("DOMContentLoaded", () => {
     transcriptContent.innerHTML = formatted.replace(regex, `<mark class="highlight">$1</mark>`);
   });
 
+  // 12. Historial Local ("Mis Transcripciones")
+  const HISTORY_STORAGE_KEY = "facuhelps_transcriptions_history";
+  const MAX_HISTORY_ITEMS = 10;
+
+  function getHistory() {
+    try {
+      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.warn("Error al leer historial:", e);
+      return [];
+    }
+  }
+
+  function saveToHistory(item) {
+    try {
+      let list = getHistory();
+      // Agregar al inicio
+      list.unshift(item);
+      // Mantener hasta 10 elementos
+      if (list.length > MAX_HISTORY_ITEMS) {
+        list = list.slice(0, MAX_HISTORY_ITEMS);
+      }
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+      updateHistoryBadge();
+    } catch (e) {
+      console.warn("Error al guardar en historial:", e);
+    }
+  }
+
+  function updateHistoryBadge() {
+    const list = getHistory();
+    if (historyBadgeCount) {
+      if (list.length > 0) {
+        historyBadgeCount.textContent = list.length;
+        historyBadgeCount.classList.remove("hidden");
+      } else {
+        historyBadgeCount.classList.add("hidden");
+      }
+    }
+  }
+
+  function getAudioTypeLabel(type) {
+    switch (type) {
+      case "clase": return "🎓 Clase / Teórico";
+      case "entrevista": return "🎙️ Entrevista";
+      case "radio": return "📻 Radio / Podcast";
+      case "continuo": return "📝 Texto continuo";
+      default: return type;
+    }
+  }
+
+  function renderHistoryList() {
+    const list = getHistory();
+    if (!historyListContainer) return;
+
+    historyListContainer.innerHTML = "";
+
+    if (btnClearHistory) {
+      if (list.length > 0) {
+        btnClearHistory.classList.remove("hidden");
+      } else {
+        btnClearHistory.classList.add("hidden");
+      }
+    }
+
+    if (list.length === 0) {
+      historyListContainer.innerHTML = `
+        <div class="py-12 px-4 text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
+            <i data-lucide="inbox" class="w-6 h-6"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">No hay transcripciones guardadas aún</p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            Cada vez que transcribas un audio con éxito, se guardará aquí automáticamente.
+          </p>
+        </div>
+      `;
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    list.forEach((item, index) => {
+      const dateStr = item.timestamp 
+        ? new Date(item.timestamp).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" }) 
+        : "Fecha reciente";
+
+      const previewText = (item.transcript || "").slice(0, 150).replace(/\*\*/g, "") + "...";
+
+      const card = document.createElement("div");
+      card.className = "p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:border-indigo-300 dark:hover:border-indigo-600/50 transition space-y-2.5";
+      card.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="overflow-hidden">
+            <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+              <i data-lucide="file-audio" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0"></i>
+              <span class="truncate">${item.filename || 'audio.mp3'}</span>
+            </h4>
+            <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <span>${dateStr}</span>
+              <span>•</span>
+              <span class="font-medium text-indigo-600 dark:text-indigo-400">${getAudioTypeLabel(item.audioType)}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" class="btn-load-history px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-1 shadow-2xs" data-index="${index}">
+              <i data-lucide="eye" class="w-3 h-3"></i>
+              <span>Cargar en visor</span>
+            </button>
+            <button type="button" class="btn-copy-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition" title="Copiar transcripción" data-index="${index}">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" class="btn-download-docx-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition" title="Descargar Word (.docx)" data-index="${index}">
+              <i data-lucide="file-type" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" class="btn-download-pdf-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 transition" title="Descargar PDF" data-index="${index}">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-2 italic bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg border border-slate-200/60 dark:border-slate-800/80 font-sans">
+          "${previewText}"
+        </p>
+      `;
+
+      // Cargar en visor
+      card.querySelector(".btn-load-history").addEventListener("click", () => {
+        rawTranscriptText = item.transcript || "";
+        resultFileName.textContent = item.filename || "audio.mp3";
+        resultModelBadge.textContent = "Historial local";
+        transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+        resultSection.classList.remove("hidden");
+        if (completedBadge) completedBadge.classList.remove("hidden");
+        if (streamingIndicator) streamingIndicator.classList.add("hidden");
+        if (summarySection) summarySection.classList.add("hidden");
+        historyModal.classList.add("hidden");
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      // Copiar
+      card.querySelector(".btn-copy-history").addEventListener("click", async (e) => {
+        try {
+          await navigator.clipboard.writeText(item.transcript || "");
+          const btn = e.currentTarget;
+          const orig = btn.innerHTML;
+          btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>';
+          if (window.lucide) window.lucide.createIcons();
+          setTimeout(() => {
+            btn.innerHTML = orig;
+            if (window.lucide) window.lucide.createIcons();
+          }, 1500);
+        } catch (err) {
+          alert("No se pudo copiar.");
+        }
+      });
+
+      // Descargar Word
+      card.querySelector(".btn-download-docx-history").addEventListener("click", async () => {
+        const baseName = (item.filename || "transcripcion").replace(/\.[^/.]+$/, "");
+        try {
+          const res = await fetch("/api/export-docx", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filename: item.filename || "transcripcion",
+              transcript: item.transcript || ""
+            })
+          });
+          if (!res.ok) throw new Error("Error en el servidor");
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${baseName}_transcripcion.docx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          alert("Error al descargar Word: " + err.message);
+        }
+      });
+
+      // Descargar PDF
+      card.querySelector(".btn-download-pdf-history").addEventListener("click", async () => {
+        const baseName = (item.filename || "transcripcion").replace(/\.[^/.]+$/, "");
+        try {
+          const printContainer = document.createElement("div");
+          printContainer.style.fontFamily = "'Calibri', 'Arial', sans-serif";
+          printContainer.style.fontSize = "11pt";
+          printContainer.style.lineHeight = "1.35";
+          printContainer.style.color = "#0f172a";
+          printContainer.style.padding = "20px";
+          printContainer.style.background = "#ffffff";
+          printContainer.innerHTML = `
+            <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px;">
+              <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">Transcripción: ${item.filename || 'Documento'}</h1>
+              <p style="font-size: 9pt; color: #64748b; margin: 0; font-style: italic;">Registro textual académico • FacuHelps</p>
+            </div>
+            <div>${formatTranscript(item.transcript || '')}</div>
+          `;
+
+          if (window.html2pdf) {
+            const opt = {
+              margin: [15, 15, 15, 15],
+              filename: `${baseName}_transcripcion.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            await window.html2pdf().set(opt).from(printContainer).save();
+          } else {
+            downloadFile(item.transcript || "", "txt", "text/plain;charset=utf-8");
+          }
+        } catch (err) {
+          alert("Error al descargar PDF: " + err.message);
+        }
+      });
+
+      historyListContainer.appendChild(card);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  if (btnHistoryToggle) {
+    btnHistoryToggle.addEventListener("click", () => {
+      renderHistoryList();
+      historyModal.classList.remove("hidden");
+    });
+  }
+
+  if (btnCloseHistoryModal) {
+    btnCloseHistoryModal.addEventListener("click", () => {
+      historyModal.classList.add("hidden");
+    });
+  }
+
+  if (historyModal) {
+    historyModal.addEventListener("click", (e) => {
+      if (e.target === historyModal) {
+        historyModal.classList.add("hidden");
+      }
+    });
+  }
+
+  if (btnClearHistory) {
+    btnClearHistory.addEventListener("click", () => {
+      if (confirm("¿Estás seguro de vaciar el historial de transcripciones guardadas?")) {
+        localStorage.removeItem(HISTORY_STORAGE_KEY);
+        updateHistoryBadge();
+        renderHistoryList();
+      }
+    });
+  }
+
   // Inicializar
   loadInitialConfig();
+  updateHistoryBadge();
 });

@@ -125,7 +125,7 @@ REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
 7. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
 8. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
 
-def get_user_prompt(audio_type: str = "clase") -> str:
+def get_user_prompt(audio_type: str = "clase", keywords: Optional[str] = None) -> str:
     if audio_type == "continuo":
         speaker_hint = """- Formato: SIN etiquetas de orador (nada de Docente, Estudiante ni Hablante). Transcribe el texto de corrido organizado únicamente en párrafos limpios con puntos y aparte claros."""
     elif audio_type == "entrevista":
@@ -135,9 +135,14 @@ def get_user_prompt(audio_type: str = "clase") -> str:
     else:
         speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Docente:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**) (CERO nombres propios). Si es clase magistral individual, párrafos limpios con puntos y aparte sin prefijos."""
 
+    keywords_instruction = ""
+    clean_kw = (keywords or "").strip()
+    if clean_kw:
+        keywords_instruction = f"\n- Atención a vocabulario específico: asegúrate de transcribir con correcta ortografía los siguientes términos y autores si aparecen en el audio: {clean_kw}."
+
     return f"""Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
 - Filtro de audio difícil: aísla la voz principal ante eco de aula, lejanía o ruido de fondo, reconstruyendo las palabras con fidelidad según el contexto temático.
-{speaker_hint}
+{speaker_hint}{keywords_instruction}
 - Limpieza de habla: elimina tartamudeos ("de de") y muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
 - Comillas: usa exclusivamente comillas dobles comunes ("..."), nunca angulares («...»).
 - PROHIBIDO incluir marcas de tiempo [mm:ss] o timestamps.
@@ -157,7 +162,8 @@ async def transcribe_audio(
     file: UploadFile = File(...),
     api_key: Optional[str] = Form(None),
     model_name: Optional[str] = Form("gemini-3.8-flash"),
-    audio_type: Optional[str] = Form("clase")
+    audio_type: Optional[str] = Form("clase"),
+    keywords: Optional[str] = Form(None)
 ):
     # 1. Resolver Pool de API Keys
     key_pool = parse_api_keys(api_key)
@@ -191,8 +197,9 @@ async def transcribe_audio(
     if effective_audio_type not in ["clase", "entrevista", "continuo", "radio"]:
         effective_audio_type = "clase"
 
+    clean_keywords = (keywords or "").strip()
     system_instruction = get_system_instruction(effective_audio_type)
-    user_prompt = get_user_prompt(effective_audio_type)
+    user_prompt = get_user_prompt(effective_audio_type, clean_keywords)
 
     # Streaming directo a disco en chunks de 1 MB para consumo mínimo de RAM (evita OOM en Render)
     temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
