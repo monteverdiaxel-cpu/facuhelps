@@ -1502,14 +1502,44 @@ document.addEventListener("DOMContentLoaded", () => {
   const viewOrganizer = document.getElementById("viewOrganizer");
 
   function switchTab(target) {
+    const activeClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs transition-all shadow-xs text-left";
+    const inactiveClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
+
     if (target === "transcriptor") {
-      tabBtnTranscriptor.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold text-xs transition";
-      tabBtnOrganizer.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium text-xs transition";
+      tabBtnTranscriptor.className = activeClasses;
+      tabBtnOrganizer.className = inactiveClasses;
+
+      // Actualizar contenedor del icono de transcriptor (activo)
+      const transIcon = tabBtnTranscriptor.querySelector("div");
+      if (transIcon) transIcon.className = "w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0";
+      // Subtítulo activo
+      const transSub = tabBtnTranscriptor.querySelector("div.text-\\[11px\\]");
+      if (transSub) transSub.className = "hidden lg:block text-[11px] text-indigo-600/70 dark:text-indigo-400/70 font-normal truncate";
+
+      // Icono de organizador (inactivo)
+      const orgIcon = tabBtnOrganizer.querySelector("div");
+      if (orgIcon) orgIcon.className = "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
+      const orgSub = tabBtnOrganizer.querySelector("div.text-\\[11px\\]");
+      if (orgSub) orgSub.className = "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
+
       viewTranscriptor.classList.remove("hidden");
       viewOrganizer.classList.add("hidden");
     } else if (target === "organizer") {
-      tabBtnOrganizer.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold text-xs transition";
-      tabBtnTranscriptor.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium text-xs transition";
+      tabBtnOrganizer.className = activeClasses;
+      tabBtnTranscriptor.className = inactiveClasses;
+
+      // Icono de organizador (activo)
+      const orgIcon = tabBtnOrganizer.querySelector("div");
+      if (orgIcon) orgIcon.className = "w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0";
+      const orgSub = tabBtnOrganizer.querySelector("div.text-\\[11px\\]");
+      if (orgSub) orgSub.className = "hidden lg:block text-[11px] text-indigo-600/70 dark:text-indigo-400/70 font-normal truncate";
+
+      // Icono de transcriptor (inactivo)
+      const transIcon = tabBtnTranscriptor.querySelector("div");
+      if (transIcon) transIcon.className = "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
+      const transSub = tabBtnTranscriptor.querySelector("div.text-\\[11px\\]");
+      if (transSub) transSub.className = "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
+
       viewOrganizer.classList.remove("hidden");
       viewTranscriptor.classList.add("hidden");
       // Cargar vista del organizador
