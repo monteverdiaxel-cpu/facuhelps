@@ -19,11 +19,12 @@
         extend: {
           colors: {
             brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#1d4ed8',
+              600: '#1e3a8a',
+              700: '#172554',
+              gold: '#f59e0b',
             }
           }
         }
@@ -31,13 +32,13 @@
     }
   </script>
 </head>
-<body class="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased selection:bg-indigo-100 dark:selection:bg-indigo-900 selection:text-indigo-900 dark:selection:text-indigo-100 transition-colors duration-200">
+<body class="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased selection:bg-amber-100 dark:selection:bg-blue-900 selection:text-blue-950 dark:selection:text-amber-200 transition-colors duration-200">
 
   <!-- Header -->
   <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 transition-colors">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
       <div id="btnHeaderLogoHome" class="flex items-center gap-2 sm:gap-3 min-w-0 shrink cursor-pointer group" title="Ir al Inicio">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-900 via-blue-800 to-blue-950 border border-amber-400/30 shadow-sm shadow-blue-950/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-900 border border-amber-400/30 shadow-sm shadow-blue-950/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
           <i data-lucide="audio-lines" class="w-4 h-4 sm:w-5 sm:h-5 text-amber-400"></i>
         </div>
         <div class="min-w-0">
@@ -49,10 +50,10 @@
       <!-- Acciones en el Header: Mis Transcripciones + Modo Oscuro + API Key (compactos en móviles) -->
       <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <button id="btnHistoryToggle" type="button" aria-label="Mis Transcripciones" class="flex items-center gap-1 sm:gap-1.5 text-xs font-medium px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 hover:bg-slate-100/80 dark:bg-slate-800/80 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-200" title="Ver transcripciones guardadas en este navegador">
-          <i data-lucide="book-marked" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0"></i>
+          <i data-lucide="book-marked" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0"></i>
           <span class="hidden md:inline">📚 Mis Transcripciones</span>
           <span class="inline md:hidden">Historial</span>
-          <span id="historyBadgeCount" class="hidden text-[10px] bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded-full">0</span>
+          <span id="historyBadgeCount" class="hidden text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold px-1.5 py-0.2 rounded-full">0</span>
         </button>
         <button id="btnThemeToggle" type="button" aria-label="Alternar modo oscuro" class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shadow-2xs shrink-0" title="Cambiar tema (Claro / Oscuro)">
           <i data-lucide="moon" id="themeIcon" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
@@ -71,7 +72,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-lg">
-          <i data-lucide="shield-check" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <i data-lucide="shield-check" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
           Configuración de API Key (Key Pool)
         </div>
         <button id="btnCloseApiKeyModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
@@ -92,7 +93,7 @@
               id="inputApiKey" 
               rows="3"
               placeholder="AIzaSyKey1..., AIzaSyKey2..., AIzaSyKey3..." 
-              class="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition resize-none"
+              class="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition resize-none"
             ></textarea>
             <button id="btnToggleShowKey" type="button" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Ver / Ocultar claves">
               <i data-lucide="eye" class="w-4 h-4"></i>
@@ -108,17 +109,17 @@
           <label for="selectModel" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
             Modelo Gemini
           </label>
-          <select id="selectModel" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition">
+          <select id="selectModel" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition">
             <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (Predeterminado - Recomendado por Google)</option>
           </select>
         </div>
 
         <div class="pt-2 flex justify-between items-center">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-900 dark:text-amber-400 hover:underline flex items-center gap-1">
             Obtener clave gratis en Google AI Studio
             <i data-lucide="external-link" class="w-3 h-3"></i>
           </a>
-          <button id="btnSaveApiKey" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          <button id="btnSaveApiKey" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
             Guardar
           </button>
         </div>
@@ -192,16 +193,16 @@
         <div id="viewHome" class="space-y-8 animate-fade-in">
           
           <!-- Hero Section -->
-          <div class="bg-gradient-to-br from-indigo-500/10 via-violet-500/5 to-slate-100/50 dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-slate-900/80 rounded-3xl border border-indigo-100 dark:border-indigo-900/40 p-6 sm:p-10 text-center relative overflow-hidden shadow-sm">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/80 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold mb-4">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <div class="bg-gradient-to-br from-blue-900/10 via-amber-400/5 to-slate-100/50 dark:from-blue-950/40 dark:via-amber-950/20 dark:to-slate-900/80 rounded-3xl border border-blue-900/15 dark:border-amber-400/20 p-6 sm:p-10 text-center relative overflow-hidden shadow-sm">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-300 text-xs font-semibold mb-4 border border-amber-400/30">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
               <span>Plataforma Académica Todo en Uno</span>
             </div>
             
             <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
               FacuHelps
             </h2>
-            <p class="text-base sm:text-lg font-medium text-indigo-600 dark:text-indigo-400 mt-2">
+            <p class="text-base sm:text-lg font-medium text-blue-900 dark:text-amber-400 mt-2">
               Tu espacio integral de estudio universitario
             </p>
             
@@ -233,12 +234,12 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             
             <!-- Tarjeta 1: Transcriptor -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-indigo-300 dark:hover:border-indigo-600/50 hover:shadow-md transition-all group">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-blue-800 dark:hover:border-amber-400/50 hover:shadow-md transition-all group">
               <div>
-                <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-2xs">
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-2xs">
                   <i data-lucide="mic" class="w-6 h-6"></i>
                 </div>
-                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">
                   🎙️ Transcriptor de Audios
                 </h3>
                 <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
@@ -265,7 +266,7 @@
                 <button 
                   id="btnCardOpenTranscriptor" 
                   type="button" 
-                  class="w-full py-2.5 px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center justify-center gap-2 transition"
+                  class="w-full py-2.5 px-4 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-blue-900 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-2 transition"
                 >
                   <span>Abrir Transcriptor</span>
                   <i data-lucide="arrow-right" class="w-4 h-4"></i>
@@ -329,7 +330,7 @@
             </div>
 
             <div class="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-              <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+              <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                 <i data-lucide="zap" class="w-4 h-4"></i>
               </div>
               <div class="min-w-0">
@@ -369,16 +370,16 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 transition-colors">
       <div 
         id="dropZone" 
-        class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+        class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-blue-50/30 dark:hover:bg-slate-800/60 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
       >
         <input type="file" id="fileInput" accept="audio/*, .mp3, .m4a, .aac, .ogg, audio/mp3, audio/mpeg, audio/mp4, audio/x-m4a, audio/aac, audio/ogg" class="hidden">
         
-        <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner">
+        <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner">
           <i data-lucide="upload-cloud" class="w-7 h-7"></i>
         </div>
 
         <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
-          Arrastra tu archivo de audio aquí o <span class="text-indigo-600 dark:text-indigo-400 group-hover:underline">haz clic para examinar</span>
+          Arrastra tu archivo de audio aquí o <span class="text-blue-900 dark:text-amber-400 group-hover:underline">haz clic para examinar</span>
         </p>
         <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
           Formatos compatibles: MP3, M4A, AAC, OGG (no se admite WAV por tamaño excesivo)
@@ -388,7 +389,7 @@
       <!-- Selected File Preview -->
       <div id="filePreview" class="hidden mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 flex items-center justify-between">
         <div class="flex items-center gap-3 overflow-hidden">
-          <div class="w-10 h-10 rounded-lg bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+          <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center shrink-0">
             <i data-lucide="file-audio" class="w-5 h-5"></i>
           </div>
           <div class="overflow-hidden">
@@ -410,17 +411,17 @@
           <button 
             type="button" 
             id="btnTypeClase" 
-            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 transition font-medium text-xs text-left shadow-xs"
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-blue-800 dark:border-amber-400/60 bg-blue-50/50 dark:bg-slate-800/80 text-blue-950 dark:text-amber-200 transition font-medium text-xs text-left shadow-xs"
             data-type="clase"
           >
             <div class="flex items-center gap-2.5">
               <span class="text-base shrink-0">🎓</span>
               <div>
                 <p class="font-semibold text-slate-900 dark:text-white">Clase / Teórico</p>
-                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-indigo-600 dark:text-indigo-400">Docente</strong> y <strong class="text-indigo-600 dark:text-indigo-400">Estudiante</strong></p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-blue-900 dark:text-amber-400">Docente</strong> y <strong class="text-blue-900 dark:text-amber-400">Estudiante</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0"></i>
           </button>
 
           <button 
@@ -433,10 +434,10 @@
               <span class="text-base shrink-0">🎙️</span>
               <div>
                 <p class="font-semibold text-slate-900 dark:text-white">Entrevista</p>
-                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-indigo-600 dark:text-indigo-400">Entrevistador</strong> y <strong class="text-indigo-600 dark:text-indigo-400">Entrevistado</strong></p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-blue-900 dark:text-amber-400">Entrevistador</strong> y <strong class="text-blue-900 dark:text-amber-400">Entrevistado</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0 hidden"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0 hidden"></i>
           </button>
 
           <button 
@@ -449,10 +450,10 @@
               <span class="text-base shrink-0">📻</span>
               <div>
                 <p class="font-semibold text-slate-900 dark:text-white">Radio / Podcast / Debate</p>
-                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-indigo-600 dark:text-indigo-400">Persona 1</strong>, <strong class="text-indigo-600 dark:text-indigo-400">Persona 2...</strong></p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-blue-900 dark:text-amber-400">Persona 1</strong>, <strong class="text-blue-900 dark:text-amber-400">Persona 2...</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0 hidden"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0 hidden"></i>
           </button>
 
           <button 
@@ -468,7 +469,7 @@
                 <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Texto continuo en párrafos, sin etiquetas</p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0 hidden"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0 hidden"></i>
           </button>
         </div>
       </div>
@@ -476,14 +477,14 @@
       <!-- Campo opcional de Vocabulario o términos clave -->
       <div class="mt-4 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
         <label for="inputKeywords" class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-          <i data-lucide="tag" class="w-3.5 h-3.5 text-indigo-500"></i>
+          <i data-lucide="tag" class="w-3.5 h-3.5 text-amber-500"></i>
           <span>Vocabulario o términos clave <span class="text-slate-400 font-normal lowercase">(opcional)</span></span>
         </label>
         <input 
           type="text" 
           id="inputKeywords" 
           placeholder="Ej.: Autores académicos, conceptos teóricos, siglas, nombres propios (separados por comas)" 
-          class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+          class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
         >
         <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight">
           Gemini priorizará la correcta ortografía de estos términos y nombres propios si se mencionan en el audio.
@@ -499,7 +500,7 @@
         <button 
           id="btnStartTranscribe" 
           disabled
-          class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-amber-200 hover:text-amber-100 border border-amber-400/30 font-medium text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-950/20 transition-all"
+          class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-amber-300 font-semibold border border-amber-400/20 text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-950/20 transition-all"
         >
           <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
           <span>Transcribir Audio</span>
@@ -512,7 +513,7 @@
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
           <div class="relative flex items-center justify-center">
-            <div class="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
           <div>
             <h3 id="progressTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Procesando audio...</h3>
@@ -568,8 +569,8 @@
             <span id="completedBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
               Completado
             </span>
-            <span id="streamingIndicator" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 animate-pulse">
-              <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span> Escribiendo en vivo...
+            <span id="streamingIndicator" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Escribiendo en vivo...
             </span>
             <span id="resultModelBadge" class="text-xs font-mono text-slate-500 dark:text-slate-400">gemini-3.8-flash</span>
           </div>
@@ -579,15 +580,15 @@
         <!-- Action buttons -->
         <div class="flex items-center flex-wrap gap-2">
           <button id="btnToggleEdit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
-            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
             <span id="btnToggleEditLabel">✏️ Editar texto</span>
           </button>
           <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
             <span>⚡ Generar resumen</span>
           </button>
-          <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 text-xs font-medium transition shadow-xs">
-            <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+          <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-slate-800/80 hover:bg-blue-100/80 dark:hover:bg-slate-700/80 text-blue-900 dark:text-amber-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
             <span>👥 Renombrar oradores</span>
           </button>
           <button id="btnCopy" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
@@ -660,7 +661,7 @@
               <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
               Velocidad:
             </span>
-            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 transition shadow-2xs" data-speed="1">1x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-800 bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-300 transition shadow-2xs" data-speed="1">1x</button>
             <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="1.25">1.25x</button>
             <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="1.5">1.5x</button>
             <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="2">2x</button>
@@ -729,7 +730,7 @@
             <button 
               id="btnNewSubjectModal" 
               type="button" 
-              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition"
+              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs shadow-sm transition"
             >
               <i data-lucide="plus" class="w-4 h-4"></i>
               <span>+ Nueva Materia</span>
@@ -737,7 +738,7 @@
             <button 
               id="btnNewFolderModal" 
               type="button" 
-              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition"
+              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs shadow-sm transition"
             >
               <i data-lucide="folder-plus" class="w-4 h-4"></i>
               <span>+ Nueva Subcarpeta</span>
@@ -752,14 +753,14 @@
           <!-- Renderizado dinámico de tarjetas de materias -->
         </div>
         <div id="orgSubjectsEmpty" class="hidden py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8">
-          <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-3">
             <i data-lucide="folder" class="w-7 h-7"></i>
           </div>
           <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">No hay materias creadas todavía</h3>
           <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
             Crea tu primera materia para comenzar a organizar apuntes, clases y lecturas en PDF.
           </p>
-          <button id="btnNewSubjectEmpty" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition">
+          <button id="btnNewSubjectEmpty" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs shadow-sm transition">
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>Crear primera materia</span>
           </button>
@@ -804,14 +805,14 @@
           <!-- Zona Drag & Drop de PDFs -->
           <div 
             id="orgPdfDropZone" 
-            class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-white dark:bg-slate-900 hover:bg-indigo-50/20 dark:hover:bg-indigo-950/20 rounded-2xl p-6 sm:p-8 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+            class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-white dark:bg-slate-900 hover:bg-blue-50/20 dark:hover:bg-slate-800/40 rounded-2xl p-6 sm:p-8 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
           >
             <input type="file" id="orgPdfFileInput" accept="application/pdf, .pdf" multiple class="hidden">
             <div class="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <i data-lucide="file-up" class="w-6 h-6"></i>
             </div>
             <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-              <span id="orgPdfDropZoneLabel">Arrastra tus archivos PDF aquí a la materia</span> o <span class="text-indigo-600 dark:text-indigo-400 group-hover:underline">haz clic para examinar</span>
+              <span id="orgPdfDropZoneLabel">Arrastra tus archivos PDF aquí a la materia</span> o <span class="text-blue-900 dark:text-amber-400 group-hover:underline">haz clic para examinar</span>
             </p>
             <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
               Solo archivos .pdf • Almacenamiento local persistente con IndexedDB
@@ -864,7 +865,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-base sm:text-lg">
-          <i data-lucide="users" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <i data-lucide="users" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
           Renombrar Oradores
         </div>
         <button id="btnCloseRenameModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
@@ -883,7 +884,7 @@
         <button id="btnCancelRename" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
           Cancelar
         </button>
-        <button id="btnSaveRename" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+        <button id="btnSaveRename" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
           Aplicar cambios
         </button>
       </div>
@@ -895,7 +896,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 animate-scale-up flex flex-col max-h-[85vh]">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 font-semibold text-base sm:text-lg">
-          <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
             <i data-lucide="book-marked" class="w-4 h-4"></i>
           </div>
           <div>
@@ -924,7 +925,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <i data-lucide="folder-plus" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <i data-lucide="folder-plus" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
           Nueva Materia
         </h3>
         <button id="btnCloseSubjectModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
@@ -944,14 +945,14 @@
             id="inputSubjectName" 
             required
             placeholder="Ej.: Antropología y Comunicación"
-            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
           >
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" id="btnCancelSubjectModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
             Crear materia
           </button>
         </div>
@@ -964,7 +965,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <i data-lucide="folder-plus" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <i data-lucide="folder-plus" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
           Nueva Subcarpeta
         </h3>
         <button id="btnCloseFolderModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
@@ -984,14 +985,14 @@
             id="inputFolderName" 
             required
             placeholder="Ej.: Teórico, Práctico o Bibliografía"
-            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
           >
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" id="btnCancelFolderModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
             Crear subcarpeta
           </button>
         </div>
@@ -1004,7 +1005,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <i data-lucide="edit-3" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <i data-lucide="edit-3" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
           Renombrar Materia
         </h3>
         <button id="btnCloseEditSubjectModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
@@ -1024,14 +1025,14 @@
             type="text" 
             id="inputEditSubjectName" 
             required
-            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
           >
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" id="btnCancelEditSubjectModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
             Guardar cambios
           </button>
         </div>
@@ -1064,14 +1065,14 @@
             type="text" 
             id="inputEditFolderName" 
             required
-            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
           >
         </div>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" id="btnCancelEditFolderModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
             Guardar cambios
           </button>
         </div>

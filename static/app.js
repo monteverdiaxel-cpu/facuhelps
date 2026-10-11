@@ -265,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
     speedButtons.forEach((btn) => {
       const btnSpeed = parseFloat(btn.getAttribute("data-speed"));
       if (btnSpeed === speed) {
-        btn.className = "btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 transition shadow-2xs";
+        btn.className = "btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-800 bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-300 transition shadow-2xs";
       } else {
         btn.className = "btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition";
       }
@@ -323,17 +323,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   dropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
-    dropZone.classList.add("border-indigo-500", "bg-indigo-50/50");
+    dropZone.classList.add("border-amber-400", "bg-blue-50/40");
   });
 
   dropZone.addEventListener("dragleave", (e) => {
     e.preventDefault();
-    dropZone.classList.remove("border-indigo-500", "bg-indigo-50/50");
+    dropZone.classList.remove("border-amber-400", "bg-blue-50/40");
   });
 
   dropZone.addEventListener("drop", (e) => {
     e.preventDefault();
-    dropZone.classList.remove("border-indigo-500", "bg-indigo-50/50");
+    dropZone.classList.remove("border-amber-400", "bg-blue-50/40");
     if (e.dataTransfer.files.length > 0) {
       handleFileSelected(e.dataTransfer.files[0]);
     }
@@ -360,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!btn) return;
       const check = btn.querySelector(".check-icon");
       if (isActive) {
-        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 transition font-medium text-xs text-left shadow-xs";
+        btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-blue-800 dark:border-amber-400/60 bg-blue-50/50 dark:bg-slate-800/80 text-blue-950 dark:text-amber-200 transition font-medium text-xs text-left shadow-xs";
         if (check) check.classList.remove("hidden");
       } else {
         btn.className = "audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 transition font-medium text-xs text-left";
@@ -580,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isEditingTranscript) {
       transcriptContent.contentEditable = "true";
-      transcriptContent.classList.add("ring-1", "ring-indigo-500/30", "bg-indigo-50/10", "dark:bg-indigo-950/20", "rounded-xl", "p-2");
+      transcriptContent.classList.add("ring-1", "ring-amber-400/40", "bg-blue-50/20", "dark:bg-slate-800/40", "rounded-xl", "p-2");
       transcriptContent.focus();
 
       if (btnToggleEdit) {
@@ -594,11 +594,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } else {
       transcriptContent.contentEditable = "false";
-      transcriptContent.classList.remove("ring-1", "ring-indigo-500/30", "bg-indigo-50/10", "dark:bg-indigo-950/20", "rounded-xl", "p-2");
+      transcriptContent.classList.remove("ring-1", "ring-amber-400/40", "bg-blue-50/20", "dark:bg-slate-800/40", "rounded-xl", "p-2");
 
       if (btnToggleEdit) {
         btnToggleEdit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs";
-        btnToggleEdit.innerHTML = '<i data-lucide="edit-3" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i> <span id="btnToggleEditLabel">✏️ Editar texto</span>';
+        btnToggleEdit.innerHTML = '<i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i> <span id="btnToggleEditLabel">✏️ Editar texto</span>';
       }
 
       if (editModeIndicator) {
@@ -934,8 +934,8 @@ document.addEventListener("DOMContentLoaded", () => {
         item.innerHTML = `
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-              Orador detectado: <code class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-mono">${speaker}</code>
+              <span class="w-2 h-2 rounded-full bg-blue-900"></span>
+              Orador detectado: <code class="bg-blue-50 text-blue-950 px-1.5 py-0.5 rounded font-mono border border-blue-200/60">${speaker}</code>
             </span>
           </div>
           <input 
@@ -943,7 +943,7 @@ document.addEventListener("DOMContentLoaded", () => {
             data-original-speaker="${speaker.replace(/"/g, '&quot;')}"
             value="${speaker.replace(/"/g, '&quot;')}" 
             placeholder="Nuevo nombre (ej: Rosana Guber)" 
-            class="rename-speaker-input w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+            class="rename-speaker-input w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
           >
         `;
         renameListContainer.appendChild(item);
@@ -1324,28 +1324,28 @@ document.addEventListener("DOMContentLoaded", () => {
       const previewText = (item.transcript || "").slice(0, 150).replace(/\*\*/g, "") + "...";
 
       const card = document.createElement("div");
-      card.className = "p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:border-indigo-300 dark:hover:border-indigo-600/50 transition space-y-2.5";
+      card.className = "p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:border-blue-800 dark:hover:border-amber-400/50 transition space-y-2.5";
       card.innerHTML = `
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div class="overflow-hidden">
             <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
-              <i data-lucide="file-audio" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0"></i>
+              <i data-lucide="file-audio" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0"></i>
               <span class="truncate">${item.filename || 'audio.mp3'}</span>
               ${item.summary ? '<span class="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded-md shrink-0">⚡ Con resumen</span>' : ''}
             </h4>
             <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
               <span>${dateStr}</span>
               <span>•</span>
-              <span class="font-medium text-indigo-600 dark:text-indigo-400">${getAudioTypeLabel(item.audioType)}</span>
+              <span class="font-medium text-blue-900 dark:text-amber-400">${getAudioTypeLabel(item.audioType)}</span>
             </div>
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
-            <button type="button" class="btn-load-history px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center gap-1 shadow-2xs" data-index="${index}">
+            <button type="button" class="btn-load-history px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-900 hover:bg-blue-800 text-amber-200 hover:text-white transition flex items-center gap-1 shadow-2xs" data-index="${index}">
               <i data-lucide="eye" class="w-3 h-3"></i>
               <span>Cargar en visor</span>
             </button>
-            <button type="button" class="btn-copy-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition" title="Copiar transcripción" data-index="${index}">
+            <button type="button" class="btn-copy-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-900 dark:hover:text-amber-400 transition" title="Copiar transcripción" data-index="${index}">
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             </button>
             <button type="button" class="btn-download-docx-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition" title="Descargar Word (.docx)" data-index="${index}">
@@ -2000,7 +2000,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const rootBtn = document.createElement("button");
     rootBtn.type = "button";
     rootBtn.className = currentSubject 
-      ? "hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold transition" 
+      ? "hover:text-blue-900 dark:hover:text-amber-400 font-semibold transition" 
       : "text-slate-800 dark:text-slate-200 font-bold";
     rootBtn.textContent = "Materias";
     rootBtn.addEventListener("click", () => {
@@ -2019,7 +2019,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const subjBtn = document.createElement("button");
       subjBtn.type = "button";
       subjBtn.className = currentFolder 
-        ? "hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold transition truncate max-w-[150px]" 
+        ? "hover:text-blue-900 dark:hover:text-amber-400 font-semibold transition truncate max-w-[150px]" 
         : "text-slate-800 dark:text-slate-200 font-bold truncate max-w-[150px]";
       subjBtn.textContent = currentSubject.name;
       subjBtn.addEventListener("click", () => {
@@ -2067,22 +2067,22 @@ document.addEventListener("DOMContentLoaded", () => {
       totalFiles += directFiles.length;
 
       const card = document.createElement("div");
-      card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-300 dark:hover:border-indigo-600/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
+      card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-800 dark:hover:border-amber-400/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
       card.innerHTML = `
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
               <i data-lucide="folder" class="w-5 h-5"></i>
             </div>
             <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">${subj.name}</h3>
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">${subj.name}</h3>
               <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                 ${folders.length} ${folders.length === 1 ? 'subcarpeta' : 'subcarpetas'} • ${totalFiles} ${totalFiles === 1 ? 'PDF' : 'PDFs'}
               </p>
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <button type="button" class="btn-edit-subject p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition" title="Editar / Renombrar materia">
+            <button type="button" class="btn-edit-subject p-1.5 rounded-lg text-slate-400 hover:text-blue-900 hover:bg-blue-50 dark:hover:bg-slate-800/60 transition" title="Editar / Renombrar materia">
               <i data-lucide="edit-3" class="w-4 h-4"></i>
             </button>
             <button type="button" class="btn-delete-subject p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Eliminar materia">
@@ -2090,7 +2090,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </button>
           </div>
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-blue-900 dark:text-amber-400 font-medium">
           <span>Abrir materia</span>
           <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
         </div>
@@ -2150,11 +2150,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const isSelected = currentFolder && currentFolder.id === fold.id;
 
       const card = document.createElement("div");
-      card.className = `p-4 rounded-xl border ${isSelected ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30' : 'border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-600/50'} hover:shadow-xs transition cursor-pointer flex flex-col justify-between group`;
+      card.className = `p-4 rounded-xl border ${isSelected ? 'border-blue-800 dark:border-amber-400 bg-blue-50/50 dark:bg-slate-800/80 ring-1 ring-amber-400/40' : 'border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-600/50'} hover:shadow-xs transition cursor-pointer flex flex-col justify-between group`;
       card.innerHTML = `
         <div class="flex items-start justify-between gap-2.5">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-9 h-9 rounded-lg ${isSelected ? 'bg-indigo-100 dark:bg-indigo-900/70 text-indigo-600 dark:text-indigo-400' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <div class="w-9 h-9 rounded-lg ${isSelected ? 'bg-blue-900 text-amber-300' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <i data-lucide="folder-open" class="w-4 h-4"></i>
             </div>
             <div class="min-w-0">
@@ -2173,7 +2173,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </button>
           </div>
         </div>
-        <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] ${isSelected ? 'text-indigo-600 font-bold' : 'text-slate-500 font-medium'}">
+        <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] ${isSelected ? 'text-blue-900 dark:text-amber-400 font-bold' : 'text-slate-500 font-medium'}">
           <span>${isSelected ? '✓ Subcarpeta seleccionada' : 'Ver PDFs de esta subcarpeta'}</span>
           <i data-lucide="chevron-right" class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"></i>
         </div>
@@ -2262,7 +2262,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
-          <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition">
+          <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i>
             <span>Ver / Leer</span>
           </button>
@@ -2454,17 +2454,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     orgPdfDropZone.addEventListener("dragover", (e) => {
       e.preventDefault();
-      orgPdfDropZone.classList.add("border-indigo-500", "bg-indigo-50/30");
+      orgPdfDropZone.classList.add("border-amber-400", "bg-blue-50/30");
     });
 
     orgPdfDropZone.addEventListener("dragleave", (e) => {
       e.preventDefault();
-      orgPdfDropZone.classList.remove("border-indigo-500", "bg-indigo-50/30");
+      orgPdfDropZone.classList.remove("border-amber-400", "bg-blue-50/30");
     });
 
     orgPdfDropZone.addEventListener("drop", async (e) => {
       e.preventDefault();
-      orgPdfDropZone.classList.remove("border-indigo-500", "bg-indigo-50/30");
+      orgPdfDropZone.classList.remove("border-amber-400", "bg-blue-50/30");
       if (e.dataTransfer.files.length > 0 && currentSubject) {
         for (const f of e.dataTransfer.files) {
           if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
