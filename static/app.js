@@ -871,7 +871,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const baseName = getActiveBaseName();
       const originalHtml = btnDownloadPdf.innerHTML;
       btnDownloadPdf.disabled = true;
-      btnDownloadPdf.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div> <span>Generando PDF...</span>';
+      btnDownloadPdf.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div> <span>Generando PDF...</span>';
 
       try {
         generateVectorPdf(textToExport, baseName);
@@ -1351,7 +1351,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <button type="button" class="btn-download-docx-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition" title="Descargar Word (.docx)" data-index="${index}">
               <i data-lucide="file-type" class="w-3.5 h-3.5"></i>
             </button>
-            <button type="button" class="btn-download-pdf-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-rose-600 transition" title="Descargar PDF" data-index="${index}">
+            <button type="button" class="btn-download-pdf-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition" title="Descargar PDF" data-index="${index}">
               <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
             </button>
             <button type="button" class="btn-delete-history p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-rose-600 hover:border-rose-300 dark:hover:border-rose-800 transition" title="Eliminar de historial" data-index="${index}">
@@ -1641,6 +1641,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnPdfViewerDownload = document.getElementById("btnPdfViewerDownload");
   const btnPdfViewerClose = document.getElementById("btnPdfViewerClose");
   const btnPdfViewerSummarize = document.getElementById("btnPdfViewerSummarize");
+  const btnPdfViewerSummarizeMobile = document.getElementById("btnPdfViewerSummarizeMobile");
   const pdfSummaryPanel = document.getElementById("pdfSummaryPanel");
   const pdfSummaryLoading = document.getElementById("pdfSummaryLoading");
   const pdfSummaryContent = document.getElementById("pdfSummaryContent");
@@ -2146,8 +2147,15 @@ document.addEventListener("DOMContentLoaded", () => {
       btnPdfViewerSummarize.disabled = true;
       btnPdfViewerSummarize.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div> <span>Generando análisis...</span>';
     }
+    if (btnPdfViewerSummarizeMobile) {
+      btnPdfViewerSummarizeMobile.disabled = true;
+    }
 
     const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
+
+    // Timeout de seguridad de 90 segundos con AbortController para evitar cuelgues
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     try {
       const formData = new FormData();
@@ -2159,8 +2167,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const response = await fetch("/api/summarize-pdf", {
         method: "POST",
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -2175,16 +2186,23 @@ document.addEventListener("DOMContentLoaded", () => {
       currentViewerFileItem.summaryUpdatedAt = Date.now();
       await dbUpdateFileSummary(currentViewerFileItem.id, summaryText);
 
-      // Mostrar en el panel lateral
+      // Mostrar en el panel lateral de inmediato
       showPdfSummaryInViewer(summaryText);
 
       // Refrescar listado de archivos para actualizar etiqueta de botón en la tarjeta
       renderFilesList();
 
     } catch (err) {
-      alert("Error al generar resumen académico: " + err.message);
+      clearTimeout(timeoutId);
       if (pdfSummaryLoading) pdfSummaryLoading.classList.add("hidden");
+
+      if (err.name === "AbortError") {
+        alert("El documento es muy extenso o el servidor demoró en responder. Por favor reintentá.");
+      } else {
+        alert("Error al generar resumen académico: " + err.message);
+      }
     } finally {
+      clearTimeout(timeoutId);
       if (btnPdfViewerSummarize) {
         btnPdfViewerSummarize.disabled = false;
         if (currentViewerFileItem && currentViewerFileItem.summary) {
@@ -2192,27 +2210,35 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Resumen con IA</span>';
         }
-        if (window.lucide) window.lucide.createIcons();
       }
+      if (btnPdfViewerSummarizeMobile) {
+        btnPdfViewerSummarizeMobile.disabled = false;
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  function handleSummarizeButtonClick() {
+    if (currentViewerFileItem && currentViewerFileItem.summary && currentViewerFileItem.summary.trim()) {
+      // Si ya tiene resumen guardado en IndexedDB: abrir o alternar el panel instantáneamente sin consultar la API
+      if (pdfSummaryPanel) {
+        if (pdfSummaryPanel.classList.contains("hidden")) {
+          showPdfSummaryInViewer(currentViewerFileItem.summary);
+        } else {
+          pdfSummaryPanel.classList.add("hidden");
+        }
+      }
+    } else {
+      // Si no tiene resumen previo, generarlo a demanda
+      generateAcademicSummaryForCurrentPdf();
     }
   }
 
   if (btnPdfViewerSummarize) {
-    btnPdfViewerSummarize.addEventListener("click", () => {
-      if (currentViewerFileItem && currentViewerFileItem.summary && currentViewerFileItem.summary.trim()) {
-        // Si ya tiene resumen guardado en IndexedDB: abrir o alternar el panel instantáneamente sin consultar la API
-        if (pdfSummaryPanel) {
-          if (pdfSummaryPanel.classList.contains("hidden")) {
-            showPdfSummaryInViewer(currentViewerFileItem.summary);
-          } else {
-            pdfSummaryPanel.classList.add("hidden");
-          }
-        }
-      } else {
-        // Si no tiene resumen previo, generarlo a demanda
-        generateAcademicSummaryForCurrentPdf();
-      }
-    });
+    btnPdfViewerSummarize.addEventListener("click", handleSummarizeButtonClick);
+  }
+  if (btnPdfViewerSummarizeMobile) {
+    btnPdfViewerSummarizeMobile.addEventListener("click", handleSummarizeButtonClick);
   }
 
   if (btnClosePdfSummaryPanel) {
@@ -2693,8 +2719,8 @@ document.addEventListener("DOMContentLoaded", () => {
       row.className = "px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition";
       row.innerHTML = `
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-            <i data-lucide="file-text" class="w-4 h-4"></i>
+          <div class="w-9 h-9 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
+            <i data-lucide="file-text" class="w-4 h-4 text-[#ffc700]"></i>
           </div>
           <div class="min-w-0">
             <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${fileItem.name}</h4>

@@ -530,7 +530,7 @@ async def summarize_pdf(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.2,
-            max_output_tokens=8192
+            max_output_tokens=4096
         )
 
         summary_text = None
