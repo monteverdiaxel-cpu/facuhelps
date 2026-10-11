@@ -1241,14 +1241,14 @@
             <div class="flex items-center gap-2 min-w-0">
               <span class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                 <span>📖 Resumen Académico</span>
-                <span class="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-full">FSOC UBA</span>
+                <span class="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-full">Comu UBA</span>
               </span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <button 
                 id="btnCopyPdfSummary" 
                 type="button" 
-                class="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1 transition"
+                class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1 transition shadow-2xs"
                 title="Copiar texto del resumen"
               >
                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
@@ -1257,18 +1257,26 @@
               <button 
                 id="btnDownloadPdfSummaryDocx" 
                 type="button" 
-                style="background-color: #001b44; color: #ffc700;"
-                class="px-2.5 py-1 rounded-lg font-semibold text-xs flex items-center gap-1 hover:brightness-125 transition"
-                title="Descargar resumen en formato Word (.docx)"
+                class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+                title="Exportar resumen a Word (.docx)"
               >
-                <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
-                <span>Word (.docx)</span>
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+                <span>📄 Descargar Word (.docx)</span>
+              </button>
+              <button 
+                id="btnDownloadPdfSummaryPdf" 
+                type="button" 
+                class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+                title="Exportar resumen académico a PDF"
+              >
+                <i data-lucide="file-down" class="w-3.5 h-3.5 text-rose-600 dark:text-rose-400"></i>
+                <span>📑 Descargar PDF</span>
               </button>
               <button 
                 id="btnClosePdfSummaryPanel" 
                 type="button" 
-                class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition"
-                title="Ocultar panel"
+                class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition"
+                title="Ocultar panel de resumen"
               >
                 <i data-lucide="x" class="w-4 h-4"></i>
               </button>

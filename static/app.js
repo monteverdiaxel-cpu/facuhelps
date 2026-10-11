@@ -1656,6 +1656,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const pdfSummaryContent = document.getElementById("pdfSummaryContent");
   const btnCopyPdfSummary = document.getElementById("btnCopyPdfSummary");
   const btnDownloadPdfSummaryDocx = document.getElementById("btnDownloadPdfSummaryDocx");
+  const btnDownloadPdfSummaryPdf = document.getElementById("btnDownloadPdfSummaryPdf");
   const btnClosePdfSummaryPanel = document.getElementById("btnClosePdfSummaryPanel");
   let currentViewerBlobUrl = null;
   let currentViewerFileItem = null;
@@ -2273,6 +2274,145 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Exportación del Resumen Académico a PDF vectorial limpio con jsPDF
+  function generateAcademicSummaryPdf(summaryMarkdown, docTitle, subjectName) {
+    const { jsPDF } = window.jspdf || window;
+    if (!jsPDF) {
+      throw new Error("La librería jsPDF no está disponible en este momento.");
+    }
+
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (margin * 2);
+    const bottomMargin = margin;
+
+    let y = margin;
+
+    function checkPageBreak(neededHeight) {
+      if (y + neededHeight > pageHeight - bottomMargin) {
+        doc.addPage();
+        y = margin;
+        return true;
+      }
+      return false;
+    }
+
+    // Encabezado institucional
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(0, 27, 68); // #001b44 Azul Xeneize
+    const titleLines = doc.splitTextToSize(`Resumen Académico: ${docTitle}`, contentWidth);
+    doc.text(titleLines, margin, y + 4);
+    y += (titleLines.length * 6);
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139); // slate-500
+    const metaText = subjectName ? `Comu UBA • Materia: ${subjectName} • FacuHelps` : "Comu UBA • Análisis Académico • FacuHelps";
+    doc.text(metaText, margin, y + 2);
+    y += 5;
+
+    // Línea divisoria
+    doc.setDrawColor(203, 213, 225); // slate-300
+    doc.setLineWidth(0.4);
+    doc.line(margin, y + 2, margin + contentWidth, y + 2);
+    y += 8;
+
+    // Parsear líneas del resumen en markdown
+    const lines = (summaryMarkdown || "").split("\n");
+    const normalLineHeight = 5.2;
+
+    for (let i = 0; i < lines.length; i++) {
+      let rawLine = lines[i].trim();
+      if (!rawLine) {
+        y += 2.5;
+        continue;
+      }
+
+      // Título sección ###
+      if (rawLine.startsWith("###")) {
+        const headerText = rawLine.replace(/^###\s*/, "").replace(/\*\*/g, "").trim();
+        checkPageBreak(12);
+        y += 3;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(0, 27, 68); // #001b44
+        const hLines = doc.splitTextToSize(headerText, contentWidth);
+        doc.text(hLines, margin, y);
+        y += (hLines.length * 5.5) + 1.5;
+        continue;
+      }
+
+      // Título sección ##
+      if (rawLine.startsWith("##")) {
+        const headerText = rawLine.replace(/^##\s*/, "").replace(/\*\*/g, "").trim();
+        checkPageBreak(14);
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(0, 27, 68);
+        const hLines = doc.splitTextToSize(headerText, contentWidth);
+        doc.text(hLines, margin, y);
+        y += (hLines.length * 6) + 2;
+        continue;
+      }
+
+      // Viñeta - o *
+      const bulletMatch = rawLine.match(/^[-*]\s+(.*)$/);
+      if (bulletMatch) {
+        const bulletText = bulletMatch[1].replace(/\*\*/g, "").replace(/\*/g, "").trim();
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+
+        const bLines = doc.splitTextToSize(bulletText, contentWidth - 6);
+        checkPageBreak(bLines.length * normalLineHeight);
+
+        // Dibujar viñeta
+        doc.circle(margin + 2, y - 1, 0.6, "F");
+        doc.text(bLines, margin + 6, y);
+        y += (bLines.length * normalLineHeight) + 1;
+        continue;
+      }
+
+      // Párrafo normal
+      const cleanLine = rawLine.replace(/\*\*/g, "").replace(/\*/g, "");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+
+      const pLines = doc.splitTextToSize(cleanLine, contentWidth);
+      checkPageBreak(pLines.length * normalLineHeight);
+      doc.text(pLines, margin, y);
+      y += (pLines.length * normalLineHeight) + 1.5;
+    }
+
+    // Pie de página con numeración
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.text(
+        `Página ${p} de ${totalPages} • Resumen Académico Comu UBA`,
+        pageWidth / 2,
+        pageHeight - 8,
+        { align: "center" }
+      );
+    }
+
+    const safeFilename = `${docTitle}_resumen_academico.pdf`.replace(/[\\/:*?"<>|]/g, "_");
+    doc.save(safeFilename);
+  }
+
   if (btnDownloadPdfSummaryDocx) {
     btnDownloadPdfSummaryDocx.addEventListener("click", async () => {
       if (!currentPdfSummaryText) {
@@ -2284,7 +2424,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         btnDownloadPdfSummaryDocx.disabled = true;
-        btnDownloadPdfSummaryDocx.innerHTML = '<div class="w-3 h-3 border-2 border-amber-300 border-t-transparent rounded-full animate-spin"></div> <span>Word...</span>';
+        btnDownloadPdfSummaryDocx.innerHTML = '<div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div> <span>Exportando...</span>';
 
         const res = await fetch("/api/export-summary-docx", {
           method: "POST",
@@ -2310,6 +2450,31 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         btnDownloadPdfSummaryDocx.disabled = false;
         btnDownloadPdfSummaryDocx.innerHTML = originalText;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    });
+  }
+
+  if (btnDownloadPdfSummaryPdf) {
+    btnDownloadPdfSummaryPdf.addEventListener("click", () => {
+      if (!currentPdfSummaryText) {
+        alert("Aún no hay resumen generado para descargar.");
+        return;
+      }
+      const baseName = (currentViewerFileItem ? currentViewerFileItem.name.replace(/\.[^/.]+$/, "") : "resumen_academico");
+      const subjectName = (currentSubject ? currentSubject.name : "");
+      const originalText = btnDownloadPdfSummaryPdf.innerHTML;
+
+      try {
+        btnDownloadPdfSummaryPdf.disabled = true;
+        btnDownloadPdfSummaryPdf.innerHTML = '<div class="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div> <span>Exportando...</span>';
+
+        generateAcademicSummaryPdf(currentPdfSummaryText, baseName, subjectName);
+      } catch (err) {
+        alert("No se pudo generar el archivo PDF del resumen: " + err.message);
+      } finally {
+        btnDownloadPdfSummaryPdf.disabled = false;
+        btnDownloadPdfSummaryPdf.innerHTML = originalText;
         if (window.lucide) window.lucide.createIcons();
       }
     });
