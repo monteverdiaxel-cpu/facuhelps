@@ -81,7 +81,7 @@ def is_retriable_error(exc: Exception) -> bool:
 def get_system_instruction(audio_type: str = "clase") -> str:
     if audio_type == "continuo":
         speaker_rules = """3. SIN DIFERENCIAR HABLANTES (TEXTO CONTINUO EN PÁRRAFOS):
-   - NO incluyas NINGUNA etiqueta de orador bajo ninguna circunstancia (está terminantemente prohibido usar Docente, Estudiante, Hablante, Entrevistador, Entrevistado o nombres propios).
+   - NO incluyas NINGUNA etiqueta de orador bajo ninguna circunstancia (está terminantemente prohibido usar Docente, Estudiante, Hablante, Entrevistador, Entrevistado, Persona o nombres propios).
    - Transcribe todo el texto de corrido organizado únicamente en párrafos limpios, legibles y naturales, con puntos y aparte claros ante cada cambio de tema o pausa temática, sin ningún prefijo ni número al inicio de los párrafos."""
     elif audio_type == "entrevista":
         speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (ENTREVISTA):
@@ -90,6 +90,15 @@ def get_system_instruction(audio_type: str = "clase") -> str:
      * **Entrevistador:** para quien realiza las preguntas.
      * **Entrevistado:** (o **Entrevistado 1:**, **Entrevistado 2:** si hubiese varios) para quien responde.
    - Si habla una sola persona (relato o monólogo): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
+    elif audio_type == "radio":
+        speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (RADIO / PODCAST / DEBATE):
+   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si los participantes son presentados o se nombran entre sí.
+   - Identifica y distingue a todos los hablantes intervinientes usando ESTRICTAMENTE y de principio a fin el formato en negrita:
+     * **Persona 1:** para la primera voz que habla.
+     * **Persona 2:** para la segunda voz que interviene.
+     * **Persona 3:**, **Persona 4:**, etc., incrementando consecutivamente según las distintas voces del programa o panel.
+   - Mantené siempre asignado el mismo número a la misma voz a lo largo de todo el audio.
+   - Separa cada intervención en párrafos limpios y claros, con puntos y aparte."""
     else:  # clase / teórico
         speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (CLASE / TEÓRICO):
    - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación.
@@ -121,6 +130,8 @@ def get_user_prompt(audio_type: str = "clase") -> str:
         speaker_hint = """- Formato: SIN etiquetas de orador (nada de Docente, Estudiante ni Hablante). Transcribe el texto de corrido organizado únicamente en párrafos limpios con puntos y aparte claros."""
     elif audio_type == "entrevista":
         speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Entrevistador:** y **Entrevistado:** (CERO nombres propios). Si habla una sola persona, párrafos limpios con puntos y aparte sin prefijos."""
+    elif audio_type == "radio":
+        speaker_hint = """- Formato de oradores: Identifica a todos los participantes usando ESTRICTAMENTE **Persona 1:**, **Persona 2:**, **Persona 3:**, etc. (incrementando según cada voz distinta). CERO nombres propios."""
     else:
         speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Docente:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**) (CERO nombres propios). Si es clase magistral individual, párrafos limpios con puntos y aparte sin prefijos."""
 
@@ -177,7 +188,7 @@ async def transcribe_audio(
     mime_type = MIME_MAP[file_ext]
     target_model_name = "gemini-3.8-flash"
     effective_audio_type = (audio_type or "clase").lower().strip()
-    if effective_audio_type not in ["clase", "entrevista", "continuo"]:
+    if effective_audio_type not in ["clase", "entrevista", "continuo", "radio"]:
         effective_audio_type = "clase"
 
     system_instruction = get_system_instruction(effective_audio_type)

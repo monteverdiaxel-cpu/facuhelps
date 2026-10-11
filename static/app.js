@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Selector de Tipo de Audio
   const btnTypeClase = document.getElementById("btnTypeClase");
   const btnTypeEntrevista = document.getElementById("btnTypeEntrevista");
+  const btnTypeRadio = document.getElementById("btnTypeRadio");
   const btnTypeContinuo = document.getElementById("btnTypeContinuo");
 
   const progressCard = document.getElementById("progressCard");
@@ -328,6 +329,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentAudioType = type;
     const isClase = type === "clase";
     const isEntrevista = type === "entrevista";
+    const isRadio = type === "radio";
     const isContinuo = type === "continuo";
 
     const updateBtn = (btn, isActive) => {
@@ -344,6 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateBtn(btnTypeClase, isClase);
     updateBtn(btnTypeEntrevista, isEntrevista);
+    updateBtn(btnTypeRadio, isRadio);
     updateBtn(btnTypeContinuo, isContinuo);
 
     if (window.lucide) window.lucide.createIcons();
@@ -354,6 +357,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (btnTypeEntrevista) {
     btnTypeEntrevista.addEventListener("click", () => setAudioType("entrevista"));
+  }
+  if (btnTypeRadio) {
+    btnTypeRadio.addEventListener("click", () => setAudioType("radio"));
   }
   if (btnTypeContinuo) {
     btnTypeContinuo.addEventListener("click", () => setAudioType("continuo"));
@@ -441,7 +447,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Reemplazar indicadores de hablantes en negrita si no vinieron en markdown
-    clean = clean.replace(/(?:^|\n)(Docente|Profesor|Profesora|Alumno|Alumna|Estudiante|Entrevistador|Entrevistadora|Entrevistado|Orador|Hablante\s*\d*):/gi, (match, p1) => {
+    clean = clean.replace(/(?:^|\n)(Docente|Profesor|Profesora|Alumno|Alumna|Estudiante|Entrevistador|Entrevistadora|Entrevistado|Orador|Persona\s*\d*|Hablante\s*\d*):/gi, (match, p1) => {
       return `\n<strong class="speaker-tag font-semibold text-slate-900">${p1}:</strong>`;
     });
 
