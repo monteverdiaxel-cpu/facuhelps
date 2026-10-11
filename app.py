@@ -76,20 +76,23 @@ def is_rotatable_error(exc: Exception) -> bool:
     """Detecta si un error amerita rotar a la siguiente API Key del pool:
     - Cuota o tasa excedida: 429, RESOURCE_EXHAUSTED, quota, rate limit
     - Clave inválida, mal copiada o revocada: 400, 403, API_KEY_INVALID, PERMISSION_DENIED, invalid api key
+    - Errores de servidor de Google AI Studio: 500, INTERNAL
     """
     err_str = str(exc).lower()
     return any(keyword in err_str for keyword in [
         "429", "resource_exhausted", "quota", "rate limit", "ratelimit",
         "400", "403", "api_key_invalid", "permission_denied", "invalid api key",
-        "api key not valid", "unauthenticated", "forbidden"
+        "api key not valid", "unauthenticated", "forbidden",
+        "500", "internal"
     ])
 
 def is_retriable_error(exc: Exception) -> bool:
-    """Detecta si un error de Gemini es temporal/503/UNAVAILABLE para reintentar con backoff."""
+    """Detecta si un error de Gemini es temporal/500/503/UNAVAILABLE/INTERNAL para reintentar con backoff."""
     err_str = str(exc).lower()
     return any(keyword in err_str for keyword in [
         "503", "unavailable", "servererror", "high demand", "overloaded",
-        "temporary", "service unavailable"
+        "temporary", "service unavailable",
+        "500", "internal"
     ])
 
 def get_system_instruction(audio_type: str = "clase") -> str:
