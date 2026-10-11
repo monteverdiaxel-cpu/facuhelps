@@ -1179,7 +1179,7 @@
       
       <!-- Barra superior del visor -->
       <div class="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/90 shrink-0">
-        <!-- Grupo Izquierdo: Nombre del PDF + Botón Destacado '⚡ Resumen con IA' -->
+        <!-- Grupo Izquierdo: Ícono de PDF, nombre del archivo y metadata -->
         <div class="flex items-center gap-3 min-w-0">
           <div class="w-8 h-8 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
             <i data-lucide="file-text" class="w-4 h-4 text-[#ffc700]"></i>
@@ -1192,29 +1192,19 @@
               Visor integrado FacuHelps
             </p>
           </div>
+        </div>
+
+        <!-- Grupo Derecho: 1. Botón '⚡ Resumen con IA', 2. '📥 Descargar PDF', 3. '✕ Cerrar' -->
+        <div class="flex items-center gap-2 shrink-0">
           <button 
             id="btnPdfViewerSummarize" 
             type="button" 
             style="background-color: #001b44; color: #ffc700;"
-            class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#ffc700]/30 font-semibold text-xs shadow-2xs hover:brightness-125 transition shrink-0"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#ffc700]/30 font-semibold text-xs shadow-2xs hover:brightness-125 transition shrink-0"
             title="Generar o ver Resumen Académico con IA (a demanda)"
           >
             <i data-lucide="zap" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
             <span>⚡ Resumen con IA</span>
-          </button>
-        </div>
-
-        <!-- Grupo Derecho: Botones de exportación (Descargar, Resumen móvil) y Cerrar neutral -->
-        <div class="flex items-center gap-2 shrink-0">
-          <button 
-            id="btnPdfViewerSummarizeMobile" 
-            type="button" 
-            style="background-color: #001b44; color: #ffc700;"
-            class="flex sm:hidden items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#ffc700]/30 font-semibold text-xs shadow-2xs hover:brightness-125 transition"
-            title="Generar o ver Resumen Académico con IA"
-          >
-            <i data-lucide="zap" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
-            <span>Resumen</span>
           </button>
           <button 
             id="btnPdfViewerDownload" 
@@ -1223,7 +1213,7 @@
             title="Descargar archivo PDF"
           >
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">Descargar PDF</span>
+            <span class="hidden sm:inline">📥 Descargar PDF</span>
           </button>
           <button 
             id="btnPdfViewerClose" 
@@ -1231,8 +1221,8 @@
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-medium transition shadow-2xs"
             title="Cerrar visor"
           >
-            <i data-lucide="x" class="w-4 h-4"></i>
-            <span>Cerrar</span>
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <span>✕ Cerrar</span>
           </button>
         </div>
       </div>
@@ -1245,13 +1235,13 @@
         </div>
 
         <!-- Panel de Resumen Académico (Lateral en desktop, inferior en móvil) -->
-        <div id="pdfSummaryPanel" class="hidden w-full lg:w-[480px] shrink-0 bg-white dark:bg-slate-900 flex flex-col h-full border-l-0 lg:border-l border-slate-200 dark:border-slate-800 animate-fade-in">
+        <div id="pdfSummaryPanel" class="hidden w-full lg:w-[480px] shrink-0 bg-white dark:bg-slate-900 flex flex-col h-full border-l-0 lg:border-l border-slate-200 dark:border-slate-800 animate-fade-in font-sans">
           <!-- Cabecera del Panel de Resumen -->
           <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between gap-2 shrink-0">
             <div class="flex items-center gap-2 min-w-0">
               <span class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
                 <span>📖 Resumen Académico</span>
-                <span class="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-full">Ciencias Sociales</span>
+                <span class="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-full">FSOC UBA</span>
               </span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">

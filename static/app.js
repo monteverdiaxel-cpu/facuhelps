@@ -1027,20 +1027,29 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;");
 
     // Títulos Markdown ###
-    clean = clean.replace(/^### (.*$)/gim, '<h4 class="text-sm font-bold text-slate-900 mt-3 mb-1.5 flex items-center gap-1.5">$1</h4>');
-    clean = clean.replace(/^## (.*$)/gim, '<h3 class="text-base font-bold text-slate-900 mt-4 mb-2">$1</h3>');
+    clean = clean.replace(/^### (.*$)/gim, '<h4 class="text-sm font-bold text-[#001b44] dark:text-[#ffc700] mt-4 mb-2 flex items-center gap-1.5">$1</h4>');
+    clean = clean.replace(/^## (.*$)/gim, '<h3 class="text-base font-bold text-[#001b44] dark:text-[#ffc700] mt-5 mb-2.5 flex items-center gap-1.5">$1</h3>');
 
-    // Negrita
-    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
-    
+    // Negrita **texto**
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>');
+
+    // Cursiva *texto* o _texto_
+    clean = clean.replace(/\*([^*]+)\*/g, '<em class="italic text-slate-800 dark:text-slate-200">$1</em>');
+    clean = clean.replace(/_([^_]+)_/g, '<em class="italic text-slate-800 dark:text-slate-200">$1</em>');
+
     // Viñetas * o -
-    clean = clean.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc text-xs text-slate-700 my-0.5">$1</li>');
+    clean = clean.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc text-xs sm:text-sm text-slate-700 dark:text-slate-300 my-1">$1</li>');
+
+    // Limpiar asteriscos crudos residuales si quedara alguno sin cerrar
+    clean = clean.replace(/\*+/g, '');
 
     // Párrafos
     const paragraphs = clean.split(/\n\s*\n/);
     return paragraphs.map((p) => {
-      if (p.startsWith("<h") || p.startsWith("<li")) return p;
-      return `<p class="text-xs text-slate-700 leading-relaxed mb-2">${p.replace(/\n/g, "<br>")}</p>`;
+      const trimmed = p.trim();
+      if (!trimmed) return "";
+      if (trimmed.startsWith("<h") || trimmed.startsWith("<li")) return trimmed;
+      return `<p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">${trimmed.replace(/\n/g, "<br>")}</p>`;
     }).join("");
   }
 
@@ -2735,8 +2744,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <i data-lucide="zap" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
             <span>${fileItem.summary ? 'Ver Resumen' : '⚡ Resumen IA'}</span>
           </button>
-          <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition">
-            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 hover:brightness-125 transition shadow-xs" style="background-color: #001b44; color: #ffc700;">
+            <i data-lucide="eye" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
             <span>Ver / Leer</span>
           </button>
           <button type="button" class="btn-download-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Descargar PDF">

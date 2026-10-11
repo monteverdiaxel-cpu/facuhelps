@@ -511,8 +511,8 @@ async def summarize_pdf(
 
         system_instruction = (
             "Actúa como un profesor universitario y analista de textos académicos de Ciencias Sociales. "
-            "A partir del texto en PDF provisto, generá un resumen analítico riguroso, profundo y exhaustivo para preparación de exámenes de grado, "
-            "estructurado obligatoriamente en las siguientes secciones en Markdown:\n\n"
+            "A partir del texto en PDF provisto, generá un resumen analítico riguroso, profundo y exhaustivo para preparación de exámenes de grado. "
+            "Estructurá el análisis académico en estas 5 secciones en Markdown sin omitir ninguna:\n\n"
             "### 🎯 Tesis Central y Debate Teórico\n"
             "(Explica la hipótesis central del autor, el problema epistemológico/social que aborda y con qué tradiciones teóricas o autores dialoga o polemiza en el texto).\n\n"
             "### 💡 Núcleo Conceptual y Categorías de Análisis\n"
@@ -521,16 +521,16 @@ async def summarize_pdf(
             "(Desglosa paso a paso la estructura del razonamiento: cómo fundamenta sus argumentos, qué metodología o ejemplos de campo utiliza y cómo llega a sus conclusiones).\n\n"
             "### 📌 Citas Textuales Clave para Exámenes\n"
             "(Extrae citas textuales representativas del PDF indispensables para fundamentar respuestas teóricas en instancias de evaluación).\n\n"
-            "### ❓ Preguntas de Cátedra\n"
-            "(Formula 4 preguntas conceptuales típicas de parcial que este texto responde, con su respuesta sintética)."
+            "### ❓ 5 Preguntas Guía Tipo Parcial\n"
+            "(Formula exactamente 5 preguntas conceptuales de parcial de Sociales/UBA sobre este texto, y redactá la respuesta teórica sintética que la cátedra espera)."
         )
 
-        user_prompt = "Por favor, analizá y generá el resumen académico riguroso de este documento PDF siguiendo al pie de la letra las secciones solicitadas."
+        user_prompt = "Por favor, analizá y generá el resumen académico riguroso de este documento PDF siguiendo al pie de la letra las 5 secciones solicitadas sin omitir ninguna."
 
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.2,
-            max_output_tokens=4096
+            max_output_tokens=8192
         )
 
         summary_text = None
