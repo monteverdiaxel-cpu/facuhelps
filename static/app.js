@@ -1587,7 +1587,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 14. MÓDULO ORGANIZADOR DE MATERIAS (INDEXEDDB LOCAL)
   // ─────────────────────────────────────────────────────────────
   const DB_NAME = "FacuHelpsDB";
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
   let dbInstance = null;
 
   // Estado de navegación del organizador
@@ -1616,13 +1616,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const orgPdfEmpty = document.getElementById("orgPdfEmpty");
   const orgPdfCountLabel = document.getElementById("orgPdfCountLabel");
 
-  // Elementos del Bloc de Notas de la Cursada
+  // Elementos del Módulo de Notas de la Materia
   const orgSubjectNotesCard = document.getElementById("orgSubjectNotesCard");
-  const subjectNotesTextarea = document.getElementById("subjectNotesTextarea");
-  const btnSaveSubjectNotes = document.getElementById("btnSaveSubjectNotes");
-  const subjectNotesSavedBadge = document.getElementById("subjectNotesSavedBadge");
-  let subjectNotesSaveTimeout = null;
-  let subjectNotesBadgeTimeout = null;
+  const orgNotesCountLabel = document.getElementById("orgNotesCountLabel");
+  const btnNewNoteModal = document.getElementById("btnNewNoteModal");
+  const orgNotesGrid = document.getElementById("orgNotesGrid");
+  const orgNotesEmpty = document.getElementById("orgNotesEmpty");
+
+  // Modal Crear / Editar Nota
+  const modalNote = document.getElementById("modalNote");
+  const modalNoteTitle = document.getElementById("modalNoteTitle");
+  const formNote = document.getElementById("formNote");
+  const noteEditId = document.getElementById("noteEditId");
+  const inputNoteTitle = document.getElementById("inputNoteTitle");
+  const inputNoteContent = document.getElementById("inputNoteContent");
+  const btnCloseNoteModal = document.getElementById("btnCloseNoteModal");
+  const btnCancelNoteModal = document.getElementById("btnCancelNoteModal");
 
   // Elementos del Visor de PDF Integrado
   const modalPdfViewer = document.getElementById("modalPdfViewer");
@@ -1692,6 +1701,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!fileStore.indexNames.contains("subjectId")) {
           fileStore.createIndex("subjectId", "subjectId", { unique: false });
         }
+        // Almacén de Notas de Materias (con índice de subjectId)
+        if (!db.objectStoreNames.contains("notes")) {
+          const notesStore = db.createObjectStore("notes", { keyPath: "id", autoIncrement: true });
+          notesStore.createIndex("subjectId", "subjectId", { unique: false });
+        }
       };
       request.onsuccess = (e) => {
         dbInstance = e.target.result;
@@ -1747,24 +1761,74 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  async function dbUpdateSubjectNotes(subjectId, text) {
+  // Operaciones DB: Notas de la Materia
+  async function dbGetNotesBySubject(subjectId) {
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction("subjects", "readwrite");
-      const store = tx.objectStore("subjects");
-      const getReq = store.get(Number(subjectId));
+      const tx = db.transaction("notes", "readonly");
+      const store = tx.objectStore("notes");
+      const index = store.index("subjectId");
+      const req = index.getAll(Number(subjectId));
+      req.onsuccess = () => {
+        const notes = req.result || [];
+        // Ordenar notas por fecha de última actualización descendente
+        notes.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        resolve(notes);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbAddNote(subjectId, title, content) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("notes", "readwrite");
+      const store = tx.objectStore("notes");
+      const now = Date.now();
+      const noteItem = {
+        subjectId: Number(subjectId),
+        title: title.trim(),
+        content: content.trim(),
+        createdAt: now,
+        updatedAt: now
+      };
+      const req = store.add(noteItem);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbUpdateNote(noteId, title, content) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("notes", "readwrite");
+      const store = tx.objectStore("notes");
+      const getReq = store.get(Number(noteId));
       getReq.onsuccess = () => {
         const item = getReq.result;
         if (!item) {
-          reject(new Error("Materia no encontrada"));
+          reject(new Error("Nota no encontrada"));
           return;
         }
-        item.notes = text;
+        item.title = title.trim();
+        item.content = content.trim();
+        item.updatedAt = Date.now();
         const putReq = store.put(item);
         putReq.onsuccess = () => resolve(putReq.result);
         putReq.onerror = () => reject(putReq.error);
       };
       getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
+  async function dbDeleteNote(noteId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("notes", "readwrite");
+      const store = tx.objectStore("notes");
+      const req = store.delete(Number(noteId));
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
     });
   }
 
@@ -1781,7 +1845,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function dbDeleteSubject(subjectId) {
     const db = await openDatabase();
-    // Eliminar también subcarpetas y todos los PDFs asociados (directos o en subcarpetas)
+    // Eliminar también subcarpetas, PDFs asociados y notas
     const folders = await dbGetFoldersBySubject(subjectId);
     for (const f of folders) {
       await dbDeleteFolder(f.id);
@@ -1790,10 +1854,14 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const f of directFiles) {
       await dbDeleteFile(f.id);
     }
+    const notes = await dbGetNotesBySubject(subjectId);
+    for (const n of notes) {
+      await dbDeleteNote(n.id);
+    }
     return new Promise((resolve, reject) => {
       const tx = db.transaction("subjects", "readwrite");
       const store = tx.objectStore("subjects");
-      const req = store.delete(subjectId);
+      const req = store.delete(Number(subjectId));
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
@@ -2011,20 +2079,10 @@ document.addEventListener("DOMContentLoaded", () => {
       btnNewSubjectModal.classList.add("hidden");
       btnNewFolderModal.classList.remove("hidden");
 
-      // Cargar bloc de notas de la materia actual
-      if (subjectNotesTextarea) {
-        // Asegurarse de tener el registro actualizado de la materia
-        const freshSubj = await dbGetSubject(currentSubject.id);
-        if (freshSubj) {
-          currentSubject = freshSubj;
-        }
-        subjectNotesTextarea.value = (currentSubject && currentSubject.notes) ? currentSubject.notes : "";
-      }
-
       if (!currentFolder) {
         // Vista directa de la Materia
         orgCurrentTitle.textContent = currentSubject.name;
-        orgCurrentSubtitle.textContent = "Subcarpetas temáticas opcionales y PDFs directos de la materia";
+        orgCurrentSubtitle.textContent = "Subcarpetas temáticas opcionales, notas de cursada y PDFs directos";
         if (orgPdfSectionTitle) orgPdfSectionTitle.textContent = `PDFs directos de ${currentSubject.name}`;
         if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = `Arrastra tus archivos PDF aquí a "${currentSubject.name}"`;
       } else {
@@ -2035,6 +2093,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = `Arrastra tus archivos PDF aquí a "${currentFolder.name}"`;
       }
 
+      await renderNotesList();
       await renderFoldersList();
       await renderFilesList();
     }
@@ -2115,6 +2174,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const directFiles = await dbGetFilesBySubject(subj.id);
       totalFiles += directFiles.length;
+      const subjNotes = await dbGetNotesBySubject(subj.id);
 
       const card = document.createElement("div");
       card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-800 dark:hover:border-amber-400/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
@@ -2127,7 +2187,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="min-w-0">
               <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">${subj.name}</h3>
               <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                ${folders.length} ${folders.length === 1 ? 'subcarpeta' : 'subcarpetas'} • ${totalFiles} ${totalFiles === 1 ? 'PDF' : 'PDFs'}
+                ${subjNotes.length} ${subjNotes.length === 1 ? 'nota' : 'notas'} • ${folders.length} ${folders.length === 1 ? 'subcarpeta' : 'subcarpetas'} • ${totalFiles} ${totalFiles === 1 ? 'PDF' : 'PDFs'}
               </p>
             </div>
           </div>
@@ -2175,6 +2235,111 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       orgSubjectsGrid.appendChild(card);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // Render Notas de la Materia
+  async function renderNotesList() {
+    if (!currentSubject || !orgNotesGrid) return;
+    const notes = await dbGetNotesBySubject(currentSubject.id);
+    orgNotesGrid.innerHTML = "";
+
+    if (orgNotesCountLabel) {
+      orgNotesCountLabel.textContent = `${notes.length} ${notes.length === 1 ? 'nota' : 'notas'}`;
+    }
+
+    if (notes.length === 0) {
+      if (orgNotesEmpty) orgNotesEmpty.classList.remove("hidden");
+      orgNotesGrid.classList.add("hidden");
+      return;
+    }
+
+    if (orgNotesEmpty) orgNotesEmpty.classList.add("hidden");
+    orgNotesGrid.classList.remove("hidden");
+
+    for (const note of notes) {
+      const dateStr = note.updatedAt 
+        ? new Date(note.updatedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) 
+        : "";
+
+      const card = document.createElement("div");
+      card.className = "p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xs transition flex flex-col justify-between group";
+
+      // Vista previa de 2 líneas de texto
+      const previewText = note.content ? note.content.trim() : "(Sin contenido adicional)";
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-start justify-between gap-2.5 mb-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              </div>
+              <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${note.title || 'Nota sin título'}</h4>
+            </div>
+            <div class="flex items-center gap-0.5 shrink-0">
+              <button type="button" class="btn-edit-note p-1 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition" title="Editar nota">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button type="button" class="btn-delete-note p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Eliminar nota">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed whitespace-pre-wrap break-words">
+            ${previewText}
+          </p>
+        </div>
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+          <span>${dateStr}</span>
+          <button type="button" class="btn-read-note text-blue-900 dark:text-amber-400 hover:underline font-medium flex items-center gap-1">
+            <span>Abrir / Editar</span>
+            <i data-lucide="chevron-right" class="w-3 h-3"></i>
+          </button>
+        </div>
+      `;
+
+      // Abrir / Editar nota al hacer clic
+      const openEdit = () => {
+        if (!modalNote || !inputNoteTitle || !inputNoteContent || !noteEditId) return;
+        noteEditId.value = note.id;
+        inputNoteTitle.value = note.title;
+        inputNoteContent.value = note.content;
+        if (modalNoteTitle) {
+          modalNoteTitle.innerHTML = `<i data-lucide="edit-3" class="w-5 h-5 text-amber-500"></i> Editar Nota`;
+        }
+        modalNote.classList.remove("hidden");
+        inputNoteTitle.focus();
+        if (window.lucide) window.lucide.createIcons();
+      };
+
+      card.querySelector(".btn-edit-note").addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEdit();
+      });
+
+      card.querySelector(".btn-read-note").addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEdit();
+      });
+
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-delete-note") || e.target.closest(".btn-edit-note") || e.target.closest(".btn-read-note")) return;
+        openEdit();
+      });
+
+      // Eliminar nota
+      card.querySelector(".btn-delete-note").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (confirm(`¿Estás seguro de eliminar la nota "${note.title || 'sin título'}"?`)) {
+          await dbDeleteNote(note.id);
+          renderNotesList();
+        }
+      });
+
+      orgNotesGrid.appendChild(card);
     }
 
     if (window.lucide) window.lucide.createIcons();
@@ -2486,50 +2651,62 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Eventos: Bloc de Notas de la Cursada
+  // Eventos: Notas de la Materia (Crear / Editar / Guardar)
   // ─────────────────────────────────────────────────────────────
-  async function saveCurrentSubjectNotes() {
-    if (!currentSubject || !subjectNotesTextarea) return;
-    const text = subjectNotesTextarea.value;
-    try {
-      await dbUpdateSubjectNotes(currentSubject.id, text);
-      currentSubject.notes = text;
-
-      // Feedback visual temporal
-      if (subjectNotesSavedBadge) {
-        subjectNotesSavedBadge.classList.remove("hidden");
-        subjectNotesSavedBadge.classList.add("inline-flex");
-        if (subjectNotesBadgeTimeout) clearTimeout(subjectNotesBadgeTimeout);
-        subjectNotesBadgeTimeout = setTimeout(() => {
-          subjectNotesSavedBadge.classList.add("hidden");
-          subjectNotesSavedBadge.classList.remove("inline-flex");
-        }, 2200);
-      }
-    } catch (err) {
-      console.error("Error al guardar notas de la materia:", err);
+  function openNewNoteModal() {
+    if (!modalNote || !inputNoteTitle || !inputNoteContent || !noteEditId) return;
+    noteEditId.value = "";
+    inputNoteTitle.value = "";
+    inputNoteContent.value = "";
+    if (modalNoteTitle) {
+      modalNoteTitle.innerHTML = `<i data-lucide="file-text" class="w-5 h-5 text-amber-500"></i> Nueva Nota`;
     }
+    modalNote.classList.remove("hidden");
+    inputNoteTitle.focus();
+    if (window.lucide) window.lucide.createIcons();
   }
 
-  if (btnSaveSubjectNotes) {
-    btnSaveSubjectNotes.addEventListener("click", () => {
-      if (subjectNotesSaveTimeout) clearTimeout(subjectNotesSaveTimeout);
-      saveCurrentSubjectNotes();
+  function closeNoteModal() {
+    if (modalNote) modalNote.classList.add("hidden");
+  }
+
+  if (btnNewNoteModal) {
+    btnNewNoteModal.addEventListener("click", openNewNoteModal);
+  }
+  if (btnCloseNoteModal) {
+    btnCloseNoteModal.addEventListener("click", closeNoteModal);
+  }
+  if (btnCancelNoteModal) {
+    btnCancelNoteModal.addEventListener("click", closeNoteModal);
+  }
+  if (modalNote) {
+    modalNote.addEventListener("click", (e) => {
+      if (e.target === modalNote) closeNoteModal();
     });
   }
 
-  if (subjectNotesTextarea) {
-    // Guardado al perder el foco (blur)
-    subjectNotesTextarea.addEventListener("blur", () => {
-      if (subjectNotesSaveTimeout) clearTimeout(subjectNotesSaveTimeout);
-      saveCurrentSubjectNotes();
-    });
+  if (formNote) {
+    formNote.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentSubject) return;
 
-    // Guardado automático con debounce (1000ms tras dejar de escribir)
-    subjectNotesTextarea.addEventListener("input", () => {
-      if (subjectNotesSaveTimeout) clearTimeout(subjectNotesSaveTimeout);
-      subjectNotesSaveTimeout = setTimeout(() => {
-        saveCurrentSubjectNotes();
-      }, 1000);
+      const editId = noteEditId.value;
+      const title = inputNoteTitle.value.trim();
+      const content = inputNoteContent.value;
+
+      if (!title) return;
+
+      try {
+        if (editId) {
+          await dbUpdateNote(editId, title, content);
+        } else {
+          await dbAddNote(currentSubject.id, title, content);
+        }
+        closeNoteModal();
+        await renderNotesList();
+      } catch (err) {
+        console.error("Error al guardar nota:", err);
+      }
     });
   }
 
