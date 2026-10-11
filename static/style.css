@@ -51,19 +51,19 @@
 
 /* Estilos de los pasos del proceso */
 .step-item.active .step-icon {
-  background-color: #1e3a8a;
-  color: #fbbf24;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+  background-color: #001b44;
+  color: #ffc700;
+  box-shadow: 0 0 0 3px rgba(255, 199, 0, 0.3);
   animation: pulseIcon 1.5s infinite;
 }
 
 .step-item.active .step-text {
-  color: #172554;
+  color: #001b44;
   font-weight: 600;
 }
 
 .dark .step-item.active .step-text {
-  color: #fde047;
+  color: #ffc700;
 }
 
 .step-item.completed .step-icon {
@@ -90,8 +90,8 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1e3a8a;
-  background-color: #eff6ff;
+  color: #001b44;
+  background-color: rgba(0, 27, 68, 0.08);
   padding: 0.125rem 0.375rem;
   border-radius: 0.375rem;
   margin-right: 0.35rem;
@@ -99,8 +99,8 @@
 }
 
 .dark .timestamp-tag {
-  color: #fbbf24;
-  background-color: rgba(30, 58, 138, 0.35);
+  color: #ffc700;
+  background-color: rgba(0, 27, 68, 0.45);
 }
 
 .speaker-tag {
@@ -136,23 +136,24 @@ mark.highlight {
 }
 
 /* Tarjetas de Tipo de Audio en Modo Oscuro */
-.dark .audio-type-btn:not([class*="border-blue-800"]):not([class*="border-amber-400"]) {
+.dark .audio-type-btn:not([class*="border-blue-800"]):not([class*="border-amber-400"]):not([class*="border-[#ffc700]"]) {
   background-color: #1e293b !important; /* slate-800 */
   border-color: #334155 !important;     /* slate-700 */
   color: #f1f5f9 !important;            /* slate-100 */
 }
 
-.dark .audio-type-btn:not([class*="border-blue-800"]):not([class*="border-amber-400"]) p.font-semibold {
+.dark .audio-type-btn:not([class*="border-blue-800"]):not([class*="border-amber-400"]):not([class*="border-[#ffc700]"]) p.font-semibold {
   color: #ffffff !important;
 }
 
-.dark .audio-type-btn:not([class*="border-blue-800"]):not([class*="border-amber-400"]) p.text-\[11px\] {
+.dark .audio-type-btn:not([class*="border-blue-800"]):not([class*="border-amber-400"]):not([class*="border-[#ffc700]"]) p.text-\[11px\] {
   color: #cbd5e1 !important;            /* slate-300 */
 }
 
 .dark .audio-type-btn[class*="border-blue-800"],
-.dark .audio-type-btn[class*="border-amber-400"] {
-  border-color: #f59e0b !important;     /* amber-500 */
-  background-color: rgba(23, 37, 84, 0.4) !important; /* blue-950 con transparencia */
+.dark .audio-type-btn[class*="border-amber-400"],
+.dark .audio-type-btn[class*="border-[#ffc700]"] {
+  border-color: #ffc700 !important;     /* Oro xeneize */
+  background-color: rgba(0, 27, 68, 0.45) !important; /* Azul xeneize con transparencia */
 }
 

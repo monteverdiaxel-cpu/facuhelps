@@ -38,8 +38,8 @@
   <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 transition-colors">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
       <div id="btnHeaderLogoHome" class="flex items-center gap-2 sm:gap-3 min-w-0 shrink cursor-pointer group" title="Ir al Inicio">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-900 border border-amber-400/30 shadow-sm shadow-blue-950/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-          <i data-lucide="audio-lines" class="w-4 h-4 sm:w-5 sm:h-5 text-amber-400"></i>
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#ffc700]/40 shadow-sm shadow-[#001b44]/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform" style="background-color: #001b44;">
+          <i data-lucide="audio-lines" class="w-4 h-4 sm:w-5 sm:h-5" style="color: #ffc700;"></i>
         </div>
         <div class="min-w-0">
           <h1 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-tight truncate transition-colors">FacuHelps</h1>
@@ -142,14 +142,14 @@
             <button 
               id="tabBtnHome" 
               type="button" 
-              class="nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-amber-400/60 dark:border-amber-400/50 bg-blue-950/10 dark:bg-blue-950/40 text-blue-950 dark:text-amber-200 font-semibold text-xs transition-all shadow-xs text-left"
+              class="nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border-2 border-[#ffc700] bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] font-semibold text-xs transition-all shadow-xs text-left"
             >
-              <div class="w-8 h-8 rounded-lg bg-blue-900/10 dark:bg-blue-900/40 text-amber-500 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <div class="w-8 h-8 rounded-lg bg-[#001b44]/15 dark:bg-[#001b44]/60 text-[#ffc700] flex items-center justify-center shrink-0">
                 <i data-lucide="home" class="w-4 h-4"></i>
               </div>
               <div class="min-w-0">
                 <div class="truncate text-xs font-semibold">Inicio</div>
-                <div class="hidden lg:block text-[11px] text-blue-900/70 dark:text-amber-300/70 font-normal truncate">Portada y accesos</div>
+                <div class="hidden lg:block text-[11px] text-[#001b44]/80 dark:text-[#ffc700]/80 font-normal truncate">Portada y accesos</div>
               </div>
             </button>
 
@@ -202,7 +202,7 @@
             <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
               FacuHelps
             </h2>
-            <p class="text-base sm:text-lg font-medium text-blue-900 dark:text-amber-400 mt-2">
+            <p class="text-base sm:text-lg font-medium text-[#002d72] dark:text-[#ffc700] mt-2">
               Tu espacio integral de estudio universitario
             </p>
             
@@ -214,9 +214,10 @@
               <button 
                 id="btnHeroOpenTranscriptor" 
                 type="button" 
-                class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-amber-200 hover:text-amber-100 border border-amber-400/30 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm shadow-blue-950/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                style="background-color: #001b44; color: #ffc700;"
+                class="px-5 py-2.5 rounded-xl border border-[#ffc700]/30 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm hover:brightness-125 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
-                <i data-lucide="mic" class="w-4 h-4 text-amber-400"></i>
+                <i data-lucide="mic" class="w-4 h-4" style="color: #ffc700;"></i>
                 <span>Abrir Transcriptor</span>
               </button>
               <button 
@@ -266,10 +267,11 @@
                 <button 
                   id="btnCardOpenTranscriptor" 
                   type="button" 
-                  class="w-full py-2.5 px-4 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-blue-900 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-2 transition"
+                  style="background-color: #001b44; color: #ffc700;"
+                  class="w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:brightness-125 transition"
                 >
                   <span>Abrir Transcriptor</span>
-                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                  <i data-lucide="arrow-right" class="w-4 h-4" style="color: #ffc700;"></i>
                 </button>
               </div>
             </div>
@@ -500,9 +502,10 @@
         <button 
           id="btnStartTranscribe" 
           disabled
-          class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-amber-300 font-semibold border border-amber-400/20 text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-950/20 transition-all"
+          style="background-color: #001b44; color: #ffc700;"
+          class="w-full sm:w-auto px-6 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-semibold border border-[#ffc700]/30 text-sm flex items-center justify-center gap-2 shadow-sm hover:brightness-125 transition-all"
         >
-          <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+          <i data-lucide="sparkles" class="w-4 h-4" style="color: #ffc700;"></i>
           <span>Transcribir Audio</span>
         </button>
       </div>
@@ -730,17 +733,19 @@
             <button 
               id="btnNewSubjectModal" 
               type="button" 
-              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs shadow-sm transition"
+              style="background-color: #001b44; color: #ffffff;"
+              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-medium text-xs shadow-sm transition"
             >
-              <i data-lucide="plus" class="w-4 h-4"></i>
+              <i data-lucide="plus" class="w-4 h-4 text-[#ffc700]"></i>
               <span>+ Nueva Materia</span>
             </button>
             <button 
               id="btnNewFolderModal" 
               type="button" 
-              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs shadow-sm transition"
+              style="background-color: #001b44; color: #ffffff;"
+              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-medium text-xs shadow-sm transition"
             >
-              <i data-lucide="folder-plus" class="w-4 h-4"></i>
+              <i data-lucide="folder-plus" class="w-4 h-4 text-[#ffc700]"></i>
               <span>+ Nueva Subcarpeta</span>
             </button>
           </div>
@@ -760,8 +765,8 @@
           <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
             Crea tu primera materia para comenzar a organizar apuntes, clases y lecturas en PDF.
           </p>
-          <button id="btnNewSubjectEmpty" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs shadow-sm transition">
-            <i data-lucide="plus" class="w-4 h-4"></i>
+          <button id="btnNewSubjectEmpty" style="background-color: #001b44; color: #ffffff;" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-[#002d72] font-medium text-xs shadow-sm transition">
+            <i data-lucide="plus" class="w-4 h-4 text-[#ffc700]"></i>
             <span>Crear primera materia</span>
           </button>
         </div>
