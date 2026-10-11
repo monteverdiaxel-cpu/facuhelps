@@ -599,43 +599,37 @@ async def export_docx(req: DocxExportRequest):
     sub_run.font.color.rgb = RGBColor(100, 116, 139)  # Slate
     sub.paragraph_format.space_after = Pt(12)
     
-    # Párrafos e intervenciones de la transcripción con formato académico
+    # Párrafos e intervenciones de la transcripción con formato académico estricto
     raw_paras = [p.strip() for p in req.transcript.split("\n") if p.strip()]
-    for p_text in raw_paras:
+    for line in raw_paras:
         p = doc.add_paragraph()
         # Formato académico: Espaciado posterior 6 pt, interlineado 1.15
         p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.line_spacing = 1.15
-        
-        # Segmentar marcas de tiempo si existieran
-        parts = re.split(r'(\[\d{1,2}:\d{2}(?::\d{2})?\])', p_text)
-        for part in parts:
-            if not part:
-                continue
-            if re.match(r'^\[\d{1,2}:\d{2}(?::\d{2})?\]$', part):
-                run = p.add_run(part + " ")
-                run.font.name = "Consolas"
-                run.font.size = Pt(9.5)
-                run.font.bold = True
-                run.font.color.rgb = RGBColor(79, 70, 229)
-            else:
-                # Segmentar negrita Markdown **...** para nombres de oradores en negrita al inicio y énfasis
-                subparts = re.split(r'(\*\*.*?\*\*)', part)
-                for subpart in subparts:
-                    if not subpart:
-                        continue
-                    if subpart.startswith("**") and subpart.endswith("**") and len(subpart) >= 4:
-                        bold_text = subpart[2:-2]
-                        run = p.add_run(bold_text)
-                        run.font.name = "Calibri"
-                        run.font.size = Pt(11)
-                        run.font.bold = True
-                        run.font.color.rgb = RGBColor(15, 23, 42)
-                    else:
-                        run = p.add_run(subpart)
-                        run.font.name = "Calibri"
-                        run.font.size = Pt(11)
-                        run.font.color.rgb = RGBColor(30, 41, 59)
+
+        # Detectar si la línea inicia con una etiqueta de hablante (con o sin asteriscos markdown)
+        m = re.match(r'^\*{0,2}([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+:)\*{0,2}\s*(.*)$', line)
+
+        if m:
+            speaker = m.group(1).replace('*', '').strip()
+            speech = m.group(2).replace('*', '').strip()
+
+            r_spk = p.add_run(speaker + " ")
+            r_spk.bold = True
+            r_spk.font.name = "Calibri"
+            r_spk.font.size = Pt(11)
+            r_spk.font.color.rgb = RGBColor(15, 23, 42)  # Azul oscuro/negro pizarra
+
+            if speech:
+                r_text = p.add_run(speech)
+                r_text.font.name = "Calibri"
+                r_text.font.size = Pt(11)
+                r_text.font.color.rgb = RGBColor(51, 65, 85)  # Slate oscuro
+        else:
+            r_text = p.add_run(line.replace('*', ''))
+            r_text.font.name = "Calibri"
+            r_text.font.size = Pt(11)
+            r_text.font.color.rgb = RGBColor(51, 65, 85)
 
     buffer = io.BytesIO()
     doc.save(buffer)
