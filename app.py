@@ -201,196 +201,155 @@ async def transcribe_audio(
     system_instruction = get_system_instruction(effective_audio_type)
     user_prompt = get_user_prompt(effective_audio_type, clean_keywords)
 
-    # Streaming directo a disco en chunks de 1 MB para consumo mínimo de RAM (evita OOM en Render)
+    # Guardar audio en disco en bloques de 1 MB (protege memoria RAM)
     temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
     local_temp_path = TEMP_DIR / temp_filename
 
-    async def generate_events():
-        google_file = None
-        client = None
-        active_client = None
+    google_file = None
+    client = None
 
-        try:
-            from google import genai
-            from google.genai import types
+    try:
+        from google import genai
+        from google.genai import types
 
-            # 1. Guardar archivo en disco leyendo en bloques de 1 MB
-            yield f"data: {json.dumps({'event': 'status', 'stage': 'local', 'message': 'Leyendo audio (detección de tamaño y optimización de velocidad)...', 'mode': 'auto'})}\n\n"
-            await asyncio.sleep(0)
+        with open(local_temp_path, "wb") as f:
+            while chunk := await file.read(1024 * 1024):
+                f.write(chunk)
 
-            file_size = 0
-            with open(local_temp_path, "wb") as f:
-                while chunk := await file.read(1024 * 1024):
-                    f.write(chunk)
-                    file_size += len(chunk)
+        # Subir a Google Files API probando con el pool de API keys si hay 429
+        upload_success = False
+        last_upload_err = None
+        key_index_used = 0
 
-            # Umbral de 20 MB (20 * 1024 * 1024 bytes)
-            INLINE_THRESHOLD = 20 * 1024 * 1024
-            key_index_used = 0
-
-            if file_size < INLINE_THRESHOLD:
-                # ─── ATAJO DE ALTA VELOCIDAD: PROCESAMIENTO INLINE (< 20 MB) ───
-                # No usa Files API ni espera polling en Google; pasa los bytes directo al modelo en 20-30s
-                size_mb = file_size / (1024 * 1024)
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Audio liviano ({size_mb:.1f} MB < 20 MB): activando atajo de alta velocidad inline...', 'mode': 'inline_flash'})}\n\n"
-                await asyncio.sleep(0)
-
-                with open(local_temp_path, "rb") as f:
-                    audio_bytes = f.read()
-
-                audio_content = types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)
-                processing_mode = "alta velocidad (inline)"
-            else:
-                # ─── FLUJO ROBUSTO PARA AUDIOS PESADOS (>= 20 MB) ───
-                # Guarda en disco y usa Google Files API para proteger memoria RAM
-                size_mb = file_size / (1024 * 1024)
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Audio pesado ({size_mb:.1f} MB >= 20 MB): subiendo a Google Files API desde disco...', 'mode': 'files_api'})}\n\n"
-                await asyncio.sleep(0)
-
-                upload_success = False
-                last_upload_err = None
-
-                for k_idx, current_key in enumerate(key_pool):
-                    try:
-                        client = genai.Client(api_key=current_key)
-                        google_file = client.files.upload(
-                            file=str(local_temp_path),
-                            config=types.UploadFileConfig(
-                                mime_type=mime_type,
-                                display_name=file.filename
-                            )
-                        )
-                        upload_success = True
-                        active_client = client
-                        key_index_used = k_idx
-                        break
-                    except Exception as up_err:
-                        last_upload_err = up_err
-                        if is_rate_limit_error(up_err) and k_idx + 1 < len(key_pool):
-                            yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Límite 429 en Key #{k_idx+1}. Rotando a Key #{k_idx+2}...', 'mode': 'files_api'})}\n\n"
-                            await asyncio.sleep(1)
-                            continue
-                        else:
-                            break
-
-                if not upload_success or not google_file:
-                    yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(last_upload_err)}'})}\n\n"
-                    return
-
-                # Sondeo cada 1 segundo exacto hasta que esté ACTIVE
-                max_wait_seconds = 180
-                start_time = time.time()
-                while google_file.state.name == "PROCESSING":
-                    if time.time() - start_time > max_wait_seconds:
-                        yield f"data: {json.dumps({'event': 'error', 'message': 'Tiempo de espera agotado mientras Google procesaba el audio.'})}\n\n"
-                        return
-                    yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 1s)...', 'mode': 'files_api'})}\n\n"
-                    await asyncio.sleep(1)
-                    google_file = active_client.files.get(name=google_file.name)
-
-                if google_file.state.name != "ACTIVE":
-                    yield f"data: {json.dumps({'event': 'error', 'message': f'Google no pudo procesar el archivo. Estado: {google_file.state.name}'})}\n\n"
-                    return
-
-                audio_content = google_file
-                processing_mode = "files_api (disco)"
-                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo en nube. Transcribiendo con Gemini Flash...', 'mode': 'files_api'})}\n\n"
-                await asyncio.sleep(0)
-
-            # 3. Transcripción con gemini-3.8-flash, rotación ante 429 y reintento ante 503
-            gen_config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.0,
-                max_output_tokens=65536,
-                thinking_config=types.ThinkingConfig(thinking_budget=0)
-            )
-
-            response = None
-            current_k_idx = key_index_used
-
-            while current_k_idx < len(key_pool):
-                curr_key = key_pool[current_k_idx]
-                curr_client = genai.Client(api_key=curr_key)
-                should_rotate = False
-
-                for attempt in range(1, 4):
-                    try:
-                        response = curr_client.models.generate_content(
-                            model="gemini-3.8-flash",
-                            contents=[
-                                audio_content,
-                                user_prompt
-                            ],
-                            config=gen_config
-                        )
-                        break
-                    except Exception as api_err:
-                        if is_rate_limit_error(api_err):
-                            # Rotación ante 429 RESOURCE_EXHAUSTED
-                            if current_k_idx + 1 < len(key_pool):
-                                next_idx = current_k_idx + 2
-                                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Cuota agotada (429) en Key #{current_k_idx+1}. Rotando automáticamente a Key #{next_idx}...', 'mode': processing_mode})}\n\n"
-                                should_rotate = True
-                                break
-                            else:
-                                raise api_err
-                        elif is_retriable_error(api_err) and attempt < 3:
-                            yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Alta demanda en Gemini (503). Reintentando en 3s (intento {attempt}/3)...', 'mode': processing_mode})}\n\n"
-                            await asyncio.sleep(3)
-                        else:
-                            raise api_err
-
-                if response is not None:
-                    break
-
-                if should_rotate:
-                    current_k_idx += 1
-                    await asyncio.sleep(1)
+        for k_idx, current_key in enumerate(key_pool):
+            try:
+                client = genai.Client(api_key=current_key)
+                google_file = client.files.upload(
+                    file=str(local_temp_path),
+                    config=types.UploadFileConfig(
+                        mime_type=mime_type,
+                        display_name=file.filename
+                    )
+                )
+                upload_success = True
+                key_index_used = k_idx
+                break
+            except Exception as up_err:
+                last_upload_err = up_err
+                if is_rate_limit_error(up_err) and k_idx + 1 < len(key_pool):
+                    time.sleep(1)
+                    continue
                 else:
                     break
 
-            transcript_text = (response.text or "").strip() if response else ""
+        if not upload_success or not google_file:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al subir el archivo de audio: {str(last_upload_err)}"
+            )
 
-            if not transcript_text:
-                yield f"data: {json.dumps({'event': 'error', 'message': 'La API devolvió una respuesta vacía.'})}\n\n"
-                return
+        # Polling rápido cada 1 segundo exacto hasta que esté ACTIVE
+        max_wait_seconds = 180
+        start_time = time.time()
+        while google_file.state.name == "PROCESSING":
+            if time.time() - start_time > max_wait_seconds:
+                raise HTTPException(
+                    status_code=504,
+                    detail="Tiempo de espera agotado mientras Google procesaba el audio."
+                )
+            time.sleep(1)
+            google_file = client.files.get(name=google_file.name)
 
-            # Emitir texto y evento de finalización
-            yield f"data: {json.dumps({'event': 'chunk', 'text': transcript_text})}\n\n"
-            yield f"data: {json.dumps({'event': 'done', 'filename': file.filename, 'model_used': 'gemini-3.8-flash', 'processing_mode': processing_mode, 'transcript': transcript_text})}\n\n"
+        if google_file.state.name != "ACTIVE":
+            raise HTTPException(
+                status_code=500,
+                detail=f"Google no pudo procesar el archivo. Estado: {google_file.state.name}"
+            )
 
-        except Exception as global_err:
-            yield f"data: {json.dumps({'event': 'error', 'message': f'Error en el proceso: {str(global_err)}'})}\n\n"
+        # Transcripción directa con gemini-3.8-flash de una sola vez
+        gen_config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.0,
+            max_output_tokens=65536,
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
+        )
 
-        finally:
-            # 5. Limpieza garantizada de archivo temporal en disco
-            if local_temp_path:
+        response = None
+        current_k_idx = key_index_used
+
+        while current_k_idx < len(key_pool):
+            curr_key = key_pool[current_k_idx]
+            curr_client = genai.Client(api_key=curr_key)
+            should_rotate = False
+
+            for attempt in range(1, 4):
                 try:
-                    if os.path.exists(local_temp_path):
-                        os.remove(local_temp_path)
-                except Exception:
-                    pass
+                    response = curr_client.models.generate_content(
+                        model=target_model_name,
+                        contents=[
+                            google_file,
+                            user_prompt
+                        ],
+                        config=gen_config
+                    )
+                    break
+                except Exception as api_err:
+                    if is_rate_limit_error(api_err):
+                        if current_k_idx + 1 < len(key_pool):
+                            should_rotate = True
+                            break
+                        else:
+                            raise api_err
+                    elif is_retriable_error(api_err) and attempt < 3:
+                        time.sleep(3)
+                    else:
+                        raise api_err
 
-            # Eliminar archivo remoto en Google Files API
-            cleanup_client = active_client or client
-            if cleanup_client and google_file and getattr(google_file, "name", None):
-                try:
-                    cleanup_client.files.delete(name=google_file.name)
-                except Exception:
-                    pass
+            if response is not None:
+                break
 
-            # Liberar cualquier residuo de memoria RAM inmediatamente
-            gc.collect()
+            if should_rotate:
+                current_k_idx += 1
+                time.sleep(1)
+            else:
+                break
 
-    return StreamingResponse(
-        generate_events(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
-    )
+        transcript_text = (response.text or "").strip() if response else ""
+
+        if not transcript_text:
+            raise HTTPException(
+                status_code=500,
+                detail="La API de Gemini devolvió una transcripción vacía."
+            )
+
+        return JSONResponse({
+            "transcript": transcript_text,
+            "filename": file.filename,
+            "model_used": target_model_name
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error durante la transcripción: {str(e)}"
+        )
+    finally:
+        # Limpieza de archivo local y remoto en Google Files API
+        if local_temp_path and os.path.exists(local_temp_path):
+            try:
+                os.remove(local_temp_path)
+            except Exception:
+                pass
+
+        if client and google_file and getattr(google_file, "name", None):
+            try:
+                client.files.delete(name=google_file.name)
+            except Exception:
+                pass
+
+        gc.collect()
 
 class SummarizeRequest(BaseModel):
     transcript: str

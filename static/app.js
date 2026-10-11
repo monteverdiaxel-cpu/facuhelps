@@ -519,109 +519,34 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(errMsg);
       }
 
-      // Preparar visor en vivo
+      const data = await response.json();
+      rawTranscriptText = data.transcript || "";
+
+      if (!rawTranscriptText.trim()) {
+        throw new Error("La transcripción recibida está vacía.");
+      }
+
+      // Finalizar visualización limpia y directa
+      setProgressStep("done");
+      progressCard.classList.add("hidden");
       resultSection.classList.remove("hidden");
-      if (completedBadge) completedBadge.classList.add("hidden");
-      if (streamingIndicator) streamingIndicator.classList.remove("hidden");
-      resultFileName.textContent = currentFile.name;
-      resultModelBadge.textContent = `${selectedModelName} • en vivo`;
-      transcriptContent.innerHTML = '<p class="text-slate-400 italic flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span> Conectando con Gemini Flash y transcribiendo en vivo...</p>';
-      
-      setTimeout(() => {
-        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 200);
-
-      // Leer el stream SSE mediante ReadableStream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = "";
-      rawTranscriptText = "";
-      let hasReceivedFirstChunk = false;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const blocks = buffer.split(/\r?\n\r?\n/);
-        buffer = blocks.pop(); // conservar resto incompleto
-
-        for (const block of blocks) {
-          const lines = block.split(/\r?\n/);
-          for (const line of lines) {
-            if (!line.startsWith("data:")) continue;
-            const jsonStr = line.slice(5).trim();
-            if (!jsonStr) continue;
-
-            try {
-              const msg = JSON.parse(jsonStr);
-
-              if (msg.event === "status") {
-                setProgressStep(msg.stage);
-                if (msg.message) progressSubtitle.textContent = msg.message;
-              } else if (msg.event === "chunk") {
-                if (!hasReceivedFirstChunk) {
-                  hasReceivedFirstChunk = true;
-                  progressCard.classList.add("hidden"); // Ocultar tarjeta de carga cuando fluye el texto
-                }
-                rawTranscriptText += msg.text;
-                // Renderizado en vivo con cursor pulsante
-                transcriptContent.innerHTML = formatTranscript(rawTranscriptText) + '<span class="inline-block w-1.5 h-4 bg-indigo-600 animate-pulse ml-0.5 align-middle"></span>';
-                if (transcriptContainer) {
-                  transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
-                }
-              } else if (msg.event === "done") {
-                setProgressStep("done");
-                if (completedBadge) completedBadge.classList.remove("hidden");
-                if (streamingIndicator) streamingIndicator.classList.add("hidden");
-                rawTranscriptText = msg.transcript || rawTranscriptText;
-                resultFileName.textContent = msg.filename || currentFile.name;
-                resultModelBadge.textContent = `${msg.model_used || selectModel.value} • ${msg.processing_mode || 'completado'}`;
-                transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
-              } else if (msg.event === "error") {
-                throw new Error(msg.message);
-              }
-            } catch (err) {
-              if (err.message && err.message !== "Unexpected end of JSON input") {
-                throw err;
-              }
-            }
-          }
-        }
-      }
-
-      // Procesar cualquier residuo en el buffer al cerrar el stream
-      if (buffer && buffer.trim()) {
-        const lines = buffer.split(/\r?\n/);
-        for (const line of lines) {
-          if (!line.startsWith("data:")) continue;
-          const jsonStr = line.slice(5).trim();
-          if (!jsonStr) continue;
-          try {
-            const msg = JSON.parse(jsonStr);
-            if (msg.event === "chunk") {
-              rawTranscriptText += msg.text;
-            } else if (msg.event === "done") {
-              rawTranscriptText = msg.transcript || rawTranscriptText;
-            }
-          } catch (e) {}
-        }
-      }
-
-      // Finalizar visualización limpia
       if (completedBadge) completedBadge.classList.remove("hidden");
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
+      resultFileName.textContent = data.filename || currentFile.name;
+      resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+
       // Guardar automáticamente en el historial local ("Mis Transcripciones")
-      if (rawTranscriptText && rawTranscriptText.trim()) {
-        saveToHistory({
-          filename: (currentFile ? currentFile.name : "audio_transcripcion.mp3"),
-          audioType: currentAudioType || "clase",
-          transcript: rawTranscriptText,
-          timestamp: Date.now()
-        });
-      }
+      saveToHistory({
+        filename: data.filename || currentFile.name,
+        audioType: currentAudioType || "clase",
+        transcript: rawTranscriptText,
+        timestamp: Date.now()
+      });
 
     } catch (err) {
       showError("Error al transcribir", err.message);
