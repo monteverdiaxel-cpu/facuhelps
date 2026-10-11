@@ -1508,15 +1508,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabBtnHome = document.getElementById("tabBtnHome");
   const tabBtnTranscriptor = document.getElementById("tabBtnTranscriptor");
   const tabBtnOrganizer = document.getElementById("tabBtnOrganizer");
+  const tabBtnCareer = document.getElementById("tabBtnCareer");
   const btnHeaderLogoHome = document.getElementById("btnHeaderLogoHome");
   const btnHeroOpenTranscriptor = document.getElementById("btnHeroOpenTranscriptor");
   const btnHeroOpenOrganizer = document.getElementById("btnHeroOpenOrganizer");
   const btnCardOpenTranscriptor = document.getElementById("btnCardOpenTranscriptor");
   const btnCardOpenOrganizer = document.getElementById("btnCardOpenOrganizer");
+  const btnCardOpenCareer = document.getElementById("btnCardOpenCareer");
 
   const viewHome = document.getElementById("viewHome");
   const viewTranscriptor = document.getElementById("viewTranscriptor");
   const viewOrganizer = document.getElementById("viewOrganizer");
+  const viewCareer = document.getElementById("viewCareer");
 
   function setTabButtonState(btn, isActive, activeTitle, inactiveSub, activeSub) {
     if (!btn) return;
@@ -1543,11 +1546,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (viewHome) viewHome.classList.add("hidden");
     if (viewTranscriptor) viewTranscriptor.classList.add("hidden");
     if (viewOrganizer) viewOrganizer.classList.add("hidden");
+    if (viewCareer) viewCareer.classList.add("hidden");
 
     // 2. Actualizar estados visuales de los botones de navegación
     setTabButtonState(tabBtnHome, target === "home");
     setTabButtonState(tabBtnTranscriptor, target === "transcriptor");
     setTabButtonState(tabBtnOrganizer, target === "organizer");
+    setTabButtonState(tabBtnCareer, target === "career");
 
     // 3. Mostrar la vista seleccionada y disparar sus acciones
     if (target === "home") {
@@ -1557,6 +1562,9 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (target === "organizer") {
       if (viewOrganizer) viewOrganizer.classList.remove("hidden");
       renderOrganizerView();
+    } else if (target === "career") {
+      if (viewCareer) viewCareer.classList.remove("hidden");
+      renderCareerView();
     }
 
     // Scroll suave hacia arriba
@@ -1573,6 +1581,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (tabBtnOrganizer) {
     tabBtnOrganizer.addEventListener("click", () => switchTab("organizer"));
+  }
+  if (tabBtnCareer) {
+    tabBtnCareer.addEventListener("click", () => switchTab("career"));
   }
 
   // Redirecciones desde la portada y header
@@ -1591,12 +1602,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnCardOpenOrganizer) {
     btnCardOpenOrganizer.addEventListener("click", () => switchTab("organizer"));
   }
+  if (btnCardOpenCareer) {
+    btnCardOpenCareer.addEventListener("click", () => switchTab("career"));
+  }
 
   // ─────────────────────────────────────────────────────────────
   // 14. MÓDULO ORGANIZADOR DE MATERIAS (INDEXEDDB LOCAL)
   // ─────────────────────────────────────────────────────────────
   const DB_NAME = "FacuHelpsDB";
-  const DB_VERSION = 3;
+  const DB_VERSION = 4;
   let dbInstance = null;
 
   // Estado de navegación del organizador
@@ -1736,6 +1750,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!db.objectStoreNames.contains("notes")) {
           const notesStore = db.createObjectStore("notes", { keyPath: "id", autoIncrement: true });
           notesStore.createIndex("subjectId", "subjectId", { unique: false });
+        }
+        // Almacén de Mi Carrera (Plan 504 Comu UBA)
+        if (!db.objectStoreNames.contains("careerPlan")) {
+          db.createObjectStore("careerPlan", { keyPath: "key" });
         }
       };
       request.onsuccess = (e) => {
@@ -3477,7 +3495,711 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 15. MÓDULO INTERACTIVO 'MI CARRERA (PLAN 504 - COMU UBA)'
+  // ─────────────────────────────────────────────────────────────
+
+  // Datos curriculares del Plan 504 (FSOC UBA)
+  const CAREER_ORIENTATIONS = [
+    {
+      id: "periodismo",
+      icon: "newspaper",
+      name: "Periodismo",
+      description: "Redacciones de noticias, medios digitales, streaming, radio, TV, periodismo de datos e investigación.",
+      stage2: {
+        introductory: [
+          { id: "per_intro_1", name: "Teoría del Periodismo", area: "Introductoria" },
+          { id: "per_intro_2", name: "Periodismo de Investigación", area: "Introductoria" },
+          { id: "per_intro_3", name: "Narrativas Periodísticas Contemporáneas", area: "Introductoria" }
+        ],
+        applied: [
+          { id: "per_app_1", name: "Periodismo de Datos y Fact-Checking", area: "Aplicada" },
+          { id: "per_app_2", name: "Producción y Gestión de Medios Periodísticos", area: "Aplicada" },
+          { id: "per_app_3", name: "Periodismo Digital, Transmedia y Plataformas", area: "Aplicada" },
+          { id: "per_app_4", name: "Ética y Legislación de Prensa", area: "Aplicada" }
+        ],
+        workshops: [
+          { id: "per_tall_1", name: "Taller de Producción Periodística en Prensa", area: "Taller Específico" },
+          { id: "per_tall_2", name: "Taller de Periodismo Audiovisual y Streaming", area: "Taller Específico" }
+        ]
+      }
+    },
+    {
+      id: "opinion_publica",
+      icon: "bar-chart-3",
+      name: "Opinión Pública y Publicidad",
+      description: "Campañas políticas y electorales, consultoría, agencias de publicidad, branding y análisis de opinión pública.",
+      stage2: {
+        introductory: [
+          { id: "op_intro_1", name: "Teoría de la Opinión Pública", area: "Introductoria" },
+          { id: "op_intro_2", name: "Comunicación Política y Campañas Electorales", area: "Introductoria" },
+          { id: "op_intro_3", name: "Teoría y Práctica de la Publicidad", area: "Introductoria" }
+        ],
+        applied: [
+          { id: "op_app_1", name: "Metodología de Encuestas y Métricas de Opinión", area: "Aplicada" },
+          { id: "op_app_2", name: "Estrategias de Branding y Comunicación Institucional", area: "Aplicada" },
+          { id: "op_app_3", name: "Comportamiento del Consumidor y Ciudadano", area: "Aplicada" },
+          { id: "op_app_4", name: "Planificación de Medios y Publicidad Digital", area: "Aplicada" }
+        ],
+        workshops: [
+          { id: "op_tall_1", name: "Taller de Creatividad Publicitaria", area: "Taller Específico" },
+          { id: "op_tall_2", name: "Taller de Consultoría y Estrategia Política", area: "Taller Específico" }
+        ]
+      }
+    },
+    {
+      id: "politicas",
+      icon: "landmark",
+      name: "Políticas y Planificación de la Comunicación",
+      description: "Gestión estatal, ministerios, organismos reguladores, políticas públicas de medios y ONGs.",
+      stage2: {
+        introductory: [
+          { id: "pol_intro_1", name: "Economía Política de las Comunicaciones", area: "Introductoria" },
+          { id: "pol_intro_2", name: "Estructura y Concentración del Sistema de Medios", area: "Introductoria" },
+          { id: "pol_intro_3", name: "Planificación Estratégica de la Comunicación", area: "Introductoria" }
+        ],
+        applied: [
+          { id: "pol_app_1", name: "Regulación, Espectro Radioeléctrico y Plataformas", area: "Aplicada" },
+          { id: "pol_app_2", name: "Gestión de la Comunicación en el Estado y Sector Público", area: "Aplicada" },
+          { id: "pol_app_3", name: "Diseño y Evaluación de Políticas Públicas", area: "Aplicada" },
+          { id: "pol_app_4", name: "Comunicación en Organizaciones y Redes Sociales", area: "Aplicada" }
+        ],
+        workshops: [
+          { id: "pol_tall_1", name: "Taller de Planificación y Formulación de Proyectos", area: "Taller Específico" },
+          { id: "pol_tall_2", name: "Taller de Campañas Públicas y Gubernamentales", area: "Taller Específico" }
+        ]
+      }
+    },
+    {
+      id: "comunitaria",
+      icon: "sprout",
+      name: "Comunicación Comunitaria",
+      description: "Medios comunitarios y cooperativos, organizaciones barriales, movimientos sociales y derechos humanos en territorio.",
+      stage2: {
+        introductory: [
+          { id: "comu_intro_1", name: "Comunicación Popular y Movimientos Sociales", area: "Introductoria" },
+          { id: "comu_intro_2", name: "Metodologías Participativas y Diagnóstico Territorial", area: "Introductoria" },
+          { id: "comu_intro_3", name: "Sostenibilidad de Medios Comunitarios y Populares", area: "Introductoria" }
+        ],
+        applied: [
+          { id: "comu_app_1", name: "Comunicación, Derechos Humanos y Géneros", area: "Aplicada" },
+          { id: "comu_app_2", name: "Gestión de Redes Barriales y Territoriales", area: "Aplicada" },
+          { id: "comu_app_3", name: "Economía Social, Cooperativismo y Medios", area: "Aplicada" },
+          { id: "comu_app_4", name: "Narrativas y Producción Popular de Contenidos", area: "Aplicada" }
+        ],
+        workshops: [
+          { id: "comu_tall_1", name: "Taller de Intervención Comunitaria y Territorio", area: "Taller Específico" },
+          { id: "comu_tall_2", name: "Taller de Medios Comunitarios, Redes y Radio", area: "Taller Específico" }
+        ]
+      }
+    },
+    {
+      id: "educacion",
+      icon: "graduation-cap",
+      name: "Procesos Educativos",
+      description: "Pedagogía de medios, e-learning, diseño de plataformas educativas y materiales didácticos.",
+      stage2: {
+        introductory: [
+          { id: "edu_intro_1", name: "Comunicación y Educación: Teorías y Debates", area: "Introductoria" },
+          { id: "edu_intro_2", name: "Pedagogía Crítica y Alfabetización Mediática", area: "Introductoria" },
+          { id: "edu_intro_3", name: "Tecnologías Educativas y Nuevos Escenarios", area: "Introductoria" }
+        ],
+        applied: [
+          { id: "edu_app_1", name: "Diseño de Entornos Virtuales y E-learning", area: "Aplicada" },
+          { id: "edu_app_2", name: "Producción de Materiales Educativos y Transmedia", area: "Aplicada" },
+          { id: "edu_app_3", name: "Didáctica de la Comunicación", area: "Aplicada" },
+          { id: "edu_app_4", name: "Evaluación de Programas Socioeducativos", area: "Aplicada" }
+        ],
+        workshops: [
+          { id: "edu_tall_1", name: "Taller de Diseño de Recursos Didácticos Digitales", area: "Taller Específico" },
+          { id: "edu_tall_2", name: "Taller de Capacitación y Proyectos Socioeducativos", area: "Taller Específico" }
+        ]
+      }
+    },
+    {
+      id: "digital",
+      icon: "laptop",
+      name: "Nuevos Medios y Comunicación Digital",
+      description: "Narrativas transmedia, comunidades digitales, plataformas y tecnologías de la información.",
+      stage2: {
+        introductory: [
+          { id: "dig_intro_1", name: "Cultura Digital, Algoritmos y Plataformas", area: "Introductoria" },
+          { id: "dig_intro_2", name: "Narrativas Transmedia y Storytelling Digital", area: "Introductoria" },
+          { id: "dig_intro_3", name: "Arquitectura de la Información y Experiencia de Usuario (UX)", area: "Introductoria" }
+        ],
+        applied: [
+          { id: "dig_app_1", name: "Inteligencia Artificial y Automatización en Comunicación", area: "Aplicada" },
+          { id: "dig_app_2", name: "Estrategias de Contenido y Gestión de Comunidades", area: "Aplicada" },
+          { id: "dig_app_3", name: "Análisis de Redes y Métricas Digitales", area: "Aplicada" },
+          { id: "dig_app_4", name: "Producción y Monetización de Nuevos Medios", area: "Aplicada" }
+        ],
+        workshops: [
+          { id: "dig_tall_1", name: "Taller de Prototipado y Diseño de Interfaces UX/UI", area: "Taller Específico" },
+          { id: "dig_tall_2", name: "Taller de Creación y Producción Transmedia", area: "Taller Específico" }
+        ]
+      }
+    }
+  ];
+
+  // Etapa 1: Ciclo Inicial (18 materias en 4 áreas)
+  const CAREER_STAGE1 = {
+    comunicacional: [
+      { id: "c1", name: "Teorías y Prácticas de la Comunicación I", area: "Área Comunicacional" },
+      { id: "c2", name: "Teorías y Prácticas de la Comunicación II", area: "Área Comunicacional" },
+      { id: "c3", name: "Semiótica", area: "Área Comunicacional" },
+      { id: "c4", name: "Semiótica de los Medios", area: "Área Comunicacional" },
+      { id: "c5", name: "Historia de los Medios", area: "Área Comunicacional" },
+      { id: "c6", name: "Comunicación y Cultura", area: "Área Comunicacional" },
+      { id: "c7", name: "Políticas Públicas de la Comunicación", area: "Área Comunicacional" },
+      { id: "c8", name: "La Investigación en Comunicación", area: "Área Comunicacional" },
+      { id: "c9", name: "Derecho a la Comunicación", area: "Área Comunicacional" }
+    ],
+    practica: [
+      { id: "p1", name: "Taller de Escritura", area: "Área Práctica (Taller)" },
+      { id: "p2", name: "Taller de Redacción y Géneros Periodísticos", area: "Área Práctica (Taller)" },
+      { id: "p3", name: "Taller Radial", area: "Área Práctica (Taller)" },
+      { id: "p4", name: "Taller Audiovisual", area: "Área Práctica (Taller)" }
+    ],
+    sociales: [
+      { id: "s1", name: "Historia Social General", area: "Ciencias Sociales (Opción 1/5)" },
+      { id: "s2", name: "Historia Argentina Contemporánea", area: "Ciencias Sociales (Opción 2/5)" },
+      { id: "s3", name: "Economía Política", area: "Ciencias Sociales (Opción 3/5)" },
+      { id: "s4", name: "Antropología y Comunicación", area: "Ciencias Sociales (Opción 4/5)" },
+      { id: "s5", name: "Filosofía y Métodos de las Ciencias Sociales", area: "Ciencias Sociales (Opción 5/5)" }
+    ],
+    problemas: [
+      { id: "pr1", name: "Cuerpo, Imagen y Sentido", area: "Problemas del Campo (Opción 1/3)" },
+      { id: "pr2", name: "Técnica, Cultura y Sociedad", area: "Problemas del Campo (Opción 2/3)" },
+      { id: "pr3", name: "Comunicación, Sujetos y Territorios", area: "Problemas del Campo (Opción 3/3)" }
+    ]
+  };
+
+  // Requisitos transversales de Etapa 2
+  const CAREER_STAGE2_COMMON = [
+    { id: "opt_1", name: "Seminario Optativo I", area: "Optativo" },
+    { id: "opt_2", name: "Seminario Optativo II", area: "Optativo" },
+    { id: "idiom_1", name: "Idioma Extranjero - Nivel I", area: "Idioma" },
+    { id: "idiom_2", name: "Idioma Extranjero - Nivel II", area: "Idioma" },
+    { id: "idiom_3", name: "Idioma Extranjero - Nivel III", area: "Idioma" },
+    { id: "ppp_2", name: "Prácticas Preprofesionales II (PPP II - 60 hs)", area: "Prácticas Profesionales" },
+    { id: "tif", name: "Taller de TIF (Trabajo Integrador Final)", area: "TIF de Grado" }
+  ];
+
+  // Estado local del plan de carrera en memoria
+  let careerPlanData = {
+    selectedOrientation: "periodismo",
+    grades: {} // { [subjectId]: { p1, p2, finalGrade, status, finalScore } }
+  };
+
+  // Operaciones DB: Career Plan
+  async function dbGetCareerPlan() {
+    const db = await openDatabase();
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction("careerPlan", "readonly");
+        const store = tx.objectStore("careerPlan");
+        const req = store.get("userPlan");
+        req.onsuccess = () => resolve(req.result ? req.result.data : null);
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  async function dbSaveCareerPlan(data) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction("careerPlan", "readwrite");
+        const store = tx.objectStore("careerPlan");
+        const req = store.put({ key: "userPlan", data, updatedAt: Date.now() });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  // Lógica de Estado UBA para Notas
+  function calculateSubjectStatus(p1Val, p2Val, finalVal) {
+    const p1 = (p1Val !== "" && p1Val !== null && !isNaN(Number(p1Val))) ? Number(p1Val) : null;
+    const p2 = (p2Val !== "" && p2Val !== null && !isNaN(Number(p2Val))) ? Number(p2Val) : null;
+    const fin = (finalVal !== "" && finalVal !== null && !isNaN(Number(finalVal))) ? Number(finalVal) : null;
+
+    if (p1 === null && p2 === null && fin === null) {
+      return { status: "pending", label: "Cursada pendiente", badgeClass: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400", score: null, isPassed: false };
+    }
+
+    // Si se cargó examen final directo
+    if (fin !== null) {
+      if (fin >= 4) {
+        return { status: "final_passed", label: "✓ Aprobada en final", badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold", score: fin, isPassed: true };
+      } else {
+        return { status: "final_failed", label: "⚠️ Final reprobado", badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 font-semibold", score: fin, isPassed: false };
+      }
+    }
+
+    // Evaluación por parciales
+    if (p1 !== null && p2 !== null) {
+      if (p1 >= 7 && p2 >= 7) {
+        const avg = ((p1 + p2) / 2);
+        return { status: "promoted", label: "🎉 Promocionada", badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold", score: avg, isPassed: true };
+      } else if (p1 >= 4 && p2 >= 4) {
+        return { status: "regular", label: "📝 Regular (A final)", badgeClass: "bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 font-semibold", score: null, isPassed: false };
+      } else {
+        return { status: "recup", label: "⚠️ Recuperatorio", badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 font-semibold", score: null, isPassed: false };
+      }
+    }
+
+    if (p1 !== null || p2 !== null) {
+      const single = p1 !== null ? p1 : p2;
+      if (single < 4) {
+        return { status: "recup", label: "⚠️ Recuperatorio", badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 font-semibold", score: null, isPassed: false };
+      }
+      return { status: "in_progress", label: "⏳ En curso", badgeClass: "bg-blue-100 text-blue-900 dark:bg-blue-950/80 dark:text-blue-300", score: null, isPassed: false };
+    }
+
+    return { status: "pending", label: "Cursada pendiente", badgeClass: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400", score: null, isPassed: false };
+  }
+
+  // Renderizar la vista de Mi Carrera
+  async function renderCareerView() {
+    // 1. Cargar persistencia
+    const saved = await dbGetCareerPlan();
+    if (saved) {
+      careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, saved);
+    }
+
+    // 2. Renderizar Orientaciones
+    renderCareerOrientations();
+
+    // 3. Renderizar Malla Curricular Etapa 1
+    renderCareerStage1();
+
+    // 4. Renderizar Malla Curricular Etapa 2
+    renderCareerStage2();
+
+    // 5. Actualizar Tablero de Métricas
+    updateCareerMetrics();
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function renderCareerOrientations() {
+    const grid = document.getElementById("careerOrientationsGrid");
+    const badge = document.getElementById("careerCurrentOrientationBadge");
+    const label = document.getElementById("careerCurrentOrientationLabel");
+    if (!grid) return;
+
+    grid.innerHTML = "";
+
+    const currentOri = CAREER_ORIENTATIONS.find(o => o.id === careerPlanData.selectedOrientation) || CAREER_ORIENTATIONS[0];
+    if (badge && label) {
+      badge.classList.remove("hidden");
+      label.textContent = `Orientación: ${currentOri.name}`;
+    }
+
+    CAREER_ORIENTATIONS.forEach(ori => {
+      const isSelected = ori.id === careerPlanData.selectedOrientation;
+      const card = document.createElement("div");
+      card.className = `p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer ${
+        isSelected 
+          ? "border-[#ffc700] bg-blue-50/70 dark:bg-blue-950/40 shadow-sm ring-1 ring-[#ffc700]" 
+          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
+      }`;
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-2.5">
+            <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-[#001b44] text-[#ffc700]' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'} flex items-center justify-center shrink-0">
+              <i data-lucide="${ori.icon}" class="w-4 h-4"></i>
+            </div>
+            ${isSelected ? '<span class="text-[10px] bg-[#001b44] text-[#ffc700] font-bold px-2 py-0.5 rounded-full">Seleccionada</span>' : ''}
+          </div>
+          <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100">${ori.name}</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">${ori.description}</p>
+        </div>
+        <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
+          <button 
+            type="button" 
+            class="btn-select-orientation w-full py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+              isSelected 
+                ? 'bg-[#001b44] text-[#ffc700]' 
+                : 'border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+            }"
+          >
+            <span>${isSelected ? '✓ Orientación Activa' : 'Elegir esta orientación'}</span>
+          </button>
+        </div>
+      `;
+
+      card.addEventListener("click", async () => {
+        careerPlanData.selectedOrientation = ori.id;
+        await dbSaveCareerPlan(careerPlanData);
+        renderCareerView();
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  function createSubjectCardElement(subject) {
+    const gradeObj = careerPlanData.grades[subject.id] || { p1: "", p2: "", finalGrade: "" };
+    const evalResult = calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade);
+
+    const card = document.createElement("div");
+    card.className = `p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+      evalResult.isPassed 
+        ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20" 
+        : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+    }`;
+
+    card.innerHTML = `
+      <div>
+        <div class="flex items-start justify-between gap-1.5 mb-1.5">
+          <span class="text-[10px] text-slate-400 font-medium truncate">${subject.area}</span>
+          <span class="badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${evalResult.badgeClass}">
+            ${evalResult.label}
+          </span>
+        </div>
+        <h5 class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2" title="${subject.name}">
+          ${subject.name}
+        </h5>
+      </div>
+
+      <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1">
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-medium">P1</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.p1 ?? ''}" 
+              class="input-p1 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#001b44] dark:focus:border-[#ffc700]"
+            >
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-medium">P2</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.p2 ?? ''}" 
+              class="input-p2 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#001b44] dark:focus:border-[#ffc700]"
+            >
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end">
+          <span class="text-[9px] text-slate-400 font-medium">Final</span>
+          <input 
+            type="number" 
+            min="1" 
+            max="10" 
+            step="0.5" 
+            placeholder="-" 
+            value="${gradeObj.finalGrade ?? ''}" 
+            class="input-final w-11 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#001b44] dark:focus:border-[#ffc700]"
+          >
+        </div>
+      </div>
+    `;
+
+    // Eventos de guardado reactivo
+    const inputP1 = card.querySelector(".input-p1");
+    const inputP2 = card.querySelector(".input-p2");
+    const inputFinal = card.querySelector(".input-final");
+
+    const handleGradeChange = async () => {
+      const p1 = inputP1.value.trim();
+      const p2 = inputP2.value.trim();
+      const fin = inputFinal.value.trim();
+
+      careerPlanData.grades[subject.id] = {
+        p1: p1 ? Number(p1) : "",
+        p2: p2 ? Number(p2) : "",
+        finalGrade: fin ? Number(fin) : ""
+      };
+
+      await dbSaveCareerPlan(careerPlanData);
+
+      // Re-evaluar insignia y métricas de inmediato
+      const newEval = calculateSubjectStatus(p1, p2, fin);
+      const badgeElem = card.querySelector(".badge-status");
+      if (badgeElem) {
+        badgeElem.className = `badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${newEval.badgeClass}`;
+        badgeElem.textContent = newEval.label;
+      }
+
+      card.className = `p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+        newEval.isPassed 
+          ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20" 
+          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+      }`;
+
+      updateCareerMetrics();
+    };
+
+    inputP1.addEventListener("change", handleGradeChange);
+    inputP2.addEventListener("change", handleGradeChange);
+    inputFinal.addEventListener("change", handleGradeChange);
+
+    return card;
+  }
+
+  function renderCareerStage1() {
+    const listCom = document.getElementById("careerListComArea");
+    const listPract = document.getElementById("careerListPractArea");
+    const listSoc = document.getElementById("careerListSocArea");
+    const listProb = document.getElementById("careerListProbArea");
+
+    if (listCom) {
+      listCom.innerHTML = "";
+      CAREER_STAGE1.comunicacional.forEach(sub => listCom.appendChild(createSubjectCardElement(sub)));
+    }
+    if (listPract) {
+      listPract.innerHTML = "";
+      CAREER_STAGE1.practica.forEach(sub => listPract.appendChild(createSubjectCardElement(sub)));
+    }
+    if (listSoc) {
+      listSoc.innerHTML = "";
+      CAREER_STAGE1.sociales.forEach(sub => listSoc.appendChild(createSubjectCardElement(sub)));
+    }
+    if (listProb) {
+      listProb.innerHTML = "";
+      CAREER_STAGE1.problemas.forEach(sub => listProb.appendChild(createSubjectCardElement(sub)));
+    }
+  }
+
+  function renderCareerStage2() {
+    const container = document.getElementById("careerStage2Container");
+    const badge = document.getElementById("careerStage2OrientationBadge");
+    if (!container) return;
+
+    const currentOri = CAREER_ORIENTATIONS.find(o => o.id === careerPlanData.selectedOrientation) || CAREER_ORIENTATIONS[0];
+    if (badge) badge.textContent = `Orientación: ${currentOri.name}`;
+
+    container.innerHTML = "";
+
+    // 2.1 Asignaturas Introductorias (3)
+    const cardIntro = document.createElement("div");
+    cardIntro.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardIntro.innerHTML = `
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+        <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span>📖 Asignaturas Introductorias</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(3 de la orientación)</span>
+        </h4>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="stage2ListIntro"></div>
+    `;
+    container.appendChild(cardIntro);
+    const listIntro = cardIntro.querySelector("#stage2ListIntro");
+    currentOri.stage2.introductory.forEach(sub => listIntro.appendChild(createSubjectCardElement(sub)));
+
+    // 2.2 Asignaturas Aplicadas (4)
+    const cardApp = document.createElement("div");
+    cardApp.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardApp.innerHTML = `
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+        <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span>🎯 Asignaturas Aplicadas</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(4 de la orientación)</span>
+        </h4>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" id="stage2ListApp"></div>
+    `;
+    container.appendChild(cardApp);
+    const listApp = cardApp.querySelector("#stage2ListApp");
+    currentOri.stage2.applied.forEach(sub => listApp.appendChild(createSubjectCardElement(sub)));
+
+    // 2.3 Talleres Específicos (2)
+    const cardTall = document.createElement("div");
+    cardTall.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardTall.innerHTML = `
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+        <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span>🛠️ Asignaturas Específicas / Talleres</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(2 de la orientación)</span>
+        </h4>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="stage2ListTall"></div>
+    `;
+    container.appendChild(cardTall);
+    const listTall = cardTall.querySelector("#stage2ListTall");
+    currentOri.stage2.workshops.forEach(sub => listTall.appendChild(createSubjectCardElement(sub)));
+
+    // 2.4 Requisitos Generales: Optativos, Idiomas, PPP II y TIF
+    const cardGeneral = document.createElement("div");
+    cardGeneral.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardGeneral.innerHTML = `
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+        <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <span>🌐 Seminarios, Idiomas, PPP II y TIF</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(Requisitos finales del plan de grado)</span>
+        </h4>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="stage2ListGeneral"></div>
+    `;
+    container.appendChild(cardGeneral);
+    const listGen = cardGeneral.querySelector("#stage2ListGeneral");
+    CAREER_STAGE2_COMMON.forEach(sub => listGen.appendChild(createSubjectCardElement(sub)));
+  }
+
+  function updateCareerMetrics() {
+    // 1. Contar aprobadas por área del Ciclo Inicial
+    const countPassed = (list) => {
+      return list.filter(sub => {
+        const g = careerPlanData.grades[sub.id];
+        if (!g) return false;
+        return calculateSubjectStatus(g.p1, g.p2, g.finalGrade).isPassed;
+      }).length;
+    };
+
+    const passedCom = countPassed(CAREER_STAGE1.comunicacional);
+    const passedPract = countPassed(CAREER_STAGE1.practica);
+    // Para sociales son máximo 3 que computan para el inicial
+    const passedSocRaw = countPassed(CAREER_STAGE1.sociales);
+    const passedSoc = Math.min(3, passedSocRaw);
+    // Para problemas son máximo 2 que computan para el inicial
+    const passedProbRaw = countPassed(CAREER_STAGE1.problemas);
+    const passedProb = Math.min(2, passedProbRaw);
+
+    const stage1TotalPassed = passedCom + passedPract + passedSoc + passedProb;
+
+    // Actualizar etiquetas en pantalla
+    const elCom = document.getElementById("careerCountComArea");
+    if (elCom) elCom.textContent = `${passedCom}/9`;
+    const elPract = document.getElementById("careerCountPractArea");
+    if (elPract) elPract.textContent = `${passedPract}/4`;
+    const elSoc = document.getElementById("careerCountSocArea");
+    if (elSoc) elSoc.textContent = `${passedSocRaw}/3 elegidas`;
+    const elProb = document.getElementById("careerCountProbArea");
+    if (elProb) elProb.textContent = `${passedProbRaw}/2 elegidas`;
+
+    const elStage1Count = document.getElementById("careerStage1Count");
+    if (elStage1Count) elStage1Count.textContent = `${stage1TotalPassed} / 18 aprobadas`;
+
+    // 2. Contar aprobadas de la Etapa 2
+    const currentOri = CAREER_ORIENTATIONS.find(o => o.id === careerPlanData.selectedOrientation) || CAREER_ORIENTATIONS[0];
+    const stage2Subs = [
+      ...currentOri.stage2.introductory,
+      ...currentOri.stage2.applied,
+      ...currentOri.stage2.workshops,
+      ...CAREER_STAGE2_COMMON
+    ];
+    const stage2TotalPassed = countPassed(stage2Subs);
+
+    const elStage2Count = document.getElementById("careerStage2Count");
+    if (elStage2Count) elStage2Count.textContent = `${stage2TotalPassed} aprobadas`;
+
+    // 3. Métrica Total (30 materias de grado)
+    // El plan de Sociales consta de 18 iniciales + 12 orientadas = 30 asignaturas totales
+    const totalPassedAll = Math.min(30, stage1TotalPassed + stage2TotalPassed);
+    const progressPercent = Math.round((totalPassedAll / 30) * 100);
+
+    const elPassedCount = document.getElementById("careerMetricPassedCount");
+    if (elPassedCount) elPassedCount.textContent = `${totalPassedAll} de 30`;
+
+    const elPercent = document.getElementById("careerMetricPercent");
+    if (elPercent) elPercent.textContent = `${progressPercent}%`;
+
+    const elProgressBar = document.getElementById("careerProgressBar");
+    if (elProgressBar) elProgressBar.style.width = `${progressPercent}%`;
+
+    // 4. Promedio General Académico
+    let scoresSum = 0;
+    let scoresCount = 0;
+
+    // Recorrer todas las materias con nota aprobada registrada
+    Object.values(careerPlanData.grades).forEach(g => {
+      const res = calculateSubjectStatus(g.p1, g.p2, g.finalGrade);
+      if (res.isPassed && res.score !== null) {
+        scoresSum += res.score;
+        scoresCount++;
+      }
+    });
+
+    const elAverage = document.getElementById("careerMetricAverage");
+    if (elAverage) {
+      if (scoresCount > 0) {
+        const avg = (scoresSum / scoresCount).toFixed(2);
+        elAverage.textContent = avg;
+      } else {
+        elAverage.textContent = "-";
+      }
+    }
+
+    // 5. Alerta de PPP I (2 de 4 talleres)
+    const cardPpp1 = document.getElementById("careerCardAlertPpp1");
+    const iconPpp1 = document.getElementById("careerIconPpp1");
+    const textPpp1 = document.getElementById("careerStatusPpp1Text");
+
+    if (passedPract >= 2) {
+      if (cardPpp1) {
+        cardPpp1.className = "bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-300 dark:border-emerald-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+      }
+      if (iconPpp1) {
+        iconPpp1.className = "w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 flex items-center justify-center transition-colors";
+      }
+      if (textPpp1) {
+        textPpp1.className = "text-sm font-bold text-emerald-800 dark:text-emerald-300";
+        textPpp1.textContent = `✓ Habilitada (${passedPract}/4 talleres)`;
+      }
+    } else {
+      if (cardPpp1) {
+        cardPpp1.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+      }
+      if (iconPpp1) {
+        iconPpp1.className = "w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors";
+      }
+      if (textPpp1) {
+        textPpp1.className = "text-sm font-bold text-slate-700 dark:text-slate-300";
+        textPpp1.textContent = `Pendiente (${passedPract}/2 talleres)`;
+      }
+    }
+
+    // 6. Alerta de Pase a Ciclo Orientado (18 materias del Ciclo Inicial)
+    const cardOriented = document.getElementById("careerCardAlertOriented");
+    const iconOriented = document.getElementById("careerIconOriented");
+    const textOriented = document.getElementById("careerStatusOrientedText");
+
+    if (stage1TotalPassed >= 18) {
+      if (cardOriented) {
+        cardOriented.className = "bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-300 dark:border-emerald-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+      }
+      if (iconOriented) {
+        iconOriented.className = "w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 flex items-center justify-center transition-colors";
+      }
+      if (textOriented) {
+        textOriented.className = "text-sm font-bold text-emerald-800 dark:text-emerald-300";
+        textOriented.textContent = "✓ Pase Habilitado (18/18)";
+      }
+    } else {
+      if (cardOriented) {
+        cardOriented.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+      }
+      if (iconOriented) {
+        iconOriented.className = "w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors";
+      }
+      if (textOriented) {
+        textOriented.className = "text-sm font-bold text-slate-700 dark:text-slate-300";
+        textOriented.textContent = `${stage1TotalPassed} de 18 del Inicial`;
+      }
+    }
+  }
+
   // Inicializar
   loadInitialConfig();
   updateHistoryBadge();
+  dbGetCareerPlan().then(saved => {
+    if (saved) careerPlanData = Object.assign(careerPlanData, saved);
+  });
 });
