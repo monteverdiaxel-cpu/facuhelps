@@ -1496,63 +1496,91 @@ document.addEventListener("DOMContentLoaded", () => {
   // ─────────────────────────────────────────────────────────────
   // 13. NAVEGACIÓN POR SOLAPAS (TABS)
   // ─────────────────────────────────────────────────────────────
+  const tabBtnHome = document.getElementById("tabBtnHome");
   const tabBtnTranscriptor = document.getElementById("tabBtnTranscriptor");
   const tabBtnOrganizer = document.getElementById("tabBtnOrganizer");
+  const btnHeaderLogoHome = document.getElementById("btnHeaderLogoHome");
+  const btnHeroOpenTranscriptor = document.getElementById("btnHeroOpenTranscriptor");
+  const btnHeroOpenOrganizer = document.getElementById("btnHeroOpenOrganizer");
+  const btnCardOpenTranscriptor = document.getElementById("btnCardOpenTranscriptor");
+  const btnCardOpenOrganizer = document.getElementById("btnCardOpenOrganizer");
+
+  const viewHome = document.getElementById("viewHome");
   const viewTranscriptor = document.getElementById("viewTranscriptor");
   const viewOrganizer = document.getElementById("viewOrganizer");
 
-  function switchTab(target) {
+  function setTabButtonState(btn, isActive, activeTitle, inactiveSub, activeSub) {
+    if (!btn) return;
     const activeClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs transition-all shadow-xs text-left";
     const inactiveClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
 
-    if (target === "transcriptor") {
-      tabBtnTranscriptor.className = activeClasses;
-      tabBtnOrganizer.className = inactiveClasses;
+    btn.className = isActive ? activeClasses : inactiveClasses;
+    const iconContainer = btn.querySelector("div");
+    if (iconContainer) {
+      iconContainer.className = isActive
+        ? "w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0"
+        : "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
+    }
+    const subText = btn.querySelector("div.text-\\[11px\\]");
+    if (subText) {
+      subText.className = isActive
+        ? "hidden lg:block text-[11px] text-indigo-600/70 dark:text-indigo-400/70 font-normal truncate"
+        : "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
+    }
+  }
 
-      // Actualizar contenedor del icono de transcriptor (activo)
-      const transIcon = tabBtnTranscriptor.querySelector("div");
-      if (transIcon) transIcon.className = "w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0";
-      // Subtítulo activo
-      const transSub = tabBtnTranscriptor.querySelector("div.text-\\[11px\\]");
-      if (transSub) transSub.className = "hidden lg:block text-[11px] text-indigo-600/70 dark:text-indigo-400/70 font-normal truncate";
+  function switchTab(target) {
+    // 1. Ocultar todas las vistas principales
+    if (viewHome) viewHome.classList.add("hidden");
+    if (viewTranscriptor) viewTranscriptor.classList.add("hidden");
+    if (viewOrganizer) viewOrganizer.classList.add("hidden");
 
-      // Icono de organizador (inactivo)
-      const orgIcon = tabBtnOrganizer.querySelector("div");
-      if (orgIcon) orgIcon.className = "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
-      const orgSub = tabBtnOrganizer.querySelector("div.text-\\[11px\\]");
-      if (orgSub) orgSub.className = "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
+    // 2. Actualizar estados visuales de los botones de navegación
+    setTabButtonState(tabBtnHome, target === "home");
+    setTabButtonState(tabBtnTranscriptor, target === "transcriptor");
+    setTabButtonState(tabBtnOrganizer, target === "organizer");
 
-      viewTranscriptor.classList.remove("hidden");
-      viewOrganizer.classList.add("hidden");
+    // 3. Mostrar la vista seleccionada y disparar sus acciones
+    if (target === "home") {
+      if (viewHome) viewHome.classList.remove("hidden");
+    } else if (target === "transcriptor") {
+      if (viewTranscriptor) viewTranscriptor.classList.remove("hidden");
     } else if (target === "organizer") {
-      tabBtnOrganizer.className = activeClasses;
-      tabBtnTranscriptor.className = inactiveClasses;
-
-      // Icono de organizador (activo)
-      const orgIcon = tabBtnOrganizer.querySelector("div");
-      if (orgIcon) orgIcon.className = "w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0";
-      const orgSub = tabBtnOrganizer.querySelector("div.text-\\[11px\\]");
-      if (orgSub) orgSub.className = "hidden lg:block text-[11px] text-indigo-600/70 dark:text-indigo-400/70 font-normal truncate";
-
-      // Icono de transcriptor (inactivo)
-      const transIcon = tabBtnTranscriptor.querySelector("div");
-      if (transIcon) transIcon.className = "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
-      const transSub = tabBtnTranscriptor.querySelector("div.text-\\[11px\\]");
-      if (transSub) transSub.className = "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
-
-      viewOrganizer.classList.remove("hidden");
-      viewTranscriptor.classList.add("hidden");
-      // Cargar vista del organizador
+      if (viewOrganizer) viewOrganizer.classList.remove("hidden");
       renderOrganizerView();
     }
+
+    // Scroll suave hacia arriba
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     if (window.lucide) window.lucide.createIcons();
   }
 
+  if (tabBtnHome) {
+    tabBtnHome.addEventListener("click", () => switchTab("home"));
+  }
   if (tabBtnTranscriptor) {
     tabBtnTranscriptor.addEventListener("click", () => switchTab("transcriptor"));
   }
   if (tabBtnOrganizer) {
     tabBtnOrganizer.addEventListener("click", () => switchTab("organizer"));
+  }
+
+  // Redirecciones desde la portada y header
+  if (btnHeaderLogoHome) {
+    btnHeaderLogoHome.addEventListener("click", () => switchTab("home"));
+  }
+  if (btnHeroOpenTranscriptor) {
+    btnHeroOpenTranscriptor.addEventListener("click", () => switchTab("transcriptor"));
+  }
+  if (btnHeroOpenOrganizer) {
+    btnHeroOpenOrganizer.addEventListener("click", () => switchTab("organizer"));
+  }
+  if (btnCardOpenTranscriptor) {
+    btnCardOpenTranscriptor.addEventListener("click", () => switchTab("transcriptor"));
+  }
+  if (btnCardOpenOrganizer) {
+    btnCardOpenOrganizer.addEventListener("click", () => switchTab("organizer"));
   }
 
   // ─────────────────────────────────────────────────────────────
