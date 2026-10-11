@@ -2047,7 +2047,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Visor de PDF Integrado (Embebido a Pantalla Completa)
-  function openEmbeddedPdfViewer(fileItem) {
+  function openEmbeddedPdfViewer(fileItem, autoShowSummary = false) {
     if (!fileItem || !fileItem.blob) return;
     currentViewerFileItem = fileItem;
 
@@ -2068,22 +2068,27 @@ document.addEventListener("DOMContentLoaded", () => {
       pdfViewerFrame.src = currentViewerBlobUrl;
     }
 
-    // El visor abre 100% en modo lectura (panel lateral cerrado por defecto).
-    // El resumen se genera o muestra únicamente a demanda cuando el usuario presiona '⚡ Resumen con IA'.
-    if (pdfSummaryPanel) pdfSummaryPanel.classList.add("hidden");
     currentPdfSummaryText = (fileItem.summary && fileItem.summary.trim()) ? fileItem.summary : "";
 
     if (btnPdfViewerSummarize) {
       if (currentPdfSummaryText) {
-        btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Ver Resumen Guardado</span>';
+        btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i> <span>⚡ Resumen Listo</span>';
       } else {
-        btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Resumen con IA</span>';
+        btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i> <span>⚡ Resumen con IA</span>';
       }
     }
 
     if (modalPdfViewer) {
       modalPdfViewer.classList.remove("hidden");
     }
+
+    // Si se solicitó abrir con el resumen visible o ya existe y se clickeó "Ver Resumen"
+    if (autoShowSummary && currentPdfSummaryText) {
+      showPdfSummaryInViewer(currentPdfSummaryText);
+    } else if (!autoShowSummary) {
+      if (pdfSummaryPanel) pdfSummaryPanel.classList.add("hidden");
+    }
+
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -2216,9 +2221,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (btnPdfViewerSummarize) {
         btnPdfViewerSummarize.disabled = false;
         if (currentViewerFileItem && currentViewerFileItem.summary) {
-          btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Ver Resumen Guardado</span>';
+          btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i> <span>⚡ Resumen Listo</span>';
         } else {
-          btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Resumen con IA</span>';
+          btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i> <span>⚡ Resumen con IA</span>';
         }
       }
       if (btnPdfViewerSummarizeMobile) {
@@ -2924,7 +2929,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Resumen IA desde la tarjeta del PDF
       row.querySelector(".btn-summarize-pdf-card").addEventListener("click", () => {
-        openEmbeddedPdfViewer(fileItem);
+        openEmbeddedPdfViewer(fileItem, true);
         if (!fileItem.summary) {
           generateAcademicSummaryForCurrentPdf();
         }
