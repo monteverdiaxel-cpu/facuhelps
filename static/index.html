@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full bg-slate-50">
+<html lang="es" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="style.css">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
@@ -27,25 +28,28 @@
     }
   </script>
 </head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
+<body class="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased selection:bg-indigo-100 dark:selection:bg-indigo-900 selection:text-indigo-900 dark:selection:text-indigo-100 transition-colors duration-200">
 
   <!-- Header -->
-  <header class="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+  <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 transition-colors">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-sm shadow-indigo-200">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-sm shadow-indigo-200 dark:shadow-none">
           <i data-lucide="audio-lines" class="w-5 h-5"></i>
         </div>
         <div>
-          <h1 class="text-base font-semibold text-slate-900 leading-tight">FacuHelps</h1>
-          <p class="text-xs text-slate-500 font-medium">Tu copiloto para clases, entrevistas y conferencias</p>
+          <h1 class="text-base font-semibold text-slate-900 dark:text-slate-100 leading-tight">FacuHelps</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Tu copiloto para clases, entrevistas y conferencias</p>
         </div>
       </div>
 
-      <!-- Configuración de API Key en el Header -->
-      <div class="flex items-center gap-3">
-        <button id="btnApiKeyToggle" class="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-100/80 transition-colors text-slate-700">
-          <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500"></i>
+      <!-- Acciones en el Header: Modo Oscuro + API Key -->
+      <div class="flex items-center gap-2.5">
+        <button id="btnThemeToggle" type="button" aria-label="Alternar modo oscuro" class="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shadow-2xs" title="Cambiar tema (Claro / Oscuro)">
+          <i data-lucide="moon" id="themeIcon" class="w-4 h-4"></i>
+        </button>
+        <button id="btnApiKeyToggle" class="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 hover:bg-slate-100/80 dark:bg-slate-800/80 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-200">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400"></i>
           <span id="apiKeyStatusLabel">Configurar API Key</span>
         </button>
       </div>
@@ -53,54 +57,54 @@
   </header>
 
   <!-- Modal / Drawer para API Key -->
-  <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-scale-up">
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2 text-slate-900 font-semibold text-lg">
-          <i data-lucide="shield-check" class="w-5 h-5 text-indigo-600"></i>
-          Configuración de API Key
+        <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-lg">
+          <i data-lucide="shield-check" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          Configuración de API Key (Key Pool)
         </div>
-        <button id="btnCloseApiKeyModal" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <button id="btnCloseApiKeyModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
-      <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-        Ingresa tu clave gratuita de Google AI Studio. Tu clave se almacena de forma segura únicamente en tu navegador (o se lee del archivo <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600">.env</code> en el servidor).
+      <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+        Ingresa una o varias claves gratuitas de Google AI Studio separadas por comas. Si se agota la cuota (error 429), el sistema rotará automáticamente a la siguiente clave disponible.
       </p>
 
       <div class="space-y-4">
         <div>
-          <label for="inputApiKey" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-            Google AI Studio API Key
+          <label for="inputApiKey" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Google AI Studio API Keys (separadas por coma)
           </label>
           <div class="relative">
-            <input 
-              type="password" 
+            <textarea 
               id="inputApiKey" 
-              placeholder="AIzaSy..." 
-              class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
-            >
-            <button id="btnToggleShowKey" type="button" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+              rows="3"
+              placeholder="AIzaSyKey1..., AIzaSyKey2..., AIzaSyKey3..." 
+              class="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition resize-none"
+            ></textarea>
+            <button id="btnToggleShowKey" type="button" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Ver / Ocultar claves">
               <i data-lucide="eye" class="w-4 h-4"></i>
             </button>
           </div>
-          <div id="envKeyNotice" class="hidden text-xs text-emerald-600 mt-2 flex items-center gap-1.5 font-medium">
+          <div id="envKeyNotice" class="hidden text-xs text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1.5 font-medium">
             <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
             API Key detectada en el archivo .env del servidor
           </div>
         </div>
 
         <div>
-          <label for="selectModel" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+          <label for="selectModel" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
             Modelo Gemini
           </label>
-          <select id="selectModel" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition">
+          <select id="selectModel" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition">
             <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (Predeterminado - Recomendado por Google)</option>
           </select>
         </div>
 
         <div class="pt-2 flex justify-between items-center">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 hover:text-indigo-700 underline flex items-center gap-1">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
             Obtener clave gratis en Google AI Studio
             <i data-lucide="external-link" class="w-3 h-3"></i>
           </a>
@@ -117,43 +121,43 @@
 
     <!-- Hero / Intro -->
     <div class="text-center max-w-2xl mx-auto pt-2 pb-4">
-      <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+      <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
         Transcripción de audio inteligente
       </h2>
-      <p class="text-sm text-slate-500 mt-2">
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
         Sube grabaciones de clases universitarias, entrevistas o conferencias de hasta 2 horas. FacuHelps genera una transcripción fiel palabra por palabra, estructurada por oradores y párrafos con exportación a Word.
       </p>
     </div>
 
     <!-- Dropzone Card -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 transition-colors">
       <div 
         id="dropZone" 
-        class="border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50/50 hover:bg-indigo-50/30 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+        class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
       >
         <input type="file" id="fileInput" accept=".mp3,.m4a,.aac,.ogg,.flac,.webm" class="hidden">
         
-        <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner">
           <i data-lucide="upload-cloud" class="w-7 h-7"></i>
         </div>
 
-        <p class="text-sm font-semibold text-slate-800">
-          Arrastra tu archivo de audio aquí o <span class="text-indigo-600 group-hover:underline">haz clic para examinar</span>
+        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          Arrastra tu archivo de audio aquí o <span class="text-indigo-600 dark:text-indigo-400 group-hover:underline">haz clic para examinar</span>
         </p>
-        <p class="text-xs text-slate-400 mt-1.5 font-medium">
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
           Formatos compatibles: MP3, M4A, AAC, OGG (no se admite WAV por tamaño excesivo)
         </p>
       </div>
 
       <!-- Selected File Preview -->
-      <div id="filePreview" class="hidden mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50/80 flex items-center justify-between">
+      <div id="filePreview" class="hidden mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 flex items-center justify-between">
         <div class="flex items-center gap-3 overflow-hidden">
-          <div class="w-10 h-10 rounded-lg bg-indigo-100/70 text-indigo-600 flex items-center justify-center shrink-0">
+          <div class="w-10 h-10 rounded-lg bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <i data-lucide="file-audio" class="w-5 h-5"></i>
           </div>
           <div class="overflow-hidden">
-            <p id="fileName" class="text-sm font-medium text-slate-900 truncate">audio_ejemplo.mp3</p>
-            <p id="fileDetails" class="text-xs text-slate-500">25.4 MB • Preparado para subir</p>
+            <p id="fileName" class="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">audio_ejemplo.mp3</p>
+            <p id="fileDetails" class="text-xs text-slate-500 dark:text-slate-400">25.4 MB • Preparado para subir</p>
           </div>
         </div>
         <button id="btnRemoveFile" class="text-slate-400 hover:text-rose-500 p-2 rounded-lg transition-colors">
@@ -162,65 +166,65 @@
       </div>
 
       <!-- Selector de Tipo de Audio -->
-      <div class="mt-6 p-4 rounded-xl border border-slate-200/90 bg-slate-50/70">
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+      <div class="mt-6 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
           Tipo de Audio
         </label>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="audioTypeGroup">
           <button 
             type="button" 
             id="btnTypeClase" 
-            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 text-indigo-900 transition font-medium text-xs text-left shadow-xs"
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 transition font-medium text-xs text-left shadow-xs"
             data-type="clase"
           >
             <div class="flex items-center gap-2.5">
               <span class="text-base shrink-0">🎓</span>
               <div>
-                <p class="font-semibold text-slate-900">Clase / Teórico</p>
-                <p class="text-[11px] text-slate-500 mt-0.5">Etiquetas: <strong class="text-indigo-600">Docente</strong> y <strong class="text-indigo-600">Estudiante</strong></p>
+                <p class="font-semibold text-slate-900 dark:text-slate-100">Clase / Teórico</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Etiquetas: <strong class="text-indigo-600 dark:text-indigo-400">Docente</strong> y <strong class="text-indigo-600 dark:text-indigo-400">Estudiante</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon shrink-0"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0"></i>
           </button>
 
           <button 
             type="button" 
             id="btnTypeEntrevista" 
-            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left"
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 transition font-medium text-xs text-left"
             data-type="entrevista"
           >
             <div class="flex items-center gap-2.5">
               <span class="text-base shrink-0">🎙️</span>
               <div>
-                <p class="font-semibold text-slate-900">Entrevista</p>
-                <p class="text-[11px] text-slate-500 mt-0.5">Etiquetas: <strong class="text-indigo-600">Entrevistador</strong> y <strong class="text-indigo-600">Entrevistado</strong></p>
+                <p class="font-semibold text-slate-900 dark:text-slate-100">Entrevista</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Etiquetas: <strong class="text-indigo-600 dark:text-indigo-400">Entrevistador</strong> y <strong class="text-indigo-600 dark:text-indigo-400">Entrevistado</strong></p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon shrink-0 hidden"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0 hidden"></i>
           </button>
 
           <button 
             type="button" 
             id="btnTypeContinuo" 
-            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 bg-white hover:border-slate-300 text-slate-700 transition font-medium text-xs text-left"
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 transition font-medium text-xs text-left"
             data-type="continuo"
           >
             <div class="flex items-center gap-2.5">
               <span class="text-base shrink-0">📝</span>
               <div>
-                <p class="font-semibold text-slate-900">Sin diferenciar hablantes</p>
-                <p class="text-[11px] text-slate-500 mt-0.5">Texto continuo en párrafos, sin etiquetas</p>
+                <p class="font-semibold text-slate-900 dark:text-slate-100">Sin diferenciar hablantes</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Texto continuo en párrafos, sin etiquetas</p>
               </div>
             </div>
-            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 check-icon shrink-0 hidden"></i>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 check-icon shrink-0 hidden"></i>
           </button>
         </div>
       </div>
 
       <!-- Action Button -->
       <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-2 text-xs text-slate-500">
-          <i data-lucide="info" class="w-4 h-4 text-slate-400 shrink-0"></i>
+        <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <i data-lucide="info" class="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0"></i>
           <span>Los audios se procesan en la Files API de Google y se eliminan automáticamente tras transcribir.</span>
         </div>
         <button 
@@ -235,97 +239,97 @@
     </div>
 
     <!-- Progress Card -->
-    <div id="progressCard" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 animate-fade-in">
+    <div id="progressCard" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 animate-fade-in">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-3">
           <div class="relative flex items-center justify-center">
             <div class="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
           <div>
-            <h3 id="progressTitle" class="text-sm font-semibold text-slate-900">Procesando audio...</h3>
-            <p id="progressSubtitle" class="text-xs text-slate-500">Esto puede tomar entre 30 segundos y unos pocos minutos según la duración.</p>
+            <h3 id="progressTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Procesando audio...</h3>
+            <p id="progressSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Esto puede tomar entre 30 segundos y unos pocos minutos según la duración.</p>
           </div>
         </div>
-        <span id="elapsedTimer" class="text-xs font-mono text-slate-400 font-medium">00:00</span>
+        <span id="elapsedTimer" class="text-xs font-mono text-slate-400 dark:text-slate-500 font-medium">00:00</span>
       </div>
 
       <!-- Progress Stages -->
       <div class="space-y-3 mt-6">
         <div class="step-item flex items-center gap-3 text-xs" id="step-local">
-          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0">
             <i data-lucide="upload" class="w-3.5 h-3.5"></i>
           </div>
-          <span class="step-text font-medium text-slate-600">Enviando audio al servidor local</span>
+          <span class="step-text font-medium text-slate-600 dark:text-slate-300">Enviando audio al servidor local</span>
         </div>
 
         <div class="step-item flex items-center gap-3 text-xs" id="step-cloud">
-          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0">
             <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
           </div>
-          <span class="step-text font-medium text-slate-600">Subiendo a Google AI Studio (Files API)</span>
+          <span class="step-text font-medium text-slate-600 dark:text-slate-300">Subiendo a Google AI Studio (Files API)</span>
         </div>
 
         <div class="step-item flex items-center gap-3 text-xs" id="step-gemini">
-          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0">
             <i data-lucide="bot" class="w-3.5 h-3.5"></i>
           </div>
-          <span class="step-text font-medium text-slate-600">Generando transcripción estructurada con Gemini Flash</span>
+          <span class="step-text font-medium text-slate-600 dark:text-slate-300">Generando transcripción estructurada con Gemini Flash</span>
         </div>
       </div>
     </div>
 
     <!-- Error Alert -->
-    <div id="errorAlert" class="hidden p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 flex items-start gap-3 text-xs">
-      <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+    <div id="errorAlert" class="hidden p-4 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 flex items-start gap-3 text-xs">
+      <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5"></i>
       <div class="flex-1">
-        <p class="font-semibold text-rose-900" id="errorTitle">Ocurrió un error</p>
-        <p class="mt-0.5 text-rose-700 leading-relaxed" id="errorMessage">Detalle del error.</p>
+        <p class="font-semibold text-rose-900 dark:text-rose-100" id="errorTitle">Ocurrió un error</p>
+        <p class="mt-0.5 text-rose-700 dark:text-rose-300 leading-relaxed" id="errorMessage">Detalle del error.</p>
       </div>
-      <button id="btnCloseError" class="text-rose-400 hover:text-rose-600 p-1">
+      <button id="btnCloseError" class="text-rose-400 hover:text-rose-600 dark:hover:text-rose-200 p-1">
         <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
 
     <!-- Results Section -->
-    <div id="resultSection" class="hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden animate-fade-in">
+    <div id="resultSection" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in">
       <!-- Toolbar -->
-      <div class="border-b border-slate-200/80 px-6 py-4 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="border-b border-slate-200/80 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2">
-            <span id="completedBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+            <span id="completedBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
               Completado
             </span>
-            <span id="streamingIndicator" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-100 text-indigo-700 animate-pulse">
-              <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span> Escribiendo en vivo...
+            <span id="streamingIndicator" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></span> Escribiendo en vivo...
             </span>
-            <span id="resultModelBadge" class="text-xs font-mono text-slate-500">gemini-3.8-flash</span>
+            <span id="resultModelBadge" class="text-xs font-mono text-slate-500 dark:text-slate-400">gemini-3.8-flash</span>
           </div>
-          <p id="resultFileName" class="text-xs text-slate-500 mt-1 font-medium">audio.mp3</p>
+          <p id="resultFileName" class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">audio.mp3</p>
         </div>
 
         <!-- Action buttons -->
         <div class="flex items-center flex-wrap gap-2">
-          <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100/80 text-amber-900 text-xs font-semibold transition shadow-xs">
-            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600"></i>
+          <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
             <span>⚡ Generar resumen</span>
           </button>
-          <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-800 text-xs font-medium transition shadow-xs">
-            <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-600"></i>
+          <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
             <span>👥 Renombrar oradores</span>
           </button>
-          <button id="btnCopy" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-xs">
+          <button id="btnCopy" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             <span id="btnCopyLabel">Copiar texto</span>
           </button>
-          <button id="btnDownloadDocx" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-100/70 text-blue-800 text-xs font-medium transition shadow-xs">
-            <i data-lucide="file-type" class="w-3.5 h-3.5 text-blue-600"></i>
+          <button id="btnDownloadDocx" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/40 hover:bg-blue-100/70 dark:hover:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="file-type" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
             <span>Descargar Word (.docx)</span>
           </button>
-          <button id="btnDownloadTxt" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-xs">
+          <button id="btnDownloadTxt" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
             <span>Descargar .txt</span>
           </button>
-          <button id="btnDownloadMd" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-xs">
+          <button id="btnDownloadMd" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
             <span>Descargar .md</span>
           </button>
@@ -333,56 +337,75 @@
       </div>
 
       <!-- Recuadro Destacado y Colapsable de Resumen Ejecutivo -->
-      <div id="summarySection" class="hidden border-b border-amber-200 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/50 transition-all">
+      <div id="summarySection" class="hidden border-b border-amber-200 dark:border-amber-900/60 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/50 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 transition-all">
         <div class="px-6 py-4 flex items-center justify-between cursor-pointer select-none" id="summaryHeader">
           <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+            <div class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 shadow-xs">
               <i data-lucide="sparkles" class="w-4 h-4"></i>
             </div>
             <div>
-              <h4 class="text-sm font-semibold text-amber-950 flex items-center gap-2">
+              <h4 class="text-sm font-semibold text-amber-950 dark:text-amber-200 flex items-center gap-2">
                 Resumen Ejecutivo
-                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-800">IA Síntesis</span>
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/80 text-amber-800 dark:text-amber-300">IA Síntesis</span>
               </h4>
-              <p class="text-[11px] text-amber-800/80">Tema central, conceptos clave y compromisos</p>
+              <p class="text-[11px] text-amber-800/80 dark:text-amber-400">Tema central, conceptos clave y compromisos</p>
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btnCopySummary" class="text-xs px-2.5 py-1 rounded-lg border border-amber-300 bg-white/80 hover:bg-white text-amber-900 transition flex items-center gap-1" title="Copiar resumen">
+            <button id="btnCopySummary" class="text-xs px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 transition flex items-center gap-1" title="Copiar resumen">
               <i data-lucide="copy" class="w-3 h-3"></i>
               <span>Copiar resumen</span>
             </button>
-            <button id="btnDownloadSummaryDocx" class="text-xs px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-100/80 hover:bg-amber-200/90 text-amber-950 font-medium transition flex items-center gap-1 shadow-2xs" title="Descargar resumen en Word">
-              <i data-lucide="file-down" class="w-3 h-3 text-amber-700"></i>
+            <button id="btnDownloadSummaryDocx" class="text-xs px-2.5 py-1 rounded-lg border border-amber-400 dark:border-amber-700 bg-amber-100/80 dark:bg-amber-900/50 hover:bg-amber-200/90 dark:hover:bg-amber-800/60 text-amber-950 dark:text-amber-200 font-medium transition flex items-center gap-1 shadow-2xs" title="Descargar resumen en Word">
+              <i data-lucide="file-down" class="w-3 h-3 text-amber-700 dark:text-amber-400"></i>
               <span>📥 Descargar resumen (.docx)</span>
             </button>
-            <button id="btnToggleSummary" class="p-1 rounded-lg hover:bg-amber-100 text-amber-800 transition">
+            <button id="btnToggleSummary" class="p-1 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 transition">
               <i data-lucide="chevron-up" id="summaryChevron" class="w-4 h-4 transition-transform duration-200"></i>
             </button>
           </div>
         </div>
         <div id="summaryBody" class="px-6 pb-6 pt-1">
-          <div id="summaryContent" class="prose prose-sm prose-amber max-w-none text-slate-800 leading-relaxed bg-white/80 p-5 rounded-xl border border-amber-200/70 shadow-xs">
+          <div id="summaryContent" class="prose prose-sm prose-amber dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed bg-white/80 dark:bg-slate-900/90 p-5 rounded-xl border border-amber-200/70 dark:border-amber-900/50 shadow-xs">
             <!-- Contenido del resumen en markdown/html -->
           </div>
         </div>
       </div>
 
+      <!-- Reproductor de Audio Integrado con Velocidad Variable -->
+      <div id="audioPlayerSection" class="hidden border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-4 sm:p-5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="w-full sm:flex-1">
+            <audio id="audioPlayer" controls class="w-full h-10 rounded-lg focus:outline-none"></audio>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center" id="playbackSpeedControls">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center gap-1">
+              <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+              Velocidad:
+            </span>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 transition shadow-2xs" data-speed="1">1x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="1.25">1.25x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="1.5">1.5x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="2">2x</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Quick Search Bar inside transcript -->
-      <div class="px-6 py-3 border-b border-slate-100 flex items-center gap-2 bg-white">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+      <div class="px-6 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 bg-white dark:bg-slate-900">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 dark:text-slate-500"></i>
         <input 
           type="text" 
           id="searchTranscript" 
           placeholder="Buscar palabras o frases en la transcripción..." 
-          class="w-full text-xs text-slate-700 placeholder-slate-400 bg-transparent focus:outline-none"
+          class="w-full text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 bg-transparent focus:outline-none"
         >
-        <span id="searchCount" class="text-[11px] text-slate-400 font-mono hidden">0 resultados</span>
+        <span id="searchCount" class="text-[11px] text-slate-400 dark:text-slate-500 font-mono hidden">0 resultados</span>
       </div>
 
       <!-- Transcript Reader -->
       <div id="transcriptContainer" class="p-6 sm:p-8 max-h-[650px] overflow-y-auto custom-scrollbar">
-        <div id="transcriptContent" class="prose prose-slate prose-sm sm:prose-base max-w-none text-slate-700 leading-relaxed font-sans space-y-4">
+        <div id="transcriptContent" class="prose prose-slate dark:prose-invert prose-sm sm:prose-base max-w-none text-slate-700 dark:text-slate-200 leading-relaxed font-sans space-y-4">
           <!-- Text will be rendered here -->
         </div>
       </div>
@@ -391,23 +414,23 @@
   </main>
 
   <!-- Footer -->
-  <footer class="border-t border-slate-200/80 py-4 text-center text-xs text-slate-400">
+  <footer class="border-t border-slate-200/80 dark:border-slate-800 py-4 text-center text-xs text-slate-400 dark:text-slate-500">
     FacuHelps • Transcripción inteligente potenciada por Google AI Studio Files API
   </footer>
 
   <!-- Modal para Renombrar Oradores -->
-  <div id="renameModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 animate-scale-up">
+  <div id="renameModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 animate-scale-up">
       <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-2 text-slate-900 font-semibold text-base sm:text-lg">
-          <i data-lucide="users" class="w-5 h-5 text-indigo-600"></i>
+        <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-base sm:text-lg">
+          <i data-lucide="users" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
           Renombrar Oradores
         </div>
-        <button id="btnCloseRenameModal" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <button id="btnCloseRenameModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
-      <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
         Personaliza los nombres de los interlocutores identificados. Se actualizarán automáticamente en la pantalla y en las descargas (.docx, .txt, .md).
       </p>
 
@@ -415,8 +438,8 @@
         <!-- Generado dinámicamente -->
       </div>
 
-      <div class="pt-4 mt-4 border-t border-slate-100 flex justify-end items-center gap-2">
-        <button id="btnCancelRename" class="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium text-xs rounded-xl transition">
+      <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center gap-2">
+        <button id="btnCancelRename" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
           Cancelar
         </button>
         <button id="btnSaveRename" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">

@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Elementos DOM
+  const btnThemeToggle = document.getElementById("btnThemeToggle");
+  const themeIcon = document.getElementById("themeIcon");
+
   const btnApiKeyToggle = document.getElementById("btnApiKeyToggle");
   const apiKeyStatusLabel = document.getElementById("apiKeyStatusLabel");
   const apiKeyModal = document.getElementById("apiKeyModal");
@@ -22,6 +25,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileDetails = document.getElementById("fileDetails");
   const btnRemoveFile = document.getElementById("btnRemoveFile");
   const btnStartTranscribe = document.getElementById("btnStartTranscribe");
+
+  // Reproductor de Audio Integrado
+  const audioPlayerSection = document.getElementById("audioPlayerSection");
+  const audioPlayer = document.getElementById("audioPlayer");
+  const speedButtons = document.querySelectorAll(".btn-speed");
+  let currentAudioUrl = null;
 
   // Selector de Tipo de Audio
   const btnTypeClase = document.getElementById("btnTypeClase");
@@ -85,12 +94,44 @@ document.addEventListener("DOMContentLoaded", () => {
   let isSummaryCollapsed = false;
   let hasServerApiKey = false;
 
+  // 0. Modo Oscuro (Dark Mode)
+  function initTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = savedTheme === "dark" || (!savedTheme && systemPrefersDark);
+
+    applyTheme(isDark);
+  }
+
+  function applyTheme(isDark) {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      if (themeIcon) themeIcon.setAttribute("data-lucide", "sun");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      if (themeIcon) themeIcon.setAttribute("data-lucide", "moon");
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener("click", () => {
+      const isCurrentlyDark = document.documentElement.classList.contains("dark");
+      applyTheme(!isCurrentlyDark);
+    });
+  }
+
   // 1. Cargar configuración inicial
   async function loadInitialConfig() {
+    initTheme();
+
     const savedKey = localStorage.getItem("gemini_api_key") || "";
     if (savedKey) {
       inputApiKey.value = savedKey;
-      updateApiKeyStatus(true, "Clave guardada");
+      const keyCount = savedKey.split(",").filter((k) => k.trim()).length;
+      updateApiKeyStatus(true, keyCount > 1 ? `${keyCount} API Keys` : "Clave guardada");
     }
 
     let savedModel = "gemini-3.8-flash";
@@ -119,11 +160,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateApiKeyStatus(isConfigured, text) {
     if (isConfigured) {
       apiKeyStatusLabel.textContent = text || "API Key Lista";
-      btnApiKeyToggle.classList.add("border-emerald-200", "bg-emerald-50/60", "text-emerald-700");
+      btnApiKeyToggle.classList.add("border-emerald-200", "dark:border-emerald-800", "bg-emerald-50/60", "dark:bg-emerald-950/40", "text-emerald-700", "dark:text-emerald-300");
       btnApiKeyToggle.classList.remove("border-slate-200", "text-slate-700");
     } else {
       apiKeyStatusLabel.textContent = "Configurar API Key";
-      btnApiKeyToggle.classList.remove("border-emerald-200", "bg-emerald-50/60", "text-emerald-700");
+      btnApiKeyToggle.classList.remove("border-emerald-200", "dark:border-emerald-800", "bg-emerald-50/60", "dark:bg-emerald-950/40", "text-emerald-700", "dark:text-emerald-300");
       btnApiKeyToggle.classList.add("border-slate-200", "text-slate-700");
     }
     if (window.lucide) window.lucide.createIcons();
@@ -156,7 +197,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const val = inputApiKey.value.trim();
     if (val) {
       localStorage.setItem("gemini_api_key", val);
-      updateApiKeyStatus(true, "Clave guardada");
+      const keyCount = val.split(",").filter((k) => k.trim()).length;
+      updateApiKeyStatus(true, keyCount > 1 ? `${keyCount} API Keys` : "Clave guardada");
     } else {
       localStorage.removeItem("gemini_api_key");
       updateApiKeyStatus(hasServerApiKey, hasServerApiKey ? "Clave en .env" : "Configurar API Key");
@@ -164,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem("gemini_model", selectModel.value);
     apiKeyModal.classList.add("hidden");
   });
+
 
   // 2. Drag & Drop y Selección de Archivos
   function formatBytes(bytes) {
@@ -173,6 +216,48 @@ document.addEventListener("DOMContentLoaded", () => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   }
+
+  function updateAudioPlayer(file) {
+    if (!audioPlayer) return;
+    if (currentAudioUrl) {
+      URL.revokeObjectURL(currentAudioUrl);
+      currentAudioUrl = null;
+    }
+
+    if (file) {
+      currentAudioUrl = URL.createObjectURL(file);
+      audioPlayer.src = currentAudioUrl;
+      audioPlayer.playbackRate = 1.0;
+      setSpeedButtonActive(1.0);
+      if (audioPlayerSection) audioPlayerSection.classList.remove("hidden");
+    } else {
+      audioPlayer.pause();
+      audioPlayer.removeAttribute("src");
+      audioPlayer.load();
+      if (audioPlayerSection) audioPlayerSection.classList.add("hidden");
+    }
+  }
+
+  function setSpeedButtonActive(speed) {
+    speedButtons.forEach((btn) => {
+      const btnSpeed = parseFloat(btn.getAttribute("data-speed"));
+      if (btnSpeed === speed) {
+        btn.className = "btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 transition shadow-2xs";
+      } else {
+        btn.className = "btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition";
+      }
+    });
+  }
+
+  speedButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const speed = parseFloat(btn.getAttribute("data-speed")) || 1.0;
+      if (audioPlayer) {
+        audioPlayer.playbackRate = speed;
+      }
+      setSpeedButtonActive(speed);
+    });
+  });
 
   function handleFileSelected(file) {
     if (!file) return;
@@ -197,6 +282,10 @@ document.addEventListener("DOMContentLoaded", () => {
     filePreview.classList.remove("hidden");
     btnStartTranscribe.disabled = false;
     hideError();
+
+    // Cargar y mostrar en el reproductor de audio integrado
+    updateAudioPlayer(file);
+
     if (window.lucide) window.lucide.createIcons();
   }
 
@@ -231,6 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fileInput.value = "";
     filePreview.classList.add("hidden");
     btnStartTranscribe.disabled = true;
+    updateAudioPlayer(null);
   });
 
   // Manejador del Selector de Tipo de Audio

@@ -47,12 +47,35 @@ MIME_MAP = {
     ".wma": "audio/x-ms-wma",
 }
 
+def parse_api_keys(key_string: Optional[str]) -> list[str]:
+    """Extrae y limpia una lista de API Keys separadas por comas, espacios o saltos de línea."""
+    if not key_string:
+        return []
+    # Separar por comas, punto y coma, o saltos de línea
+    keys = re.split(r'[,;\n\r]+', key_string)
+    cleaned = [k.strip() for k in keys if k and k.strip()]
+    # Eliminar duplicados manteniendo el orden
+    seen = set()
+    result = []
+    for k in cleaned:
+        if k not in seen:
+            seen.add(k)
+            result.append(k)
+    return result
+
+def is_rate_limit_error(exc: Exception) -> bool:
+    """Detecta si un error es de cuota/tasa excedida (429 / RESOURCE_EXHAUSTED)."""
+    err_str = str(exc).lower()
+    return any(keyword in err_str for keyword in [
+        "429", "resource_exhausted", "quota", "rate limit", "ratelimit"
+    ])
+
 def is_retriable_error(exc: Exception) -> bool:
-    """Detecta si un error de Gemini es temporal/503/UNAVAILABLE para reintentar."""
+    """Detecta si un error de Gemini es temporal/503/UNAVAILABLE para reintentar con backoff."""
     err_str = str(exc).lower()
     return any(keyword in err_str for keyword in [
         "503", "unavailable", "servererror", "high demand", "overloaded",
-        "resource_exhausted", "temporary", "service unavailable"
+        "temporary", "service unavailable"
     ])
 
 def get_system_instruction(audio_type: str = "clase") -> str:
@@ -125,12 +148,15 @@ async def transcribe_audio(
     model_name: Optional[str] = Form("gemini-3.8-flash"),
     audio_type: Optional[str] = Form("clase")
 ):
-    # 1. Resolver API Key
-    effective_key = (api_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
-    if not effective_key:
+    # 1. Resolver Pool de API Keys
+    key_pool = parse_api_keys(api_key)
+    if not key_pool:
+        key_pool = parse_api_keys(os.getenv("GEMINI_API_KEY", ""))
+
+    if not key_pool:
         raise HTTPException(
             status_code=400,
-            detail="No se encontró una API Key válida. Ingrésala en la interfaz o configúrala en el archivo .env."
+            detail="No se encontró ninguna API Key válida. Ingrésala en la interfaz o configúrala en el archivo .env."
         )
 
     # 2. Validar extensión de archivo
@@ -164,12 +190,11 @@ async def transcribe_audio(
     async def generate_events():
         google_file = None
         client = None
+        active_client = None
 
         try:
             from google import genai
             from google.genai import types
-
-            client = genai.Client(api_key=effective_key)
 
             # 1. Guardar archivo en disco leyendo en bloques de 1 MB sin cargarlo completo en memoria RAM
             yield f"data: {json.dumps({'event': 'status', 'stage': 'local', 'message': 'Guardando audio en disco (consumo mínimo de RAM)...', 'mode': 'files_api'})}\n\n"
@@ -181,20 +206,39 @@ async def transcribe_audio(
                     f.write(chunk)
                     file_size += len(chunk)
 
-            # 2. Subida a Google Files API transmitiendo directamente desde el archivo en disco
+            # 2. Subida a Google Files API transmitiendo directamente desde el archivo en disco (usando la primera clave funcional)
             yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Subiendo {file_size / (1024*1024):.1f} MB a Google Files API desde disco...', 'mode': 'files_api'})}\n\n"
             await asyncio.sleep(0)
 
-            try:
-                google_file = client.files.upload(
-                    file=str(local_temp_path),
-                    config=types.UploadFileConfig(
-                        mime_type=mime_type,
-                        display_name=file.filename
+            upload_success = False
+            last_upload_err = None
+            key_index_used = 0
+
+            for k_idx, current_key in enumerate(key_pool):
+                try:
+                    client = genai.Client(api_key=current_key)
+                    google_file = client.files.upload(
+                        file=str(local_temp_path),
+                        config=types.UploadFileConfig(
+                            mime_type=mime_type,
+                            display_name=file.filename
+                        )
                     )
-                )
-            except Exception as e:
-                yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(e)}'})}\n\n"
+                    upload_success = True
+                    active_client = client
+                    key_index_used = k_idx
+                    break
+                except Exception as up_err:
+                    last_upload_err = up_err
+                    if is_rate_limit_error(up_err) and k_idx + 1 < len(key_pool):
+                        yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': f'Límite 429 en Key #{k_idx+1}. Rotando a Key #{k_idx+2}...', 'mode': 'files_api'})}\n\n"
+                        await asyncio.sleep(1)
+                        continue
+                    else:
+                        break
+
+            if not upload_success or not google_file:
+                yield f"data: {json.dumps({'event': 'error', 'message': f'Error al subir el audio a Google Files API: {str(last_upload_err)}'})}\n\n"
                 return
 
             # Sondeo optimizado a cada 1 segundo (rápido y sin demoras)
@@ -206,7 +250,7 @@ async def transcribe_audio(
                     return
                 yield f"data: {json.dumps({'event': 'status', 'stage': 'cloud', 'message': 'Procesando archivo en Google AI Studio (verificando cada 1s)...', 'mode': 'files_api'})}\n\n"
                 await asyncio.sleep(1)
-                google_file = client.files.get(name=google_file.name)
+                google_file = active_client.files.get(name=google_file.name)
 
             if google_file.state.name != "ACTIVE":
                 yield f"data: {json.dumps({'event': 'error', 'message': f'Google no pudo procesar el archivo. Estado: {google_file.state.name}'})}\n\n"
@@ -217,7 +261,7 @@ async def transcribe_audio(
             yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': 'Audio activo. Generando transcripción con Gemini Flash...', 'mode': 'files_api'})}\n\n"
             await asyncio.sleep(0)
 
-            # 3. Transcripción directa con gemini-3.8-flash (con reintento automático ante 503/UNAVAILABLE)
+            # 3. Transcripción directa con gemini-3.8-flash con ROTACIÓN AUTOMÁTICA DE KEYS ante 429 y reintento ante 503
             gen_config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.0,
@@ -226,24 +270,48 @@ async def transcribe_audio(
             )
 
             response = None
-            max_attempts = 3
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    response = client.models.generate_content(
-                        model="gemini-3.8-flash",
-                        contents=[
-                            audio_content,
-                            user_prompt
-                        ],
-                        config=gen_config
-                    )
+            current_k_idx = key_index_used
+
+            while current_k_idx < len(key_pool):
+                curr_key = key_pool[current_k_idx]
+                curr_client = genai.Client(api_key=curr_key)
+                should_rotate = False
+
+                for attempt in range(1, 4):
+                    try:
+                        response = curr_client.models.generate_content(
+                            model="gemini-3.8-flash",
+                            contents=[
+                                audio_content,
+                                user_prompt
+                            ],
+                            config=gen_config
+                        )
+                        break
+                    except Exception as api_err:
+                        if is_rate_limit_error(api_err):
+                            # Rotación ante 429 RESOURCE_EXHAUSTED
+                            if current_k_idx + 1 < len(key_pool):
+                                next_idx = current_k_idx + 2
+                                yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Cuota agotada (429) en Key #{current_k_idx+1}. Rotando automáticamente a Key #{next_idx}...', 'mode': 'files_api'})}\n\n"
+                                should_rotate = True
+                                break
+                            else:
+                                raise api_err
+                        elif is_retriable_error(api_err) and attempt < 3:
+                            yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Alta demanda en Gemini (503). Reintentando en 3s (intento {attempt}/3)...', 'mode': 'files_api'})}\n\n"
+                            await asyncio.sleep(3)
+                        else:
+                            raise api_err
+
+                if response is not None:
                     break
-                except Exception as api_err:
-                    if is_retriable_error(api_err) and attempt < max_attempts:
-                        yield f"data: {json.dumps({'event': 'status', 'stage': 'gemini', 'message': f'Alta demanda en Gemini (503). Reintentando en 3s (intento {attempt}/{max_attempts})...', 'mode': 'files_api'})}\n\n"
-                        await asyncio.sleep(3)
-                    else:
-                        raise api_err
+
+                if should_rotate:
+                    current_k_idx += 1
+                    await asyncio.sleep(1)
+                else:
+                    break
 
             transcript_text = (response.text or "").strip() if response else ""
 
@@ -268,9 +336,10 @@ async def transcribe_audio(
                     pass
 
             # Eliminar archivo remoto en Google Files API
-            if client and google_file and getattr(google_file, "name", None):
+            cleanup_client = active_client or client
+            if cleanup_client and google_file and getattr(google_file, "name", None):
                 try:
-                    client.files.delete(name=google_file.name)
+                    cleanup_client.files.delete(name=google_file.name)
                 except Exception:
                     pass
 
@@ -297,8 +366,11 @@ async def summarize_transcript(req: SummarizeRequest):
     if not req.transcript or not req.transcript.strip():
         raise HTTPException(status_code=400, detail="El texto de la transcripción está vacío.")
 
-    effective_key = (req.api_key or "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
-    if not effective_key:
+    key_pool = parse_api_keys(req.api_key)
+    if not key_pool:
+        key_pool = parse_api_keys(os.getenv("GEMINI_API_KEY", ""))
+
+    if not key_pool:
         raise HTTPException(
             status_code=400,
             detail="No se encontró una API Key válida. Ingrésala en la interfaz o configúrala en el servidor."
@@ -308,7 +380,6 @@ async def summarize_transcript(req: SummarizeRequest):
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=effective_key)
         target_model = "gemini-3.8-flash"
 
         system_instruction = (
@@ -334,20 +405,41 @@ async def summarize_transcript(req: SummarizeRequest):
         )
 
         response = None
-        max_attempts = 3
-        for attempt in range(1, max_attempts + 1):
-            try:
-                response = client.models.generate_content(
-                    model=target_model,
-                    contents=[user_content],
-                    config=config
-                )
+        current_k_idx = 0
+
+        while current_k_idx < len(key_pool):
+            curr_key = key_pool[current_k_idx]
+            curr_client = genai.Client(api_key=curr_key)
+            should_rotate = False
+
+            for attempt in range(1, 4):
+                try:
+                    response = curr_client.models.generate_content(
+                        model=target_model,
+                        contents=[user_content],
+                        config=config
+                    )
+                    break
+                except Exception as api_err:
+                    if is_rate_limit_error(api_err):
+                        if current_k_idx + 1 < len(key_pool):
+                            should_rotate = True
+                            break
+                        else:
+                            raise api_err
+                    elif is_retriable_error(api_err) and attempt < 3:
+                        await asyncio.sleep(3)
+                    else:
+                        raise api_err
+
+            if response is not None:
                 break
-            except Exception as api_err:
-                if is_retriable_error(api_err) and attempt < max_attempts:
-                    await asyncio.sleep(3)
-                else:
-                    raise api_err
+
+            if should_rotate:
+                current_k_idx += 1
+                await asyncio.sleep(1)
+            else:
+                break
 
         summary_text = (response.text or "").strip() if response else ""
         return JSONResponse({
@@ -369,31 +461,32 @@ async def export_summary_docx(req: SummaryDocxExportRequest):
 
     doc = docx.Document()
 
+    # Formato académico estricto: Márgenes estándar de 2.5 cm (aprox 0.984 pulgadas)
     for section in doc.sections:
-        section.top_margin = Inches(1)
-        section.bottom_margin = Inches(1)
-        section.left_margin = Inches(1)
-        section.right_margin = Inches(1)
+        section.top_margin = Inches(0.984)
+        section.bottom_margin = Inches(0.984)
+        section.left_margin = Inches(0.984)
+        section.right_margin = Inches(0.984)
 
     clean_base = Path(req.filename).stem if req.filename else "resumen"
 
-    # Título principal
+    # Título principal académico
     title = doc.add_paragraph()
     title_run = title.add_run(f"Resumen Ejecutivo: {clean_base}")
     title_run.font.name = "Calibri"
-    title_run.font.size = Pt(18)
+    title_run.font.size = Pt(16)
     title_run.font.bold = True
-    title_run.font.color.rgb = RGBColor(180, 83, 9)  # Ámbar elegante
+    title_run.font.color.rgb = RGBColor(15, 23, 42)
     title.paragraph_format.space_after = Pt(2)
 
-    # Subtítulo
+    # Subtítulo con metadata
     sub = doc.add_paragraph()
     sub_run = sub.add_run("Síntesis pedagógica generada por FacuHelps con Gemini Flash")
     sub_run.font.name = "Calibri"
     sub_run.font.size = Pt(9.5)
     sub_run.font.italic = True
     sub_run.font.color.rgb = RGBColor(100, 116, 139)
-    sub.paragraph_format.space_after = Pt(14)
+    sub.paragraph_format.space_after = Pt(12)
 
     # Procesar líneas de Markdown del resumen
     lines = req.summary.split("\n")
@@ -405,27 +498,29 @@ async def export_summary_docx(req: SummaryDocxExportRequest):
         if line.startswith("### "):
             header_text = line[4:].strip()
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(10)
+            p.paragraph_format.space_before = Pt(8)
             p.paragraph_format.space_after = Pt(4)
+            p.paragraph_format.line_spacing = 1.15
             run = p.add_run(header_text)
             run.font.name = "Calibri"
-            run.font.size = Pt(13)
+            run.font.size = Pt(12)
             run.font.bold = True
             run.font.color.rgb = RGBColor(15, 23, 42)
         elif line.startswith("## "):
             header_text = line[3:].strip()
             p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(12)
+            p.paragraph_format.space_before = Pt(10)
             p.paragraph_format.space_after = Pt(4)
+            p.paragraph_format.line_spacing = 1.15
             run = p.add_run(header_text)
             run.font.name = "Calibri"
-            run.font.size = Pt(14)
+            run.font.size = Pt(13)
             run.font.bold = True
             run.font.color.rgb = RGBColor(15, 23, 42)
         elif line.startswith("- ") or line.startswith("* "):
             bullet_text = line[2:].strip()
             p = doc.add_paragraph(style='List Bullet')
-            p.paragraph_format.space_after = Pt(3)
+            p.paragraph_format.space_after = Pt(4)
             p.paragraph_format.line_spacing = 1.15
 
             # Procesar negritas dentro de la viñeta
@@ -446,7 +541,7 @@ async def export_summary_docx(req: SummaryDocxExportRequest):
                     norm_run.font.color.rgb = RGBColor(51, 65, 85)
         else:
             p = doc.add_paragraph()
-            p.paragraph_format.space_after = Pt(5)
+            p.paragraph_format.space_after = Pt(6)
             p.paragraph_format.line_spacing = 1.15
 
             subparts = re.split(r'(\*\*.*?\*\*)', line)
@@ -488,12 +583,12 @@ async def export_docx(req: DocxExportRequest):
     
     doc = docx.Document()
     
-    # Configurar márgenes de página
+    # Formato académico estricto: Márgenes estándar de 2.5 cm (aprox 0.984 pulgadas)
     for section in doc.sections:
-        section.top_margin = Inches(1)
-        section.bottom_margin = Inches(1)
-        section.left_margin = Inches(1)
-        section.right_margin = Inches(1)
+        section.top_margin = Inches(0.984)
+        section.bottom_margin = Inches(0.984)
+        section.left_margin = Inches(0.984)
+        section.right_margin = Inches(0.984)
         
     clean_base = Path(req.filename).stem if req.filename else "transcripcion"
     
@@ -501,28 +596,29 @@ async def export_docx(req: DocxExportRequest):
     title = doc.add_paragraph()
     title_run = title.add_run(f"Transcripción: {req.filename}")
     title_run.font.name = "Calibri"
-    title_run.font.size = Pt(18)
+    title_run.font.size = Pt(16)
     title_run.font.bold = True
-    title_run.font.color.rgb = RGBColor(79, 70, 229)  # Índigo elegante
+    title_run.font.color.rgb = RGBColor(15, 23, 42)
     title.paragraph_format.space_after = Pt(2)
     
     # Subtítulo con metadata
     sub = doc.add_paragraph()
-    sub_run = sub.add_run("Generado con Gemini Audio Transcriber — Transcripción Literal (Verbatim)")
+    sub_run = sub.add_run("Registro textual literal y académico (Verbatim)")
     sub_run.font.name = "Calibri"
     sub_run.font.size = Pt(9.5)
     sub_run.font.italic = True
     sub_run.font.color.rgb = RGBColor(100, 116, 139)  # Slate
-    sub.paragraph_format.space_after = Pt(14)
+    sub.paragraph_format.space_after = Pt(12)
     
-    # Párrafos e intervenciones de la transcripción
+    # Párrafos e intervenciones de la transcripción con formato académico
     raw_paras = [p.strip() for p in req.transcript.split("\n") if p.strip()]
     for p_text in raw_paras:
         p = doc.add_paragraph()
+        # Formato académico: Espaciado posterior 6 pt, interlineado 1.15
         p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.line_spacing = 1.15
         
-        # Segmentar marcas de tiempo tipo [00:01:23] o [01:23]
+        # Segmentar marcas de tiempo si existieran
         parts = re.split(r'(\[\d{1,2}:\d{2}(?::\d{2})?\])', p_text)
         for part in parts:
             if not part:
@@ -534,7 +630,7 @@ async def export_docx(req: DocxExportRequest):
                 run.font.bold = True
                 run.font.color.rgb = RGBColor(79, 70, 229)
             else:
-                # Segmentar negrita Markdown **...** para oradores y énfasis
+                # Segmentar negrita Markdown **...** para nombres de oradores en negrita al inicio y énfasis
                 subparts = re.split(r'(\*\*.*?\*\*)', part)
                 for subpart in subparts:
                     if not subpart:
@@ -550,7 +646,7 @@ async def export_docx(req: DocxExportRequest):
                         run = p.add_run(subpart)
                         run.font.name = "Calibri"
                         run.font.size = Pt(11)
-                        run.font.color.rgb = RGBColor(51, 65, 85)
+                        run.font.color.rgb = RGBColor(30, 41, 59)
 
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -572,7 +668,7 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 7860))
     host = os.environ.get("HOST", "0.0.0.0")
     print(f"Iniciando servidor en http://localhost:{port} (host: {host})...")
     uvicorn.run("app:app", host=host, port=port)

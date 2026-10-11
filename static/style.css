@@ -99,6 +99,18 @@
   color: #0f172a;
 }
 
+.dark .speaker-tag {
+  color: #f1f5f9;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
 /* Búsqueda dentro del texto - Resaltado amarillo vivo */
 mark.highlight {
   background-color: #fde047; /* Amarillo intenso visible */
@@ -108,3 +120,9 @@ mark.highlight {
   border-radius: 0.25rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
+
+.dark mark.highlight {
+  background-color: #eab308;
+  color: #1a1500;
+}
+
