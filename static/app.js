@@ -1493,6 +1493,661 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 13. NAVEGACIÓN POR SOLAPAS (TABS)
+  // ─────────────────────────────────────────────────────────────
+  const tabBtnTranscriptor = document.getElementById("tabBtnTranscriptor");
+  const tabBtnOrganizer = document.getElementById("tabBtnOrganizer");
+  const viewTranscriptor = document.getElementById("viewTranscriptor");
+  const viewOrganizer = document.getElementById("viewOrganizer");
+
+  function switchTab(target) {
+    if (target === "transcriptor") {
+      tabBtnTranscriptor.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold text-xs transition";
+      tabBtnOrganizer.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium text-xs transition";
+      viewTranscriptor.classList.remove("hidden");
+      viewOrganizer.classList.add("hidden");
+    } else if (target === "organizer") {
+      tabBtnOrganizer.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold text-xs transition";
+      tabBtnTranscriptor.className = "nav-tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-medium text-xs transition";
+      viewOrganizer.classList.remove("hidden");
+      viewTranscriptor.classList.add("hidden");
+      // Cargar vista del organizador
+      renderOrganizerView();
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  if (tabBtnTranscriptor) {
+    tabBtnTranscriptor.addEventListener("click", () => switchTab("transcriptor"));
+  }
+  if (tabBtnOrganizer) {
+    tabBtnOrganizer.addEventListener("click", () => switchTab("organizer"));
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // 14. MÓDULO ORGANIZADOR DE MATERIAS (INDEXEDDB LOCAL)
+  // ─────────────────────────────────────────────────────────────
+  const DB_NAME = "FacuHelpsDB";
+  const DB_VERSION = 1;
+  let dbInstance = null;
+
+  // Estado de navegación del organizador
+  let currentSubject = null; // { id, name, createdAt }
+  let currentFolder = null;   // { id, subjectId, name, createdAt }
+
+  // Elementos DOM del Organizador
+  const orgBreadcrumbs = document.getElementById("orgBreadcrumbs");
+  const orgCurrentTitle = document.getElementById("orgCurrentTitle");
+  const orgCurrentSubtitle = document.getElementById("orgCurrentSubtitle");
+  const btnNewSubjectModal = document.getElementById("btnNewSubjectModal");
+  const btnNewFolderModal = document.getElementById("btnNewFolderModal");
+  const orgSubjectsView = document.getElementById("orgSubjectsView");
+  const orgSubjectsGrid = document.getElementById("orgSubjectsGrid");
+  const orgSubjectsEmpty = document.getElementById("orgSubjectsEmpty");
+  const btnNewSubjectEmpty = document.getElementById("btnNewSubjectEmpty");
+  const orgFoldersView = document.getElementById("orgFoldersView");
+  const orgFoldersGrid = document.getElementById("orgFoldersGrid");
+  const orgFoldersEmpty = document.getElementById("orgFoldersEmpty");
+  const btnNewFolderEmpty = document.getElementById("btnNewFolderEmpty");
+  const orgFilesView = document.getElementById("orgFilesView");
+  const orgPdfDropZone = document.getElementById("orgPdfDropZone");
+  const orgPdfFileInput = document.getElementById("orgPdfFileInput");
+  const orgPdfList = document.getElementById("orgPdfList");
+  const orgPdfEmpty = document.getElementById("orgPdfEmpty");
+  const orgPdfCountLabel = document.getElementById("orgPdfCountLabel");
+
+  // Modales del Organizador
+  const modalSubject = document.getElementById("modalSubject");
+  const formNewSubject = document.getElementById("formNewSubject");
+  const inputSubjectName = document.getElementById("inputSubjectName");
+  const btnCloseSubjectModal = document.getElementById("btnCloseSubjectModal");
+  const btnCancelSubjectModal = document.getElementById("btnCancelSubjectModal");
+
+  const modalFolder = document.getElementById("modalFolder");
+  const formNewFolder = document.getElementById("formNewFolder");
+  const inputFolderName = document.getElementById("inputFolderName");
+  const btnCloseFolderModal = document.getElementById("btnCloseFolderModal");
+  const btnCancelFolderModal = document.getElementById("btnCancelFolderModal");
+
+  // Inicialización de IndexedDB
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      if (dbInstance) {
+        resolve(dbInstance);
+        return;
+      }
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        // Almacén de Materias
+        if (!db.objectStoreNames.contains("subjects")) {
+          db.createObjectStore("subjects", { keyPath: "id", autoIncrement: true });
+        }
+        // Almacén de Subcarpetas (con índice de subjectId)
+        if (!db.objectStoreNames.contains("folders")) {
+          const folderStore = db.createObjectStore("folders", { keyPath: "id", autoIncrement: true });
+          folderStore.createIndex("subjectId", "subjectId", { unique: false });
+        }
+        // Almacén de Archivos PDF (con índice de folderId)
+        if (!db.objectStoreNames.contains("files")) {
+          const fileStore = db.createObjectStore("files", { keyPath: "id", autoIncrement: true });
+          fileStore.createIndex("folderId", "folderId", { unique: false });
+        }
+      };
+      request.onsuccess = (e) => {
+        dbInstance = e.target.result;
+        resolve(dbInstance);
+      };
+      request.onerror = (e) => {
+        reject(e.target.error);
+      };
+    });
+  }
+
+  // Operaciones DB: Materias
+  async function dbGetSubjects() {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("subjects", "readonly");
+      const store = tx.objectStore("subjects");
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbAddSubject(name) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("subjects", "readwrite");
+      const store = tx.objectStore("subjects");
+      const req = store.add({ name, createdAt: Date.now() });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbDeleteSubject(subjectId) {
+    const db = await openDatabase();
+    // Eliminar también subcarpetas y PDFs asociados
+    const folders = await dbGetFoldersBySubject(subjectId);
+    for (const f of folders) {
+      await dbDeleteFolder(f.id);
+    }
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("subjects", "readwrite");
+      const store = tx.objectStore("subjects");
+      const req = store.delete(subjectId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // Operaciones DB: Subcarpetas
+  async function dbGetFoldersBySubject(subjectId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("folders", "readonly");
+      const store = tx.objectStore("folders");
+      const index = store.index("subjectId");
+      const req = index.getAll(subjectId);
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbAddFolder(subjectId, name) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("folders", "readwrite");
+      const store = tx.objectStore("folders");
+      const req = store.add({ subjectId, name, createdAt: Date.now() });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbDeleteFolder(folderId) {
+    const db = await openDatabase();
+    // Eliminar archivos asociados a la subcarpeta
+    const files = await dbGetFilesByFolder(folderId);
+    for (const file of files) {
+      await dbDeleteFile(file.id);
+    }
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("folders", "readwrite");
+      const store = tx.objectStore("folders");
+      const req = store.delete(folderId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // Operaciones DB: Archivos PDF
+  async function dbGetFilesByFolder(folderId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readonly");
+      const store = tx.objectStore("files");
+      const index = store.index("folderId");
+      const req = index.getAll(folderId);
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbAddFile(folderId, file) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readwrite");
+      const store = tx.objectStore("files");
+      const item = {
+        folderId,
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/pdf",
+        blob: file,
+        uploadedAt: Date.now()
+      };
+      const req = store.add(item);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbDeleteFile(fileId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readwrite");
+      const store = tx.objectStore("files");
+      const req = store.delete(fileId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // Renderizado dinámico del Organizador
+  async function renderOrganizerView() {
+    renderBreadcrumbs();
+
+    if (!currentSubject) {
+      // Nivel 1: Materias
+      orgSubjectsView.classList.remove("hidden");
+      orgFoldersView.classList.add("hidden");
+      orgFilesView.classList.add("hidden");
+      btnNewSubjectModal.classList.remove("hidden");
+      btnNewFolderModal.classList.add("hidden");
+      orgCurrentTitle.textContent = "Materias";
+      orgCurrentSubtitle.textContent = "Organizador académico 100% privado en tu navegador (IndexedDB local)";
+      await renderSubjectsList();
+    } else if (!currentFolder) {
+      // Nivel 2: Subcarpetas de la materia seleccionada
+      orgSubjectsView.classList.add("hidden");
+      orgFoldersView.classList.remove("hidden");
+      orgFilesView.classList.add("hidden");
+      btnNewSubjectModal.classList.add("hidden");
+      btnNewFolderModal.classList.remove("hidden");
+      orgCurrentTitle.textContent = currentSubject.name;
+      orgCurrentSubtitle.textContent = "Subcarpetas de la materia";
+      await renderFoldersList();
+    } else {
+      // Nivel 3: Archivos PDF de la subcarpeta seleccionada
+      orgSubjectsView.classList.add("hidden");
+      orgFoldersView.classList.add("hidden");
+      orgFilesView.classList.remove("hidden");
+      btnNewSubjectModal.classList.add("hidden");
+      btnNewFolderModal.classList.add("hidden");
+      orgCurrentTitle.textContent = currentFolder.name;
+      orgCurrentSubtitle.textContent = `Documentos PDF en ${currentSubject.name} > ${currentFolder.name}`;
+      await renderFilesList();
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function renderBreadcrumbs() {
+    if (!orgBreadcrumbs) return;
+    orgBreadcrumbs.innerHTML = "";
+
+    // Migaja raíz: Materias
+    const rootBtn = document.createElement("button");
+    rootBtn.type = "button";
+    rootBtn.className = currentSubject 
+      ? "hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold transition" 
+      : "text-slate-800 dark:text-slate-200 font-bold";
+    rootBtn.textContent = "Materias";
+    rootBtn.addEventListener("click", () => {
+      currentSubject = null;
+      currentFolder = null;
+      renderOrganizerView();
+    });
+    orgBreadcrumbs.appendChild(rootBtn);
+
+    if (currentSubject) {
+      const sep1 = document.createElement("span");
+      sep1.textContent = ">";
+      sep1.className = "text-slate-400";
+      orgBreadcrumbs.appendChild(sep1);
+
+      const subjBtn = document.createElement("button");
+      subjBtn.type = "button";
+      subjBtn.className = currentFolder 
+        ? "hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold transition truncate max-w-[150px]" 
+        : "text-slate-800 dark:text-slate-200 font-bold truncate max-w-[150px]";
+      subjBtn.textContent = currentSubject.name;
+      subjBtn.addEventListener("click", () => {
+        currentFolder = null;
+        renderOrganizerView();
+      });
+      orgBreadcrumbs.appendChild(subjBtn);
+    }
+
+    if (currentFolder) {
+      const sep2 = document.createElement("span");
+      sep2.textContent = ">";
+      sep2.className = "text-slate-400";
+      orgBreadcrumbs.appendChild(sep2);
+
+      const foldSpan = document.createElement("span");
+      foldSpan.className = "text-slate-800 dark:text-slate-200 font-bold truncate max-w-[150px]";
+      foldSpan.textContent = currentFolder.name;
+      orgBreadcrumbs.appendChild(foldSpan);
+    }
+  }
+
+  // Render Nivel 1: Materias
+  async function renderSubjectsList() {
+    const subjects = await dbGetSubjects();
+    orgSubjectsGrid.innerHTML = "";
+
+    if (subjects.length === 0) {
+      orgSubjectsEmpty.classList.remove("hidden");
+      orgSubjectsGrid.classList.add("hidden");
+      return;
+    }
+
+    orgSubjectsEmpty.classList.add("hidden");
+    orgSubjectsGrid.classList.remove("hidden");
+
+    for (const subj of subjects) {
+      const folders = await dbGetFoldersBySubject(subj.id);
+      let totalFiles = 0;
+      for (const f of folders) {
+        const files = await dbGetFilesByFolder(f.id);
+        totalFiles += files.length;
+      }
+
+      const card = document.createElement("div");
+      card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-300 dark:hover:border-indigo-600/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+              <i data-lucide="folder" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">${subj.name}</h3>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                ${folders.length} ${folders.length === 1 ? 'subcarpeta' : 'subcarpetas'} • ${totalFiles} ${totalFiles === 1 ? 'PDF' : 'PDFs'}
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn-delete-subject p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition shrink-0" title="Eliminar materia">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+          <span>Abrir materia</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+        </div>
+      `;
+
+      // Entrar a la materia
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-delete-subject")) return;
+        currentSubject = subj;
+        currentFolder = null;
+        renderOrganizerView();
+      });
+
+      // Eliminar materia
+      card.querySelector(".btn-delete-subject").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (confirm(`¿Estás seguro de eliminar la materia "${subj.name}" y todos sus archivos guardados?`)) {
+          await dbDeleteSubject(subj.id);
+          renderSubjectsList();
+        }
+      });
+
+      orgSubjectsGrid.appendChild(card);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // Render Nivel 2: Subcarpetas
+  async function renderFoldersList() {
+    if (!currentSubject) return;
+    const folders = await dbGetFoldersBySubject(currentSubject.id);
+    orgFoldersGrid.innerHTML = "";
+
+    if (folders.length === 0) {
+      orgFoldersEmpty.classList.remove("hidden");
+      orgFoldersGrid.classList.add("hidden");
+      return;
+    }
+
+    orgFoldersEmpty.classList.add("hidden");
+    orgFoldersGrid.classList.remove("hidden");
+
+    for (const fold of folders) {
+      const files = await dbGetFilesByFolder(fold.id);
+
+      const card = document.createElement("div");
+      card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-600/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
+              <i data-lucide="folder-open" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">${fold.name}</h3>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                ${files.length} ${files.length === 1 ? 'archivo PDF' : 'archivos PDF'}
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn-delete-folder p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition shrink-0" title="Eliminar subcarpeta">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-medium">
+          <span>Ver archivos</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+        </div>
+      `;
+
+      // Entrar a la subcarpeta
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-delete-folder")) return;
+        currentFolder = fold;
+        renderOrganizerView();
+      });
+
+      // Eliminar subcarpeta
+      card.querySelector(".btn-delete-folder").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (confirm(`¿Estás seguro de eliminar la subcarpeta "${fold.name}" y sus PDFs?`)) {
+          await dbDeleteFolder(fold.id);
+          renderFoldersList();
+        }
+      });
+
+      orgFoldersGrid.appendChild(card);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // Render Nivel 3: Archivos PDF
+  async function renderFilesList() {
+    if (!currentFolder) return;
+    const files = await dbGetFilesByFolder(currentFolder.id);
+    orgPdfList.innerHTML = "";
+    orgPdfCountLabel.textContent = `${files.length} ${files.length === 1 ? 'archivo' : 'archivos'}`;
+
+    if (files.length === 0) {
+      orgPdfEmpty.classList.remove("hidden");
+      return;
+    }
+
+    orgPdfEmpty.classList.add("hidden");
+
+    files.forEach((fileItem) => {
+      const dateStr = fileItem.uploadedAt 
+        ? new Date(fileItem.uploadedAt).toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : "Reciente";
+
+      const row = document.createElement("div");
+      row.className = "px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition";
+      row.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+          </div>
+          <div class="min-w-0">
+            <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${fileItem.name}</h4>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              ${formatBytes(fileItem.size)} • Guardado el ${dateStr}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span>Abrir / Ver</span>
+          </button>
+          <button type="button" class="btn-download-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Descargar PDF">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          </button>
+          <button type="button" class="btn-delete-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-800 bg-white dark:bg-slate-800 text-slate-400 hover:text-rose-600 transition" title="Eliminar archivo">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      `;
+
+      // Abrir PDF en nueva pestaña
+      row.querySelector(".btn-open-pdf").addEventListener("click", () => {
+        if (!fileItem.blob) return;
+        const blobUrl = URL.createObjectURL(fileItem.blob);
+        window.open(blobUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      });
+
+      // Descargar PDF
+      row.querySelector(".btn-download-pdf-db").addEventListener("click", () => {
+        if (!fileItem.blob) return;
+        const blobUrl = URL.createObjectURL(fileItem.blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = fileItem.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      });
+
+      // Eliminar PDF
+      row.querySelector(".btn-delete-pdf-db").addEventListener("click", async () => {
+        if (confirm(`¿Eliminar el archivo "${fileItem.name}" de esta subcarpeta?`)) {
+          await dbDeleteFile(fileItem.id);
+          renderFilesList();
+        }
+      });
+
+      orgPdfList.appendChild(row);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // Modales de creación de Materia y Subcarpeta
+  if (btnNewSubjectModal) {
+    btnNewSubjectModal.addEventListener("click", () => {
+      inputSubjectName.value = "";
+      modalSubject.classList.remove("hidden");
+      inputSubjectName.focus();
+    });
+  }
+  if (btnNewSubjectEmpty) {
+    btnNewSubjectEmpty.addEventListener("click", () => {
+      inputSubjectName.value = "";
+      modalSubject.classList.remove("hidden");
+      inputSubjectName.focus();
+    });
+  }
+  if (btnCloseSubjectModal) {
+    btnCloseSubjectModal.addEventListener("click", () => modalSubject.classList.add("hidden"));
+  }
+  if (btnCancelSubjectModal) {
+    btnCancelSubjectModal.addEventListener("click", () => modalSubject.classList.add("hidden"));
+  }
+  if (modalSubject) {
+    modalSubject.addEventListener("click", (e) => {
+      if (e.target === modalSubject) modalSubject.classList.add("hidden");
+    });
+  }
+  if (formNewSubject) {
+    formNewSubject.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = inputSubjectName.value.trim();
+      if (!name) return;
+      await dbAddSubject(name);
+      modalSubject.classList.add("hidden");
+      renderSubjectsList();
+    });
+  }
+
+  if (btnNewFolderModal) {
+    btnNewFolderModal.addEventListener("click", () => {
+      inputFolderName.value = "";
+      modalFolder.classList.remove("hidden");
+      inputFolderName.focus();
+    });
+  }
+  if (btnNewFolderEmpty) {
+    btnNewFolderEmpty.addEventListener("click", () => {
+      inputFolderName.value = "";
+      modalFolder.classList.remove("hidden");
+      inputFolderName.focus();
+    });
+  }
+  if (btnCloseFolderModal) {
+    btnCloseFolderModal.addEventListener("click", () => modalFolder.classList.add("hidden"));
+  }
+  if (btnCancelFolderModal) {
+    btnCancelFolderModal.addEventListener("click", () => modalFolder.classList.add("hidden"));
+  }
+  if (modalFolder) {
+    modalFolder.addEventListener("click", (e) => {
+      if (e.target === modalFolder) modalFolder.classList.add("hidden");
+    });
+  }
+  if (formNewFolder) {
+    formNewFolder.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentSubject) return;
+      const name = inputFolderName.value.trim();
+      if (!name) return;
+      await dbAddFolder(currentSubject.id, name);
+      modalFolder.classList.add("hidden");
+      renderFoldersList();
+    });
+  }
+
+  // Subida de PDFs en Zona Drag & Drop (Nivel 3)
+  if (orgPdfDropZone && orgPdfFileInput) {
+    orgPdfDropZone.addEventListener("click", () => orgPdfFileInput.click());
+
+    orgPdfFileInput.addEventListener("change", async (e) => {
+      if (e.target.files.length > 0 && currentFolder) {
+        for (const f of e.target.files) {
+          if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+            await dbAddFile(currentFolder.id, f);
+          }
+        }
+        orgPdfFileInput.value = "";
+        renderFilesList();
+      }
+    });
+
+    orgPdfDropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      orgPdfDropZone.classList.add("border-indigo-500", "bg-indigo-50/30");
+    });
+
+    orgPdfDropZone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      orgPdfDropZone.classList.remove("border-indigo-500", "bg-indigo-50/30");
+    });
+
+    orgPdfDropZone.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      orgPdfDropZone.classList.remove("border-indigo-500", "bg-indigo-50/30");
+      if (e.dataTransfer.files.length > 0 && currentFolder) {
+        for (const f of e.dataTransfer.files) {
+          if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+            await dbAddFile(currentFolder.id, f);
+          }
+        }
+        renderFilesList();
+      }
+    });
+  }
+
   // Inicializar
   loadInitialConfig();
   updateHistoryBadge();
