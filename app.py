@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import time
+import unicodedata
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -46,6 +47,14 @@ MIME_MAP = {
     ".webm": "audio/webm",
     ".wma": "audio/x-ms-wma",
 }
+
+def sanitize_filename(filename: str) -> str:
+    """Genera un nombre seguro en ASCII sin tildes, eñes ni caracteres especiales."""
+    # Normalizar caracteres con tildes/eñes a caracteres base equivalentes en ASCII
+    normalized = unicodedata.normalize('NFKD', filename).encode('ascii', 'ignore').decode('ascii')
+    # Reemplazar cualquier caracter no alfanumérico (excepto puntos, guiones y guiones bajos) por guiones bajos
+    safe_name = re.sub(r'[^a-zA-Z0-9._-]', '_', normalized).strip('._')
+    return safe_name or "audio"
 
 def parse_api_keys(key_string: Optional[str]) -> list[str]:
     """Extrae y limpia una lista de API Keys separadas por comas, espacios o saltos de línea."""
@@ -201,8 +210,9 @@ async def transcribe_audio(
     system_instruction = get_system_instruction(effective_audio_type)
     user_prompt = get_user_prompt(effective_audio_type, clean_keywords)
 
-    # Guardar audio en disco en bloques de 1 MB (protege memoria RAM)
-    temp_filename = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
+    # Sanitizar el nombre del archivo para generar un nombre seguro en ASCII sin tildes ni eñes
+    safe_filename = sanitize_filename(Path(file.filename).name)
+    temp_filename = f"{uuid.uuid4().hex}_{safe_filename}"
     local_temp_path = TEMP_DIR / temp_filename
 
     google_file = None
@@ -228,7 +238,7 @@ async def transcribe_audio(
                     file=str(local_temp_path),
                     config=types.UploadFileConfig(
                         mime_type=mime_type,
-                        display_name=file.filename
+                        display_name=safe_filename
                     )
                 )
                 upload_success = True
