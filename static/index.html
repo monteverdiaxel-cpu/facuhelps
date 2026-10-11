@@ -499,10 +499,12 @@
         </div>
       </div>
     </div>
-    <!-- Fin viewTranscriptor -->
+    <!-- Fin resultSection -->
+  </div>
+  <!-- Fin viewTranscriptor -->
 
     <!-- Vista 2: Organizador de Materias (IndexedDB local, oculta por defecto) -->
-    <div id="viewOrganizer" class="hidden space-y-6">
+    <div id="viewOrganizer" class="space-y-6 hidden">
 
       <!-- Encabezado del Organizador y Migas de Pan (Breadcrumbs) -->
       <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-6 transition-colors">
@@ -769,6 +771,86 @@
           </button>
           <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
             Crear subcarpeta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Editar / Renombrar Materia -->
+  <div id="modalEditSubject" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          Renombrar Materia
+        </h3>
+        <button id="btnCloseEditSubjectModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Modifica el nombre de la materia seleccionada.
+      </p>
+      <form id="formEditSubject" class="space-y-4">
+        <input type="hidden" id="editSubjectId">
+        <div>
+          <label for="inputEditSubjectName" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Nombre de la materia
+          </label>
+          <input 
+            type="text" 
+            id="inputEditSubjectName" 
+            required
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+          >
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelEditSubjectModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Guardar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Editar / Renombrar Subcarpeta -->
+  <div id="modalEditFolder" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+          Renombrar Subcarpeta
+        </h3>
+        <button id="btnCloseEditFolderModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Modifica el nombre de la subcarpeta seleccionada.
+      </p>
+      <form id="formEditFolder" class="space-y-4">
+        <input type="hidden" id="editFolderId">
+        <div>
+          <label for="inputEditFolderName" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Nombre de la subcarpeta
+          </label>
+          <input 
+            type="text" 
+            id="inputEditFolderName" 
+            required
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+          >
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelEditFolderModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Guardar cambios
           </button>
         </div>
       </form>

@@ -1570,6 +1570,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCloseFolderModal = document.getElementById("btnCloseFolderModal");
   const btnCancelFolderModal = document.getElementById("btnCancelFolderModal");
 
+  // Modales de Edición / Renombrado
+  const modalEditSubject = document.getElementById("modalEditSubject");
+  const formEditSubject = document.getElementById("formEditSubject");
+  const editSubjectId = document.getElementById("editSubjectId");
+  const inputEditSubjectName = document.getElementById("inputEditSubjectName");
+  const btnCloseEditSubjectModal = document.getElementById("btnCloseEditSubjectModal");
+  const btnCancelEditSubjectModal = document.getElementById("btnCancelEditSubjectModal");
+
+  const modalEditFolder = document.getElementById("modalEditFolder");
+  const formEditFolder = document.getElementById("formEditFolder");
+  const editFolderId = document.getElementById("editFolderId");
+  const inputEditFolderName = document.getElementById("inputEditFolderName");
+  const btnCloseEditFolderModal = document.getElementById("btnCloseEditFolderModal");
+  const btnCancelEditFolderModal = document.getElementById("btnCancelEditFolderModal");
+
   // Inicialización de IndexedDB
   function openDatabase() {
     return new Promise((resolve, reject) => {
@@ -1628,6 +1643,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function dbUpdateSubject(subjectId, newName) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("subjects", "readwrite");
+      const store = tx.objectStore("subjects");
+      const getReq = store.get(Number(subjectId));
+      getReq.onsuccess = () => {
+        const item = getReq.result;
+        if (!item) {
+          reject(new Error("Materia no encontrada"));
+          return;
+        }
+        item.name = newName;
+        const putReq = store.put(item);
+        putReq.onsuccess = () => resolve(putReq.result);
+        putReq.onerror = () => reject(putReq.error);
+      };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
   async function dbDeleteSubject(subjectId) {
     const db = await openDatabase();
     // Eliminar también subcarpetas y PDFs asociados
@@ -1665,6 +1701,27 @@ document.addEventListener("DOMContentLoaded", () => {
       const req = store.add({ subjectId, name, createdAt: Date.now() });
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function dbUpdateFolder(folderId, newName) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("folders", "readwrite");
+      const store = tx.objectStore("folders");
+      const getReq = store.get(Number(folderId));
+      getReq.onsuccess = () => {
+        const item = getReq.result;
+        if (!item) {
+          reject(new Error("Subcarpeta no encontrada"));
+          return;
+        }
+        item.name = newName;
+        const putReq = store.put(item);
+        putReq.onsuccess = () => resolve(putReq.result);
+        putReq.onerror = () => reject(putReq.error);
+      };
+      getReq.onerror = () => reject(getReq.error);
     });
   }
 
@@ -1853,9 +1910,14 @@ document.addEventListener("DOMContentLoaded", () => {
               </p>
             </div>
           </div>
-          <button type="button" class="btn-delete-subject p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition shrink-0" title="Eliminar materia">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" class="btn-edit-subject p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition" title="Editar / Renombrar materia">
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </button>
+            <button type="button" class="btn-delete-subject p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Eliminar materia">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
         </div>
         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-400 font-medium">
           <span>Abrir materia</span>
@@ -1865,10 +1927,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Entrar a la materia
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".btn-delete-subject")) return;
+        if (e.target.closest(".btn-delete-subject") || e.target.closest(".btn-edit-subject")) return;
         currentSubject = subj;
         currentFolder = null;
         renderOrganizerView();
+      });
+
+      // Editar / Renombrar materia
+      card.querySelector(".btn-edit-subject").addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (editSubjectId && inputEditSubjectName && modalEditSubject) {
+          editSubjectId.value = subj.id;
+          inputEditSubjectName.value = subj.name;
+          modalEditSubject.classList.remove("hidden");
+          inputEditSubjectName.focus();
+        }
       });
 
       // Eliminar materia
@@ -1919,9 +1992,14 @@ document.addEventListener("DOMContentLoaded", () => {
               </p>
             </div>
           </div>
-          <button type="button" class="btn-delete-folder p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition shrink-0" title="Eliminar subcarpeta">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" class="btn-edit-folder p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition" title="Editar / Renombrar subcarpeta">
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </button>
+            <button type="button" class="btn-delete-folder p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Eliminar subcarpeta">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
         </div>
         <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-medium">
           <span>Ver archivos</span>
@@ -1931,9 +2009,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Entrar a la subcarpeta
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".btn-delete-folder")) return;
+        if (e.target.closest(".btn-delete-folder") || e.target.closest(".btn-edit-folder")) return;
         currentFolder = fold;
         renderOrganizerView();
+      });
+
+      // Editar / Renombrar subcarpeta
+      card.querySelector(".btn-edit-folder").addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (editFolderId && inputEditFolderName && modalEditFolder) {
+          editFolderId.value = fold.id;
+          inputEditFolderName.value = fold.name;
+          modalEditFolder.classList.remove("hidden");
+          inputEditFolderName.focus();
+        }
       });
 
       // Eliminar subcarpeta
@@ -2105,6 +2194,60 @@ document.addEventListener("DOMContentLoaded", () => {
       await dbAddFolder(currentSubject.id, name);
       modalFolder.classList.add("hidden");
       renderFoldersList();
+    });
+  }
+
+  // Eventos de edición / renombrado de Materia
+  if (btnCloseEditSubjectModal) {
+    btnCloseEditSubjectModal.addEventListener("click", () => modalEditSubject.classList.add("hidden"));
+  }
+  if (btnCancelEditSubjectModal) {
+    btnCancelEditSubjectModal.addEventListener("click", () => modalEditSubject.classList.add("hidden"));
+  }
+  if (modalEditSubject) {
+    modalEditSubject.addEventListener("click", (e) => {
+      if (e.target === modalEditSubject) modalEditSubject.classList.add("hidden");
+    });
+  }
+  if (formEditSubject) {
+    formEditSubject.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = editSubjectId.value;
+      const newName = inputEditSubjectName.value.trim();
+      if (!id || !newName) return;
+      await dbUpdateSubject(id, newName);
+      if (currentSubject && Number(currentSubject.id) === Number(id)) {
+        currentSubject.name = newName;
+      }
+      modalEditSubject.classList.add("hidden");
+      renderOrganizerView();
+    });
+  }
+
+  // Eventos de edición / renombrado de Subcarpeta
+  if (btnCloseEditFolderModal) {
+    btnCloseEditFolderModal.addEventListener("click", () => modalEditFolder.classList.add("hidden"));
+  }
+  if (btnCancelEditFolderModal) {
+    btnCancelEditFolderModal.addEventListener("click", () => modalEditFolder.classList.add("hidden"));
+  }
+  if (modalEditFolder) {
+    modalEditFolder.addEventListener("click", (e) => {
+      if (e.target === modalEditFolder) modalEditFolder.classList.add("hidden");
+    });
+  }
+  if (formEditFolder) {
+    formEditFolder.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = editFolderId.value;
+      const newName = inputEditFolderName.value.trim();
+      if (!id || !newName) return;
+      await dbUpdateFolder(id, newName);
+      if (currentFolder && Number(currentFolder.id) === Number(id)) {
+        currentFolder.name = newName;
+      }
+      modalEditFolder.classList.add("hidden");
+      renderOrganizerView();
     });
   }
 
