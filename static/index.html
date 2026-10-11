@@ -1203,6 +1203,16 @@
 
         <div class="flex items-center gap-2 shrink-0">
           <button 
+            id="btnPdfViewerSummarize" 
+            type="button" 
+            style="background-color: #001b44; color: #ffc700;"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#ffc700]/30 font-semibold text-xs shadow-2xs hover:brightness-125 transition"
+            title="Generar o ver Resumen Académico con IA (a demanda)"
+          >
+            <i data-lucide="zap" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
+            <span>⚡ Resumen con IA</span>
+          </button>
+          <button 
             id="btnPdfViewerDownload" 
             type="button" 
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-2xs"
@@ -1218,14 +1228,73 @@
             title="Cerrar visor"
           >
             <i data-lucide="x" class="w-4 h-4"></i>
-            <span>Cerrar visor</span>
+            <span>Cerrar</span>
           </button>
         </div>
       </div>
 
-      <!-- Contenedor del documento embebido -->
-      <div class="flex-1 w-full bg-slate-100 dark:bg-slate-950 relative overflow-hidden flex items-center justify-center">
-        <iframe id="pdfViewerFrame" class="w-full h-full border-0" title="Visor de PDF"></iframe>
+      <!-- Contenedor Principal: PDF iframe + Panel lateral de Resumen Académico -->
+      <div class="flex-1 w-full bg-slate-100 dark:bg-slate-950 relative overflow-hidden flex flex-col lg:flex-row">
+        <!-- Frame PDF -->
+        <div id="pdfViewerFrameContainer" class="flex-1 h-full min-h-[300px] border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 relative">
+          <iframe id="pdfViewerFrame" class="w-full h-full border-0" title="Visor de PDF"></iframe>
+        </div>
+
+        <!-- Panel de Resumen Académico (Lateral en desktop, inferior en móvil) -->
+        <div id="pdfSummaryPanel" class="hidden w-full lg:w-[480px] shrink-0 bg-white dark:bg-slate-900 flex flex-col h-full border-l-0 lg:border-l border-slate-200 dark:border-slate-800 animate-fade-in">
+          <!-- Cabecera del Panel de Resumen -->
+          <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
+                <span>📖 Resumen Académico</span>
+                <span class="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-semibold px-1.5 py-0.5 rounded-full">Ciencias Sociales</span>
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button 
+                id="btnCopyPdfSummary" 
+                type="button" 
+                class="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1 transition"
+                title="Copiar texto del resumen"
+              >
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Copiar</span>
+              </button>
+              <button 
+                id="btnDownloadPdfSummaryDocx" 
+                type="button" 
+                style="background-color: #001b44; color: #ffc700;"
+                class="px-2.5 py-1 rounded-lg font-semibold text-xs flex items-center gap-1 hover:brightness-125 transition"
+                title="Descargar resumen en formato Word (.docx)"
+              >
+                <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+                <span>Word (.docx)</span>
+              </button>
+              <button 
+                id="btnClosePdfSummaryPanel" 
+                type="button" 
+                class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition"
+                title="Ocultar panel"
+              >
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Estado de carga del resumen -->
+          <div id="pdfSummaryLoading" class="hidden p-8 flex flex-col items-center justify-center text-center my-auto">
+            <div class="w-9 h-9 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <h4 class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">Generando análisis académico...</h4>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-xs">
+              Extrayendo tesis central, categorías teóricas, citas textuales y preguntas de examen con Gemini Flash.
+            </p>
+          </div>
+
+          <!-- Contenido del Resumen Académico con scroll independiente -->
+          <div id="pdfSummaryContent" class="flex-1 overflow-y-auto p-4 sm:p-5 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed space-y-4">
+            <!-- Renderizado dinámico de Markdown -->
+          </div>
+        </div>
       </div>
 
     </div>

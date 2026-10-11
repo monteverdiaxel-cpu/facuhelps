@@ -456,6 +456,193 @@ async def summarize_transcript(req: SummarizeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar el resumen: {str(e)}")
 
+@app.post("/api/summarize-pdf")
+async def summarize_pdf(
+    file: UploadFile = File(...),
+    api_key: Optional[str] = Form(None),
+    model_name: Optional[str] = Form("gemini-3.8-flash")
+):
+    """
+    Genera un resumen analítico y riguroso de un PDF académico para Ciencias Sociales
+    utilizando Google AI Studio Files API y rotación segura de claves en el key_pool.
+    """
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="No se seleccionó ningún archivo PDF.")
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="El archivo proporcionado no es un PDF válido.")
+
+    raw_pool = []
+    if api_key:
+        raw_pool.extend(parse_api_keys(api_key))
+
+    env_key = os.environ.get("GEMINI_API_KEY")
+    if env_key:
+        raw_pool.extend(parse_api_keys(env_key))
+
+    key_pool = []
+    seen = set()
+    for k in raw_pool:
+        if k not in seen:
+            seen.add(k)
+            key_pool.append(k)
+
+    if not key_pool:
+        raise HTTPException(
+            status_code=400,
+            detail="No se encontró una API Key válida. Ingrésala en la interfaz o configúrala en el servidor."
+        )
+
+    safe_filename = sanitize_filename(file.filename)
+    unique_prefix = uuid.uuid4().hex[:8]
+    local_temp_path = TEMP_DIR / f"pdf_{unique_prefix}_{safe_filename}.pdf"
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        # Guardar temporalmente el PDF en disco
+        with local_temp_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        target_model_name = "gemini-3.8-flash"
+        if model_name and "pro" in model_name.lower():
+            target_model_name = "gemini-3.8-pro"
+
+        system_instruction = (
+            "Actúa como un profesor universitario y analista de textos académicos de Ciencias Sociales. "
+            "A partir del texto en PDF provisto, generá un resumen analítico riguroso, profundo y exhaustivo para preparación de exámenes de grado, "
+            "estructurado obligatoriamente en las siguientes secciones en Markdown:\n\n"
+            "### 🎯 Tesis Central y Debate Teórico\n"
+            "(Explica la hipótesis central del autor, el problema epistemológico/social que aborda y con qué tradiciones teóricas o autores dialoga o polemiza en el texto).\n\n"
+            "### 💡 Núcleo Conceptual y Categorías de Análisis\n"
+            "(Define con máxima precisión técnica cada concepto fundamental, categoría teórica y término analítico central introducido o discutido por el autor).\n\n"
+            "### 🧭 Desarrollo de la Argumentación y Casos Empíricos\n"
+            "(Desglosa paso a paso la estructura del razonamiento: cómo fundamenta sus argumentos, qué metodología o ejemplos de campo utiliza y cómo llega a sus conclusiones).\n\n"
+            "### 📌 Citas Textuales Clave para Exámenes\n"
+            "(Extrae citas textuales representativas del PDF indispensables para fundamentar respuestas teóricas en instancias de evaluación).\n\n"
+            "### ❓ Preguntas de Cátedra\n"
+            "(Formula 4 preguntas conceptuales típicas de parcial que este texto responde, con su respuesta sintética)."
+        )
+
+        user_prompt = "Por favor, analizá y generá el resumen académico riguroso de este documento PDF siguiendo al pie de la letra las secciones solicitadas."
+
+        gen_config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.2,
+            max_output_tokens=8192
+        )
+
+        summary_text = None
+        last_error = None
+
+        for k_idx, current_key in enumerate(key_pool):
+            client = None
+            google_file = None
+            try:
+                # 1. Instanciar client con la clave actual
+                client = genai.Client(api_key=current_key)
+
+                # 2. Subir el archivo PDF a Files API
+                google_file = client.files.upload(
+                    file=str(local_temp_path),
+                    config=types.UploadFileConfig(
+                        mime_type="application/pdf",
+                        display_name=safe_filename
+                    )
+                )
+
+                # 3. Esperar a que pase a estado ACTIVE
+                max_wait_seconds = 180
+                start_time = time.time()
+                while google_file.state.name == "PROCESSING":
+                    if time.time() - start_time > max_wait_seconds:
+                        raise HTTPException(
+                            status_code=504,
+                            detail="Tiempo de espera agotado mientras Google procesaba el archivo PDF."
+                        )
+                    time.sleep(1)
+                    google_file = client.files.get(name=google_file.name)
+
+                if google_file.state.name != "ACTIVE":
+                    raise Exception(f"Google no pudo procesar el PDF. Estado: {google_file.state.name}")
+
+                # 4. Generar contenido con el modelo
+                has_next_key = (k_idx + 1 < len(key_pool))
+                max_attempts = 1 if has_next_key else 3
+                response = None
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        response = client.models.generate_content(
+                            model=target_model_name,
+                            contents=[
+                                google_file,
+                                user_prompt
+                            ],
+                            config=gen_config
+                        )
+                        break
+                    except Exception as gen_err:
+                        if is_rotatable_error(gen_err) and has_next_key:
+                            raise gen_err
+                        if is_retriable_error(gen_err) and attempt < max_attempts:
+                            time.sleep(2)
+                        else:
+                            raise gen_err
+
+                summary_text = (response.text or "").strip() if response else ""
+                if not summary_text:
+                    raise Exception("La API de Gemini devolvió un resumen vacío.")
+
+                break
+
+            except Exception as exc:
+                last_error = exc
+                if is_rotatable_error(exc) and k_idx + 1 < len(key_pool):
+                    time.sleep(1)
+                    continue
+                if isinstance(exc, HTTPException):
+                    raise exc
+                if k_idx + 1 >= len(key_pool):
+                    raise exc
+                raise exc
+
+            finally:
+                # 5. Eliminar siempre el archivo en Google Files API
+                if client and google_file and getattr(google_file, "name", None):
+                    try:
+                        client.files.delete(name=google_file.name)
+                    except Exception:
+                        pass
+
+        if not summary_text:
+            raise HTTPException(
+                status_code=500,
+                detail=f"No se pudo completar el resumen académico del PDF con ninguna clave: {str(last_error)}"
+            )
+
+        return JSONResponse({
+            "success": True,
+            "summary": summary_text,
+            "filename": file.filename,
+            "model_used": target_model_name
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error inesperado al resumir el PDF: {str(e)}"
+        )
+    finally:
+        # Limpieza del archivo temporal local
+        if local_temp_path.exists():
+            try:
+                local_temp_path.unlink()
+            except Exception:
+                pass
+
 class SummaryDocxExportRequest(BaseModel):
     filename: Optional[str] = "resumen"
     summary: str

@@ -1633,15 +1633,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCloseNoteModal = document.getElementById("btnCloseNoteModal");
   const btnCancelNoteModal = document.getElementById("btnCancelNoteModal");
 
-  // Elementos del Visor de PDF Integrado
+  // Elementos del Visor de PDF Integrado y Resumen Académico
   const modalPdfViewer = document.getElementById("modalPdfViewer");
   const pdfViewerFrame = document.getElementById("pdfViewerFrame");
   const pdfViewerTitle = document.getElementById("pdfViewerTitle");
   const pdfViewerSubtitle = document.getElementById("pdfViewerSubtitle");
   const btnPdfViewerDownload = document.getElementById("btnPdfViewerDownload");
   const btnPdfViewerClose = document.getElementById("btnPdfViewerClose");
+  const btnPdfViewerSummarize = document.getElementById("btnPdfViewerSummarize");
+  const pdfSummaryPanel = document.getElementById("pdfSummaryPanel");
+  const pdfSummaryLoading = document.getElementById("pdfSummaryLoading");
+  const pdfSummaryContent = document.getElementById("pdfSummaryContent");
+  const btnCopyPdfSummary = document.getElementById("btnCopyPdfSummary");
+  const btnDownloadPdfSummaryDocx = document.getElementById("btnDownloadPdfSummaryDocx");
+  const btnClosePdfSummaryPanel = document.getElementById("btnClosePdfSummaryPanel");
   let currentViewerBlobUrl = null;
   let currentViewerFileItem = null;
+  let currentPdfSummaryText = "";
 
   // Modales del Organizador
   const modalSubject = document.getElementById("modalSubject");
@@ -1983,12 +1991,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function dbUpdateFileSummary(fileId, summary) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readwrite");
+      const store = tx.objectStore("files");
+      const getReq = store.get(Number(fileId));
+      getReq.onsuccess = () => {
+        const item = getReq.result;
+        if (!item) {
+          reject(new Error("Archivo PDF no encontrado"));
+          return;
+        }
+        item.summary = summary;
+        item.summaryUpdatedAt = Date.now();
+        const putReq = store.put(item);
+        putReq.onsuccess = () => resolve(putReq.result);
+        putReq.onerror = () => reject(putReq.error);
+      };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
+  async function dbGetFile(fileId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readonly");
+      const store = tx.objectStore("files");
+      const getReq = store.get(Number(fileId));
+      getReq.onsuccess = () => resolve(getReq.result || null);
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
   async function dbDeleteFile(fileId) {
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("files", "readwrite");
       const store = tx.objectStore("files");
-      const req = store.delete(fileId);
+      const req = store.delete(Number(fileId));
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
@@ -2015,9 +2056,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (pdfViewerFrame) {
       pdfViewerFrame.src = currentViewerBlobUrl;
     }
+
+    // El visor abre 100% en modo lectura (panel lateral cerrado por defecto).
+    // El resumen se genera o muestra únicamente a demanda cuando el usuario presiona '⚡ Resumen con IA'.
+    if (pdfSummaryPanel) pdfSummaryPanel.classList.add("hidden");
+    currentPdfSummaryText = (fileItem.summary && fileItem.summary.trim()) ? fileItem.summary : "";
+
+    if (btnPdfViewerSummarize) {
+      if (currentPdfSummaryText) {
+        btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Ver Resumen Guardado</span>';
+      } else {
+        btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Resumen con IA</span>';
+      }
+    }
+
     if (modalPdfViewer) {
       modalPdfViewer.classList.remove("hidden");
     }
+    if (window.lucide) window.lucide.createIcons();
   }
 
   function closeEmbeddedPdfViewer() {
@@ -2027,11 +2083,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modalPdfViewer) {
       modalPdfViewer.classList.add("hidden");
     }
+    if (pdfSummaryPanel) {
+      pdfSummaryPanel.classList.add("hidden");
+    }
     if (currentViewerBlobUrl) {
       URL.revokeObjectURL(currentViewerBlobUrl);
       currentViewerBlobUrl = null;
     }
     currentViewerFileItem = null;
+    currentPdfSummaryText = "";
   }
 
   if (btnPdfViewerClose) {
@@ -2049,6 +2109,174 @@ document.addEventListener("DOMContentLoaded", () => {
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    });
+  }
+
+  // Mostrar resumen en el panel lateral del visor
+  function showPdfSummaryInViewer(summaryText) {
+    currentPdfSummaryText = summaryText;
+    if (!pdfSummaryPanel || !pdfSummaryContent) return;
+    pdfSummaryContent.innerHTML = formatSummaryMarkdown(summaryText);
+    if (pdfSummaryLoading) pdfSummaryLoading.classList.add("hidden");
+    pdfSummaryContent.classList.remove("hidden");
+    pdfSummaryPanel.classList.remove("hidden");
+    if (btnPdfViewerSummarize) {
+      btnPdfViewerSummarize.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> <span>Resumen Listo</span>';
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  // Generar resumen académico para el archivo actualmente visualizado
+  async function generateAcademicSummaryForCurrentPdf() {
+    if (!currentViewerFileItem || !currentViewerFileItem.blob) {
+      alert("No hay ningún archivo PDF cargado en el visor.");
+      return;
+    }
+
+    if (!pdfSummaryPanel) return;
+    pdfSummaryPanel.classList.remove("hidden");
+    if (pdfSummaryLoading) pdfSummaryLoading.classList.remove("hidden");
+    if (pdfSummaryContent) {
+      pdfSummaryContent.classList.add("hidden");
+      pdfSummaryContent.innerHTML = "";
+    }
+
+    const originalBtnHtml = btnPdfViewerSummarize ? btnPdfViewerSummarize.innerHTML : "";
+    if (btnPdfViewerSummarize) {
+      btnPdfViewerSummarize.disabled = true;
+      btnPdfViewerSummarize.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div> <span>Generando análisis...</span>';
+    }
+
+    const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
+
+    try {
+      const formData = new FormData();
+      formData.append("file", currentViewerFileItem.blob, currentViewerFileItem.name);
+      if (apiKey) {
+        formData.append("api_key", apiKey);
+      }
+      formData.append("model_name", "gemini-3.8-flash");
+
+      const response = await fetch("/api/summarize-pdf", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || "Error en el servidor al generar el resumen académico del PDF.");
+      }
+
+      const data = await response.json();
+      const summaryText = data.summary || "";
+
+      // Guardar en memoria y en IndexedDB
+      currentViewerFileItem.summary = summaryText;
+      currentViewerFileItem.summaryUpdatedAt = Date.now();
+      await dbUpdateFileSummary(currentViewerFileItem.id, summaryText);
+
+      // Mostrar en el panel lateral
+      showPdfSummaryInViewer(summaryText);
+
+      // Refrescar listado de archivos para actualizar etiqueta de botón en la tarjeta
+      renderFilesList();
+
+    } catch (err) {
+      alert("Error al generar resumen académico: " + err.message);
+      if (pdfSummaryLoading) pdfSummaryLoading.classList.add("hidden");
+    } finally {
+      if (btnPdfViewerSummarize) {
+        btnPdfViewerSummarize.disabled = false;
+        if (currentViewerFileItem && currentViewerFileItem.summary) {
+          btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Ver Resumen Guardado</span>';
+        } else {
+          btnPdfViewerSummarize.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5 text-[#ffc700]"></i> <span>⚡ Resumen con IA</span>';
+        }
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+  }
+
+  if (btnPdfViewerSummarize) {
+    btnPdfViewerSummarize.addEventListener("click", () => {
+      if (currentViewerFileItem && currentViewerFileItem.summary && currentViewerFileItem.summary.trim()) {
+        // Si ya tiene resumen guardado en IndexedDB: abrir o alternar el panel instantáneamente sin consultar la API
+        if (pdfSummaryPanel) {
+          if (pdfSummaryPanel.classList.contains("hidden")) {
+            showPdfSummaryInViewer(currentViewerFileItem.summary);
+          } else {
+            pdfSummaryPanel.classList.add("hidden");
+          }
+        }
+      } else {
+        // Si no tiene resumen previo, generarlo a demanda
+        generateAcademicSummaryForCurrentPdf();
+      }
+    });
+  }
+
+  if (btnClosePdfSummaryPanel) {
+    btnClosePdfSummaryPanel.addEventListener("click", () => {
+      if (pdfSummaryPanel) pdfSummaryPanel.classList.add("hidden");
+    });
+  }
+
+  if (btnCopyPdfSummary) {
+    btnCopyPdfSummary.addEventListener("click", async () => {
+      if (!currentPdfSummaryText) return;
+      try {
+        await navigator.clipboard.writeText(currentPdfSummaryText);
+        const originalHtml = btnCopyPdfSummary.innerHTML;
+        btnCopyPdfSummary.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> <span class="text-emerald-700 font-medium">¡Copiado!</span>';
+        setTimeout(() => {
+          btnCopyPdfSummary.innerHTML = originalHtml;
+          if (window.lucide) window.lucide.createIcons();
+        }, 2000);
+      } catch (err) {
+        alert("No se pudo copiar el resumen al portapapeles.");
+      }
+    });
+  }
+
+  if (btnDownloadPdfSummaryDocx) {
+    btnDownloadPdfSummaryDocx.addEventListener("click", async () => {
+      if (!currentPdfSummaryText) {
+        alert("Aún no hay resumen generado para descargar.");
+        return;
+      }
+      const baseName = (currentViewerFileItem ? currentViewerFileItem.name.replace(/\.[^/.]+$/, "") : "resumen_academico");
+      const originalText = btnDownloadPdfSummaryDocx.innerHTML;
+
+      try {
+        btnDownloadPdfSummaryDocx.disabled = true;
+        btnDownloadPdfSummaryDocx.innerHTML = '<div class="w-3 h-3 border-2 border-amber-300 border-t-transparent rounded-full animate-spin"></div> <span>Word...</span>';
+
+        const res = await fetch("/api/export-summary-docx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: `${baseName}_resumen_academico`,
+            summary: currentPdfSummaryText
+          })
+        });
+
+        if (!res.ok) throw new Error("Error en el servidor al exportar el resumen a Word.");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${baseName}_resumen_academico.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("No se pudo exportar a Word: " + err.message);
+      } finally {
+        btnDownloadPdfSummaryDocx.disabled = false;
+        btnDownloadPdfSummaryDocx.innerHTML = originalText;
+        if (window.lucide) window.lucide.createIcons();
+      }
     });
   }
 
@@ -2477,6 +2705,10 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" class="btn-summarize-pdf-card px-2.5 py-1.5 rounded-lg border border-[#ffc700]/40 text-xs font-semibold flex items-center gap-1 shadow-2xs hover:brightness-125 transition" style="background-color: #001b44; color: #ffc700;" title="Generar o ver Resumen Académico con IA">
+            <i data-lucide="zap" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
+            <span>${fileItem.summary ? 'Ver Resumen' : '⚡ Resumen IA'}</span>
+          </button>
           <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition">
             <i data-lucide="eye" class="w-3.5 h-3.5"></i>
             <span>Ver / Leer</span>
@@ -2489,6 +2721,14 @@ document.addEventListener("DOMContentLoaded", () => {
           </button>
         </div>
       `;
+
+      // Resumen IA desde la tarjeta del PDF
+      row.querySelector(".btn-summarize-pdf-card").addEventListener("click", () => {
+        openEmbeddedPdfViewer(fileItem);
+        if (!fileItem.summary) {
+          generateAcademicSummaryForCurrentPdf();
+        }
+      });
 
       // Ver / Leer PDF dentro del visor embebido integrado
       row.querySelector(".btn-open-pdf").addEventListener("click", () => {
