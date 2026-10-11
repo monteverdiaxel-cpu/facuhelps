@@ -3505,6 +3505,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: "periodismo",
       icon: "newspaper",
       name: "Periodismo",
+      workField: "Prensa, medios digitales, streaming y TV",
       description: "Redacciones de noticias, medios digitales, streaming, radio, TV, periodismo de datos e investigación.",
       stage2: {
         introductory: [
@@ -3528,6 +3529,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: "opinion_publica",
       icon: "bar-chart-3",
       name: "Opinión Pública y Publicidad",
+      workField: "Campañas políticas, consultoría y agencias",
       description: "Campañas políticas y electorales, consultoría, agencias de publicidad, branding y análisis de opinión pública.",
       stage2: {
         introductory: [
@@ -3550,7 +3552,8 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       id: "politicas",
       icon: "landmark",
-      name: "Políticas y Planificación de la Comunicación",
+      name: "Políticas y Planificación",
+      workField: "Gestión estatal, regulación y políticas públicas",
       description: "Gestión estatal, ministerios, organismos reguladores, políticas públicas de medios y ONGs.",
       stage2: {
         introductory: [
@@ -3574,6 +3577,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: "comunitaria",
       icon: "sprout",
       name: "Comunicación Comunitaria",
+      workField: "Medios populares, territorio y movimientos",
       description: "Medios comunitarios y cooperativos, organizaciones barriales, movimientos sociales y derechos humanos en territorio.",
       stage2: {
         introductory: [
@@ -3597,6 +3601,7 @@ document.addEventListener("DOMContentLoaded", () => {
       id: "educacion",
       icon: "graduation-cap",
       name: "Procesos Educativos",
+      workField: "Pedagogía de medios, e-learning y didáctica",
       description: "Pedagogía de medios, e-learning, diseño de plataformas educativas y materiales didácticos.",
       stage2: {
         introductory: [
@@ -3619,7 +3624,8 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       id: "digital",
       icon: "laptop",
-      name: "Nuevos Medios y Comunicación Digital",
+      name: "Nuevos Medios y Digital",
+      workField: "Transmedia, productos digitales y UX/UI",
       description: "Narrativas transmedia, comunidades digitales, plataformas y tecnologías de la información.",
       stage2: {
         introductory: [
@@ -3840,6 +3846,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return recommended;
   }
 
+  // Mapeo de perfiles profesionales para materias optativas (Etapa 1 y 2)
+  const SUBJECT_PROFILE_MAP = {
+    // Ciencias Sociales (Etapa 1)
+    s1: { label: "Políticas / Historia Social", orientations: ["politicas"] },
+    s2: { label: "Periodismo / Políticas", orientations: ["periodismo", "politicas"] },
+    s3: { label: "Opinión Pública / Políticas", orientations: ["opinion_publica", "politicas"] },
+    s4: { label: "Comunitaria / Investigación", orientations: ["comunitaria"] },
+    s5: { label: "Investigación / Procesos Educativos", orientations: ["educacion"] },
+    // Problemas del Campo (Etapa 1)
+    pr1: { label: "Nuevos Medios / Educación", orientations: ["digital", "educacion"] },
+    pr2: { label: "Nuevos Medios / Digital", orientations: ["digital"] },
+    pr3: { label: "Comunitaria / Territorio", orientations: ["comunitaria"] },
+    // Optativas transversales (Etapa 2)
+    opt_1: { label: "Orientación elegida", orientations: ["all"] },
+    opt_2: { label: "Orientación elegida", orientations: ["all"] }
+  };
+
   function renderCareerOrientations() {
     const grid = document.getElementById("careerOrientationsGrid");
     const badge = document.getElementById("careerCurrentOrientationBadge");
@@ -3859,41 +3882,34 @@ document.addEventListener("DOMContentLoaded", () => {
     CAREER_ORIENTATIONS.forEach(ori => {
       const isSelected = ori.id === careerPlanData.selectedOrientation;
       const isRecommended = recommendedOrientations.has(ori.id);
-      const card = document.createElement("div");
-      card.className = `p-4 sm:p-5 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer ${
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = `p-2.5 sm:p-3 rounded-xl border transition-all text-left flex items-start gap-2.5 sm:gap-3 w-full cursor-pointer relative group ${
         isSelected 
-          ? "border-[#ffc700] bg-blue-50/70 dark:bg-blue-950/40 shadow-sm ring-1 ring-[#ffc700]" 
+          ? "border-[#ffc700] bg-blue-950/10 dark:bg-blue-950/40 text-blue-950 dark:text-amber-200 font-semibold ring-1 ring-[#ffc700] shadow-xs" 
           : isRecommended
-            ? "border-amber-300 dark:border-amber-600/70 bg-amber-50/25 dark:bg-amber-950/20 hover:border-amber-400 shadow-2xs"
-            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
+            ? "border-amber-300 dark:border-amber-600/70 bg-amber-50/30 dark:bg-amber-950/20 hover:border-amber-400 text-slate-800 dark:text-slate-200 shadow-2xs"
+            : "border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 shadow-2xs"
       }`;
 
       card.innerHTML = `
-        <div>
-          <div class="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
-            <div class="w-9 h-9 rounded-xl ${isSelected ? 'bg-[#001b44] text-[#ffc700]' : isRecommended ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'} flex items-center justify-center shrink-0">
-              <i data-lucide="${ori.icon}" class="w-4 h-4"></i>
-            </div>
-            <div class="flex items-center gap-1.5 flex-wrap justify-end">
-              ${isRecommended ? '<span class="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-300/80 dark:border-amber-600/80 flex items-center gap-1">💡 Recomendada según tus materias y notas</span>' : ''}
-              ${isSelected ? '<span class="text-[10px] bg-[#001b44] text-[#ffc700] font-bold px-2 py-0.5 rounded-full">Seleccionada</span>' : ''}
-            </div>
+        <div class="w-8 h-8 rounded-lg ${
+          isSelected 
+            ? 'bg-[#001b44] text-[#ffc700]' 
+            : isRecommended
+              ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'
+        } flex items-center justify-center shrink-0 transition-colors">
+          <i data-lucide="${ori.icon}" class="w-4 h-4"></i>
+        </div>
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex items-center justify-between gap-1 mb-0.5">
+            <span class="text-xs font-bold truncate ${isSelected ? 'text-blue-950 dark:text-amber-200' : 'text-slate-900 dark:text-slate-100'}">${ori.name}</span>
+            ${isRecommended ? '<span class="text-[9px] bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 font-bold px-1.5 py-0.2 rounded-full border border-amber-300 dark:border-amber-600 shrink-0">💡 Recomendada</span>' : ''}
           </div>
-          <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100">${ori.name}</h4>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">${ori.description}</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-tight">${ori.workField || ori.description}</p>
         </div>
-        <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80">
-          <button 
-            type="button" 
-            class="btn-select-orientation w-full py-1.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-              isSelected 
-                ? 'bg-[#001b44] text-[#ffc700]' 
-                : 'border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
-            }"
-          >
-            <span>${isSelected ? '✓ Orientación Activa' : 'Elegir esta orientación'}</span>
-          </button>
-        </div>
+        ${isSelected ? '<div class="w-2 h-2 rounded-full bg-[#ffc700] ring-2 ring-white dark:ring-slate-900 shrink-0 mt-1"></div>' : ''}
       `;
 
       card.addEventListener("click", async () => {
@@ -3912,11 +3928,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const gradeObj = careerPlanData.grades[subject.id] || { p1: "", p2: "", finalGrade: "" };
     const evalResult = calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade);
 
+    const profile = SUBJECT_PROFILE_MAP[subject.id];
+    const isProfileMatch = profile && (profile.orientations.includes(careerPlanData.selectedOrientation) || profile.orientations.includes("all"));
+
     const card = document.createElement("div");
-    card.className = `p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+    card.className = `p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
       evalResult.isPassed 
-        ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20" 
-        : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+        ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+        : isProfileMatch
+          ? "border-[#ffc700] dark:border-[#ffc700]/80 ring-1 ring-[#ffc700]/70 dark:ring-[#ffc700]/60 bg-amber-50/15 dark:bg-amber-950/15 shadow-2xs"
+          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
     }`;
 
     card.innerHTML = `
@@ -3930,12 +3951,23 @@ document.addEventListener("DOMContentLoaded", () => {
         <h5 class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2" title="${subject.name}">
           ${subject.name}
         </h5>
+        ${profile ? `
+          <div class="mt-2">
+            <span class="inline-flex items-center text-[10px] px-2 py-0.5 rounded-md transition-colors ${
+              isProfileMatch
+                ? 'bg-[#ffc700]/20 text-amber-900 dark:text-amber-200 border border-[#ffc700]/60 font-semibold'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60 font-normal'
+            }">
+              🏷️ Perfila para: ${profile.label}
+            </span>
+          </div>
+        ` : ''}
       </div>
 
       <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1.5">
           <div class="flex flex-col">
-            <span class="text-[9px] text-slate-400 font-medium">P1</span>
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">P1</span>
             <input 
               type="number" 
               min="1" 
@@ -3943,11 +3975,11 @@ document.addEventListener("DOMContentLoaded", () => {
               step="0.5" 
               placeholder="-" 
               value="${gradeObj.p1 ?? ''}" 
-              class="input-p1 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#001b44] dark:focus:border-[#ffc700]"
+              class="input-p1 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
             >
           </div>
           <div class="flex flex-col">
-            <span class="text-[9px] text-slate-400 font-medium">P2</span>
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">P2</span>
             <input 
               type="number" 
               min="1" 
@@ -3955,13 +3987,13 @@ document.addEventListener("DOMContentLoaded", () => {
               step="0.5" 
               placeholder="-" 
               value="${gradeObj.p2 ?? ''}" 
-              class="input-p2 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#001b44] dark:focus:border-[#ffc700]"
+              class="input-p2 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
             >
           </div>
         </div>
 
         <div class="flex flex-col items-end">
-          <span class="text-[9px] text-slate-400 font-medium">Final</span>
+          <span class="text-[9px] text-slate-400 font-medium mb-0.5">Final</span>
           <input 
             type="number" 
             min="1" 
@@ -3969,7 +4001,7 @@ document.addEventListener("DOMContentLoaded", () => {
             step="0.5" 
             placeholder="-" 
             value="${gradeObj.finalGrade ?? ''}" 
-            class="input-final w-11 h-7 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-[#001b44] dark:focus:border-[#ffc700]"
+            class="input-final w-11 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
           >
         </div>
       </div>
@@ -4001,10 +4033,12 @@ document.addEventListener("DOMContentLoaded", () => {
         badgeElem.textContent = newEval.label;
       }
 
-      card.className = `p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+      card.className = `p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
         newEval.isPassed 
-          ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20" 
-          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
+          ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+          : isProfileMatch
+            ? "border-[#ffc700] dark:border-[#ffc700]/80 ring-1 ring-[#ffc700]/70 dark:ring-[#ffc700]/60 bg-amber-50/15 dark:bg-amber-950/15 shadow-2xs"
+            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
       }`;
 
       updateCareerMetrics();
@@ -4208,7 +4242,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (passedPract >= 2) {
       if (cardPpp1) {
-        cardPpp1.className = "bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-300 dark:border-emerald-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+        cardPpp1.className = "bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-300 dark:border-emerald-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors";
       }
       if (iconPpp1) {
         iconPpp1.className = "w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 flex items-center justify-center transition-colors";
@@ -4219,7 +4253,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } else {
       if (cardPpp1) {
-        cardPpp1.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+        cardPpp1.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors";
       }
       if (iconPpp1) {
         iconPpp1.className = "w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors";
@@ -4237,7 +4271,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (stage1TotalPassed >= 18) {
       if (cardOriented) {
-        cardOriented.className = "bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-300 dark:border-emerald-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+        cardOriented.className = "bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-300 dark:border-emerald-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors";
       }
       if (iconOriented) {
         iconOriented.className = "w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 flex items-center justify-center transition-colors";
@@ -4248,7 +4282,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } else {
       if (cardOriented) {
-        cardOriented.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm flex flex-col justify-between transition-colors";
+        cardOriented.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors";
       }
       if (iconOriented) {
         iconOriented.className = "w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors";
