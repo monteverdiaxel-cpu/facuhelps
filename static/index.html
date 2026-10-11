@@ -244,16 +244,16 @@
         </div>
       </div>
 
-      <!-- Campo opcional de Palabras clave / Autores -->
+      <!-- Campo opcional de Vocabulario o términos clave -->
       <div class="mt-4 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
         <label for="inputKeywords" class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
           <i data-lucide="tag" class="w-3.5 h-3.5 text-indigo-500"></i>
-          <span>Vocabulario o autores clave <span class="text-slate-400 font-normal lowercase">(opcional)</span></span>
+          <span>Vocabulario o términos clave <span class="text-slate-400 font-normal lowercase">(opcional)</span></span>
         </label>
         <input 
           type="text" 
           id="inputKeywords" 
-          placeholder="ej. Guber, Bourgois, Spradley, UBA, etnografía, Bourdieu" 
+          placeholder="Ej.: Autores académicos, conceptos teóricos, siglas, nombres propios (separados por comas)" 
           class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
         >
         <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight">
@@ -349,6 +349,10 @@
 
         <!-- Action buttons -->
         <div class="flex items-center flex-wrap gap-2">
+          <button id="btnToggleEdit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+            <span id="btnToggleEditLabel">✏️ Editar texto</span>
+          </button>
           <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
             <span>⚡ Generar resumen</span>
@@ -447,23 +451,22 @@
           >
           <span id="searchCount" class="text-[11px] text-slate-400 dark:text-slate-500 font-mono hidden shrink-0">0 resultados</span>
         </div>
-        <div class="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 select-none shrink-0">
-          <span class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium">
-            <i data-lucide="edit-3" class="w-3 h-3"></i>
-            Edición directa activa
+        <div class="flex items-center gap-2 text-[11px] select-none shrink-0" id="editorStatusContainer">
+          <span id="editModeIndicator" class="inline-flex items-center gap-1 text-slate-400 dark:text-slate-500 font-normal">
+            <i data-lucide="lock" class="w-3 h-3 text-slate-400"></i>
+            Modo solo lectura protegido
           </span>
-          <span>(puedes editar o corregir el texto aquí mismo)</span>
         </div>
       </div>
 
-      <!-- Transcript Reader & Editor Directo -->
-      <div id="transcriptContainer" class="p-6 sm:p-8 max-h-[650px] overflow-y-auto custom-scrollbar focus-within:ring-1 focus-within:ring-indigo-500/20">
+      <!-- Transcript Reader & Editor Protegido (solo lectura por defecto) -->
+      <div id="transcriptContainer" class="p-6 sm:p-8 max-h-[650px] overflow-y-auto custom-scrollbar">
         <div 
           id="transcriptContent" 
-          contenteditable="true"
+          contenteditable="false"
           spellcheck="true"
-          aria-label="Transcripción de audio editable"
-          class="prose prose-slate dark:prose-invert prose-sm sm:prose-base max-w-none text-slate-700 dark:text-slate-200 leading-relaxed font-sans space-y-4 focus:outline-none"
+          aria-label="Transcripción de audio"
+          class="prose prose-slate dark:prose-invert prose-sm sm:prose-base max-w-none text-slate-700 dark:text-slate-200 leading-relaxed font-sans space-y-4 focus:outline-none transition-all"
         >
           <!-- Text will be rendered here -->
         </div>

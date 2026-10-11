@@ -66,6 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const streamingIndicator = document.getElementById("streamingIndicator");
   const transcriptContainer = document.getElementById("transcriptContainer");
   const transcriptContent = document.getElementById("transcriptContent");
+  const btnToggleEdit = document.getElementById("btnToggleEdit");
+  const btnToggleEditLabel = document.getElementById("btnToggleEditLabel");
+  const editModeIndicator = document.getElementById("editModeIndicator");
   const btnSummarize = document.getElementById("btnSummarize");
   const btnRenameSpeakers = document.getElementById("btnRenameSpeakers");
   const btnCopy = document.getElementById("btnCopy");
@@ -477,6 +480,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     hideError();
+    setEditMode(false);
     resultSection.classList.add("hidden");
     if (summarySection) summarySection.classList.add("hidden");
     if (searchTranscript) searchTranscript.value = "";
@@ -628,6 +632,51 @@ document.addEventListener("DOMContentLoaded", () => {
       if (window.lucide) window.lucide.createIcons();
     }
   });
+
+  // Modo de edición opcional y protegido (solo lectura por defecto)
+  let isEditingTranscript = false;
+
+  function setEditMode(enable) {
+    isEditingTranscript = enable;
+    if (!transcriptContent) return;
+
+    if (isEditingTranscript) {
+      transcriptContent.contentEditable = "true";
+      transcriptContent.classList.add("ring-1", "ring-indigo-500/30", "bg-indigo-50/10", "dark:bg-indigo-950/20", "rounded-xl", "p-2");
+      transcriptContent.focus();
+
+      if (btnToggleEdit) {
+        btnToggleEdit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs";
+        btnToggleEdit.innerHTML = '<i data-lucide="lock" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i> <span id="btnToggleEditLabel">🔒 Bloquear edición</span>';
+      }
+
+      if (editModeIndicator) {
+        editModeIndicator.className = "inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium";
+        editModeIndicator.innerHTML = '<i data-lucide="edit-3" class="w-3 h-3 text-amber-500"></i> Edición activa (escribe o corrige libremente)';
+      }
+    } else {
+      transcriptContent.contentEditable = "false";
+      transcriptContent.classList.remove("ring-1", "ring-indigo-500/30", "bg-indigo-50/10", "dark:bg-indigo-950/20", "rounded-xl", "p-2");
+
+      if (btnToggleEdit) {
+        btnToggleEdit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs";
+        btnToggleEdit.innerHTML = '<i data-lucide="edit-3" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i> <span id="btnToggleEditLabel">✏️ Editar texto</span>';
+      }
+
+      if (editModeIndicator) {
+        editModeIndicator.className = "inline-flex items-center gap-1 text-slate-400 dark:text-slate-500 font-normal";
+        editModeIndicator.innerHTML = '<i data-lucide="lock" class="w-3 h-3 text-slate-400"></i> Modo solo lectura protegido';
+      }
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  if (btnToggleEdit) {
+    btnToggleEdit.addEventListener("click", () => {
+      setEditMode(!isEditingTranscript);
+    });
+  }
 
   // Obtener el texto actual de la transcripción (refleja ediciones directas del usuario)
   function getCurrentTranscriptText() {
