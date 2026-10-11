@@ -1559,7 +1559,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 14. MÓDULO ORGANIZADOR DE MATERIAS (INDEXEDDB LOCAL)
   // ─────────────────────────────────────────────────────────────
   const DB_NAME = "FacuHelpsDB";
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   let dbInstance = null;
 
   // Estado de navegación del organizador
@@ -1572,20 +1572,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const orgCurrentSubtitle = document.getElementById("orgCurrentSubtitle");
   const btnNewSubjectModal = document.getElementById("btnNewSubjectModal");
   const btnNewFolderModal = document.getElementById("btnNewFolderModal");
+  const btnNewFolderInline = document.getElementById("btnNewFolderInline");
   const orgSubjectsView = document.getElementById("orgSubjectsView");
   const orgSubjectsGrid = document.getElementById("orgSubjectsGrid");
   const orgSubjectsEmpty = document.getElementById("orgSubjectsEmpty");
   const btnNewSubjectEmpty = document.getElementById("btnNewSubjectEmpty");
-  const orgFoldersView = document.getElementById("orgFoldersView");
+  const orgSubjectDetailView = document.getElementById("orgSubjectDetailView");
   const orgFoldersGrid = document.getElementById("orgFoldersGrid");
   const orgFoldersEmpty = document.getElementById("orgFoldersEmpty");
-  const btnNewFolderEmpty = document.getElementById("btnNewFolderEmpty");
-  const orgFilesView = document.getElementById("orgFilesView");
   const orgPdfDropZone = document.getElementById("orgPdfDropZone");
+  const orgPdfDropZoneLabel = document.getElementById("orgPdfDropZoneLabel");
   const orgPdfFileInput = document.getElementById("orgPdfFileInput");
+  const orgPdfSectionTitle = document.getElementById("orgPdfSectionTitle");
   const orgPdfList = document.getElementById("orgPdfList");
   const orgPdfEmpty = document.getElementById("orgPdfEmpty");
   const orgPdfCountLabel = document.getElementById("orgPdfCountLabel");
+
+  // Elementos del Visor de PDF Integrado
+  const modalPdfViewer = document.getElementById("modalPdfViewer");
+  const pdfViewerFrame = document.getElementById("pdfViewerFrame");
+  const pdfViewerTitle = document.getElementById("pdfViewerTitle");
+  const pdfViewerSubtitle = document.getElementById("pdfViewerSubtitle");
+  const btnPdfViewerDownload = document.getElementById("btnPdfViewerDownload");
+  const btnPdfViewerClose = document.getElementById("btnPdfViewerClose");
+  let currentViewerBlobUrl = null;
+  let currentViewerFileItem = null;
 
   // Modales del Organizador
   const modalSubject = document.getElementById("modalSubject");
@@ -1634,10 +1645,16 @@ document.addEventListener("DOMContentLoaded", () => {
           const folderStore = db.createObjectStore("folders", { keyPath: "id", autoIncrement: true });
           folderStore.createIndex("subjectId", "subjectId", { unique: false });
         }
-        // Almacén de Archivos PDF (con índice de folderId)
+        // Almacén de Archivos PDF (con índices folderId y subjectId)
+        let fileStore;
         if (!db.objectStoreNames.contains("files")) {
-          const fileStore = db.createObjectStore("files", { keyPath: "id", autoIncrement: true });
+          fileStore = db.createObjectStore("files", { keyPath: "id", autoIncrement: true });
           fileStore.createIndex("folderId", "folderId", { unique: false });
+        } else {
+          fileStore = e.target.transaction.objectStore("files");
+        }
+        if (!fileStore.indexNames.contains("subjectId")) {
+          fileStore.createIndex("subjectId", "subjectId", { unique: false });
         }
       };
       request.onsuccess = (e) => {
@@ -1696,10 +1713,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function dbDeleteSubject(subjectId) {
     const db = await openDatabase();
-    // Eliminar también subcarpetas y PDFs asociados
+    // Eliminar también subcarpetas y todos los PDFs asociados (directos o en subcarpetas)
     const folders = await dbGetFoldersBySubject(subjectId);
     for (const f of folders) {
       await dbDeleteFolder(f.id);
+    }
+    const directFiles = await dbGetFilesBySubject(subjectId);
+    for (const f of directFiles) {
+      await dbDeleteFile(f.id);
     }
     return new Promise((resolve, reject) => {
       const tx = db.transaction("subjects", "readwrite");
@@ -1784,13 +1805,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  async function dbAddFile(folderId, file) {
+  async function dbGetFilesBySubject(subjectId) {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("files", "readonly");
+      const store = tx.objectStore("files");
+      if (store.indexNames.contains("subjectId")) {
+        const index = store.index("subjectId");
+        const req = index.getAll(subjectId);
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      } else {
+        // Fallback
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const all = req.result || [];
+          resolve(all.filter(f => f.subjectId === subjectId));
+        };
+        req.onerror = () => reject(req.error);
+      }
+    });
+  }
+
+  async function dbAddFile(subjectId, folderId, file) {
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("files", "readwrite");
       const store = tx.objectStore("files");
       const item = {
-        folderId,
+        subjectId,
+        folderId: folderId || null,
         name: file.name,
         size: file.size,
         type: file.type || "application/pdf",
@@ -1814,39 +1858,106 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Visor de PDF Integrado (Embebido a Pantalla Completa)
+  function openEmbeddedPdfViewer(fileItem) {
+    if (!fileItem || !fileItem.blob) return;
+    currentViewerFileItem = fileItem;
+
+    if (currentViewerBlobUrl) {
+      URL.revokeObjectURL(currentViewerBlobUrl);
+      currentViewerBlobUrl = null;
+    }
+
+    currentViewerBlobUrl = URL.createObjectURL(fileItem.blob);
+    if (pdfViewerTitle) pdfViewerTitle.textContent = fileItem.name;
+    if (pdfViewerSubtitle) {
+      const parentName = currentFolder 
+        ? `${currentSubject ? currentSubject.name + ' > ' : ''}${currentFolder.name}` 
+        : (currentSubject ? currentSubject.name : 'Materia');
+      pdfViewerSubtitle.textContent = `${formatBytes(fileItem.size)} • ${parentName}`;
+    }
+    if (pdfViewerFrame) {
+      pdfViewerFrame.src = currentViewerBlobUrl;
+    }
+    if (modalPdfViewer) {
+      modalPdfViewer.classList.remove("hidden");
+    }
+  }
+
+  function closeEmbeddedPdfViewer() {
+    if (pdfViewerFrame) {
+      pdfViewerFrame.src = "about:blank";
+    }
+    if (modalPdfViewer) {
+      modalPdfViewer.classList.add("hidden");
+    }
+    if (currentViewerBlobUrl) {
+      URL.revokeObjectURL(currentViewerBlobUrl);
+      currentViewerBlobUrl = null;
+    }
+    currentViewerFileItem = null;
+  }
+
+  if (btnPdfViewerClose) {
+    btnPdfViewerClose.addEventListener("click", closeEmbeddedPdfViewer);
+  }
+
+  if (btnPdfViewerDownload) {
+    btnPdfViewerDownload.addEventListener("click", () => {
+      if (!currentViewerFileItem || !currentViewerFileItem.blob) return;
+      const blobUrl = URL.createObjectURL(currentViewerFileItem.blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = currentViewerFileItem.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    });
+  }
+
+  // Cerrar visor con tecla Escape
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalPdfViewer && !modalPdfViewer.classList.contains("hidden")) {
+      closeEmbeddedPdfViewer();
+    }
+  });
+
   // Renderizado dinámico del Organizador
   async function renderOrganizerView() {
     renderBreadcrumbs();
 
     if (!currentSubject) {
-      // Nivel 1: Materias
+      // Nivel 1: Lista general de Materias
       orgSubjectsView.classList.remove("hidden");
-      orgFoldersView.classList.add("hidden");
-      orgFilesView.classList.add("hidden");
+      orgSubjectDetailView.classList.add("hidden");
       btnNewSubjectModal.classList.remove("hidden");
       btnNewFolderModal.classList.add("hidden");
       orgCurrentTitle.textContent = "Materias";
       orgCurrentSubtitle.textContent = "Organizador académico 100% privado en tu navegador (IndexedDB local)";
       await renderSubjectsList();
-    } else if (!currentFolder) {
-      // Nivel 2: Subcarpetas de la materia seleccionada
+    } else {
+      // Nivel 2 y 3: Interior de la Materia (Subcarpetas opcionales + PDFs)
       orgSubjectsView.classList.add("hidden");
-      orgFoldersView.classList.remove("hidden");
-      orgFilesView.classList.add("hidden");
+      orgSubjectDetailView.classList.remove("hidden");
       btnNewSubjectModal.classList.add("hidden");
       btnNewFolderModal.classList.remove("hidden");
-      orgCurrentTitle.textContent = currentSubject.name;
-      orgCurrentSubtitle.textContent = "Subcarpetas de la materia";
+
+      if (!currentFolder) {
+        // Vista directa de la Materia
+        orgCurrentTitle.textContent = currentSubject.name;
+        orgCurrentSubtitle.textContent = "Subcarpetas temáticas opcionales y PDFs directos de la materia";
+        if (orgPdfSectionTitle) orgPdfSectionTitle.textContent = `PDFs directos de ${currentSubject.name}`;
+        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = `Arrastra tus archivos PDF aquí a "${currentSubject.name}"`;
+      } else {
+        // Vista enfocada en una subcarpeta
+        orgCurrentTitle.textContent = `${currentSubject.name} › ${currentFolder.name}`;
+        orgCurrentSubtitle.textContent = `Subcarpeta: ${currentFolder.name}`;
+        if (orgPdfSectionTitle) orgPdfSectionTitle.textContent = `PDFs en ${currentFolder.name}`;
+        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = `Arrastra tus archivos PDF aquí a "${currentFolder.name}"`;
+      }
+
       await renderFoldersList();
-    } else {
-      // Nivel 3: Archivos PDF de la subcarpeta seleccionada
-      orgSubjectsView.classList.add("hidden");
-      orgFoldersView.classList.add("hidden");
-      orgFilesView.classList.remove("hidden");
-      btnNewSubjectModal.classList.add("hidden");
-      btnNewFolderModal.classList.add("hidden");
-      orgCurrentTitle.textContent = currentFolder.name;
-      orgCurrentSubtitle.textContent = `Documentos PDF en ${currentSubject.name} > ${currentFolder.name}`;
       await renderFilesList();
     }
 
@@ -1924,6 +2035,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const files = await dbGetFilesByFolder(f.id);
         totalFiles += files.length;
       }
+      const directFiles = await dbGetFilesBySubject(subj.id);
+      totalFiles += directFiles.length;
 
       const card = document.createElement("div");
       card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-300 dark:hover:border-indigo-600/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
@@ -1989,7 +2102,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // Render Nivel 2: Subcarpetas
+  // Render Subcarpetas
   async function renderFoldersList() {
     if (!currentSubject) return;
     const folders = await dbGetFoldersBySubject(currentSubject.id);
@@ -2006,41 +2119,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
     for (const fold of folders) {
       const files = await dbGetFilesByFolder(fold.id);
+      const isSelected = currentFolder && currentFolder.id === fold.id;
 
       const card = document.createElement("div");
-      card.className = "p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-600/50 hover:shadow-md transition cursor-pointer flex flex-col justify-between group";
+      card.className = `p-4 rounded-xl border ${isSelected ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/40 ring-1 ring-indigo-500/30' : 'border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-amber-400 dark:hover:border-amber-600/50'} hover:shadow-xs transition cursor-pointer flex flex-col justify-between group`;
       card.innerHTML = `
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <i data-lucide="folder-open" class="w-5 h-5"></i>
+        <div class="flex items-start justify-between gap-2.5">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-lg ${isSelected ? 'bg-indigo-100 dark:bg-indigo-900/70 text-indigo-600 dark:text-indigo-400' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <i data-lucide="folder-open" class="w-4 h-4"></i>
             </div>
             <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">${fold.name}</h3>
-              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                ${files.length} ${files.length === 1 ? 'archivo PDF' : 'archivos PDF'}
+              <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${fold.name}</h4>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                ${files.length} ${files.length === 1 ? 'PDF' : 'PDFs'}
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <button type="button" class="btn-edit-folder p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition" title="Editar / Renombrar subcarpeta">
-              <i data-lucide="edit-3" class="w-4 h-4"></i>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button type="button" class="btn-edit-folder p-1 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition" title="Renombrar subcarpeta">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
             </button>
-            <button type="button" class="btn-delete-folder p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Eliminar subcarpeta">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <button type="button" class="btn-delete-folder p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Eliminar subcarpeta">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-medium">
-          <span>Ver archivos</span>
-          <i data-lucide="chevron-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+        <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] ${isSelected ? 'text-indigo-600 font-bold' : 'text-slate-500 font-medium'}">
+          <span>${isSelected ? '✓ Subcarpeta seleccionada' : 'Ver PDFs de esta subcarpeta'}</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"></i>
         </div>
       `;
 
-      // Entrar a la subcarpeta
+      // Entrar o alternar la subcarpeta
       card.addEventListener("click", (e) => {
         if (e.target.closest(".btn-delete-folder") || e.target.closest(".btn-edit-folder")) return;
-        currentFolder = fold;
+        if (currentFolder && currentFolder.id === fold.id) {
+          // Si ya está seleccionada, volver a ver todos los PDFs directos de la materia
+          currentFolder = null;
+        } else {
+          currentFolder = fold;
+        }
         renderOrganizerView();
       });
 
@@ -2060,7 +2179,10 @@ document.addEventListener("DOMContentLoaded", () => {
         e.stopPropagation();
         if (confirm(`¿Estás seguro de eliminar la subcarpeta "${fold.name}" y sus PDFs?`)) {
           await dbDeleteFolder(fold.id);
-          renderFoldersList();
+          if (currentFolder && currentFolder.id === fold.id) {
+            currentFolder = null;
+          }
+          renderOrganizerView();
         }
       });
 
@@ -2070,10 +2192,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // Render Nivel 3: Archivos PDF
+  // Render Archivos PDF (Directos de la materia si currentFolder es null, o de la subcarpeta seleccionada)
   async function renderFilesList() {
-    if (!currentFolder) return;
-    const files = await dbGetFilesByFolder(currentFolder.id);
+    if (!currentSubject) return;
+
+    let files = [];
+    if (currentFolder) {
+      files = await dbGetFilesByFolder(currentFolder.id);
+    } else {
+      files = await dbGetFilesBySubject(currentSubject.id);
+    }
+
     orgPdfList.innerHTML = "";
     orgPdfCountLabel.textContent = `${files.length} ${files.length === 1 ? 'archivo' : 'archivos'}`;
 
@@ -2106,8 +2235,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <div class="flex items-center gap-1.5 shrink-0">
           <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition">
-            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-            <span>Abrir / Ver</span>
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            <span>Ver / Leer</span>
           </button>
           <button type="button" class="btn-download-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Descargar PDF">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -2118,12 +2247,9 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-      // Abrir PDF en nueva pestaña
+      // Ver / Leer PDF dentro del visor embebido integrado
       row.querySelector(".btn-open-pdf").addEventListener("click", () => {
-        if (!fileItem.blob) return;
-        const blobUrl = URL.createObjectURL(fileItem.blob);
-        window.open(blobUrl, "_blank");
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        openEmbeddedPdfViewer(fileItem);
       });
 
       // Descargar PDF
@@ -2141,7 +2267,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Eliminar PDF
       row.querySelector(".btn-delete-pdf-db").addEventListener("click", async () => {
-        if (confirm(`¿Eliminar el archivo "${fileItem.name}" de esta subcarpeta?`)) {
+        if (confirm(`¿Eliminar el archivo "${fileItem.name}"?`)) {
           await dbDeleteFile(fileItem.id);
           renderFilesList();
         }
@@ -2197,8 +2323,8 @@ document.addEventListener("DOMContentLoaded", () => {
       inputFolderName.focus();
     });
   }
-  if (btnNewFolderEmpty) {
-    btnNewFolderEmpty.addEventListener("click", () => {
+  if (btnNewFolderInline) {
+    btnNewFolderInline.addEventListener("click", () => {
       inputFolderName.value = "";
       modalFolder.classList.remove("hidden");
       inputFolderName.focus();
@@ -2223,7 +2349,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!name) return;
       await dbAddFolder(currentSubject.id, name);
       modalFolder.classList.add("hidden");
-      renderFoldersList();
+      renderOrganizerView();
     });
   }
 
@@ -2281,15 +2407,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Subida de PDFs en Zona Drag & Drop (Nivel 3)
+  // Subida de PDFs en Zona Drag & Drop (Nivel Materia o Subcarpeta)
   if (orgPdfDropZone && orgPdfFileInput) {
     orgPdfDropZone.addEventListener("click", () => orgPdfFileInput.click());
 
     orgPdfFileInput.addEventListener("change", async (e) => {
-      if (e.target.files.length > 0 && currentFolder) {
+      if (e.target.files.length > 0 && currentSubject) {
         for (const f of e.target.files) {
           if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
-            await dbAddFile(currentFolder.id, f);
+            const folderId = currentFolder ? currentFolder.id : null;
+            await dbAddFile(currentSubject.id, folderId, f);
           }
         }
         orgPdfFileInput.value = "";
@@ -2310,10 +2437,11 @@ document.addEventListener("DOMContentLoaded", () => {
     orgPdfDropZone.addEventListener("drop", async (e) => {
       e.preventDefault();
       orgPdfDropZone.classList.remove("border-indigo-500", "bg-indigo-50/30");
-      if (e.dataTransfer.files.length > 0 && currentFolder) {
+      if (e.dataTransfer.files.length > 0 && currentSubject) {
         for (const f of e.dataTransfer.files) {
           if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
-            await dbAddFile(currentFolder.id, f);
+            const folderId = currentFolder ? currentFolder.id : null;
+            await dbAddFile(currentSubject.id, folderId, f);
           }
         }
         renderFilesList();
