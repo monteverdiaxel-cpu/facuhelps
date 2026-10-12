@@ -951,6 +951,13 @@ async def export_docx(req: DocxExportRequest):
         }
     )
 
+@app.get("/")
+async def read_root():
+    index_path = Path("static/index.html")
+    if not index_path.exists():
+        index_path = Path(__file__).parent / "static" / "index.html"
+    return FileResponse(index_path)
+
 # Montar carpeta estática
 STATIC_DIR = Path("static")
 if not STATIC_DIR.exists():
