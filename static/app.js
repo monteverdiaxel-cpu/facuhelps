@@ -532,13 +532,15 @@ document.addEventListener("DOMContentLoaded", () => {
         .replace(/[^\w.-]/g, "_")
         .replace(/_+/g, "_");
 
-      // 1. Intento de SUBIDA DIRECTA a Google AI Studio (Ahorro total de 0 MB en Render)
-      if (clientApiKey) {
-        try {
-          setProgressStep("cloud");
-          const mimeType = getFileMimeType(currentFile);
+      // 1. Intento de SUBIDA DIRECTA a Google AI Studio (Ahorro total de 0 MB en Render / Vercel)
+      try {
+        setProgressStep("cloud");
+        const mimeType = getFileMimeType(currentFile);
+        let uploadUrl = null;
+        let usedKeyIndex = 0;
 
-          // a) Iniciar subida resumible en Google
+        if (clientApiKey) {
+          // a1) Iniciar subida resumible en Google directamente desde el cliente con su API Key
           const startUploadRes = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${encodeURIComponent(clientApiKey)}`, {
             method: "POST",
             headers: {
@@ -559,66 +561,97 @@ document.addEventListener("DOMContentLoaded", () => {
             throw new Error(`Google upload handshake failed (${startUploadRes.status})`);
           }
 
-          const uploadUrl = startUploadRes.headers.get("x-goog-upload-url");
+          uploadUrl = startUploadRes.headers.get("x-goog-upload-url");
           if (!uploadUrl) {
             throw new Error("No se recibió 'x-goog-upload-url' de Google AI Studio.");
           }
-
-          // b) Subir el binario del audio directamente a Google
-          const uploadBinaryRes = await fetch(uploadUrl, {
-            method: "POST",
-            headers: {
-              "Content-Length": currentFile.size.toString(),
-              "X-Goog-Upload-Offset": "0",
-              "X-Goog-Upload-Command": "upload, finalize"
-            },
-            body: currentFile
-          });
-
-          if (!uploadBinaryRes.ok) {
-            throw new Error(`Google binary upload failed (${uploadBinaryRes.status})`);
-          }
-
-          const googleFileJson = await uploadBinaryRes.json();
-          const googleFileName = googleFileJson?.file?.name; // Ej: "files/abc123xyz"
-
-          if (!googleFileName) {
-            throw new Error("Google AI Studio no devolvió el identificador del archivo.");
-          }
-
-          // c) Procesar en el endpoint liviano de Render enviando únicamente el URI
-          setProgressStep("gemini");
-          const uriRes = await fetch("/api/transcribe-file-uri", {
+          usedKeyIndex = 0;
+        } else {
+          // a2) Solicitar sesión de subida al servidor usando el pool del archivo .env con rotación automática
+          const sessionRes = await fetch("/api/get-upload-session", {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              file_name: googleFileName,
-              api_key: clientApiKey,
-              audio_type: currentAudioType || "clase",
-              keywords: inputKeywords ? inputKeywords.value.trim() : "",
-              model_name: (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash"
+              filename: cleanFileName,
+              mime_type: mimeType,
+              file_size: currentFile.size,
+              api_key: null
             })
           });
 
-          if (!uriRes.ok) {
-            const errText = await uriRes.text();
-            let errMsg = "Error al procesar transcripción por URI.";
+          if (!sessionRes.ok) {
+            const errText = await sessionRes.text();
+            let errMsg = "No se pudo obtener la sesión de subida a Google AI Studio.";
             try { errMsg = JSON.parse(errText).detail || errMsg; } catch (e) {}
             throw new Error(errMsg);
           }
 
-          data = await uriRes.json();
-          usedDirectUpload = true;
-
-        } catch (directUploadErr) {
-          console.warn("Subida directa falló o no disponible. Realizando fallback a /api/transcribe:", directUploadErr);
-          data = null; // Dispara el fallback abajo
+          const sessionJson = await sessionRes.json();
+          uploadUrl = sessionJson.upload_url;
+          usedKeyIndex = sessionJson.key_index || 0;
         }
+
+        if (!uploadUrl) {
+          throw new Error("No se pudo obtener la URL de subida resumible.");
+        }
+
+        // b) Subir el binario del audio directamente desde el navegador a Google
+        const uploadBinaryRes = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            "Content-Length": currentFile.size.toString(),
+            "X-Goog-Upload-Offset": "0",
+            "X-Goog-Upload-Command": "upload, finalize"
+          },
+          body: currentFile
+        });
+
+        if (!uploadBinaryRes.ok) {
+          throw new Error(`Google binary upload failed (${uploadBinaryRes.status})`);
+        }
+
+        const googleFileJson = await uploadBinaryRes.json();
+        const googleFileName = googleFileJson?.file?.name; // Ej: "files/abc123xyz"
+
+        if (!googleFileName) {
+          throw new Error("Google AI Studio no devolvió el identificador del archivo.");
+        }
+
+        // c) Procesar en el endpoint liviano de Render / Vercel enviando únicamente el URI
+        setProgressStep("gemini");
+        const uriRes = await fetch("/api/transcribe-file-uri", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            file_name: googleFileName,
+            api_key: clientApiKey || null,
+            key_index: usedKeyIndex,
+            audio_type: currentAudioType || "clase",
+            keywords: inputKeywords ? inputKeywords.value.trim() : "",
+            model_name: (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash"
+          })
+        });
+
+        if (!uriRes.ok) {
+          const errText = await uriRes.text();
+          let errMsg = "Error al procesar transcripción por URI.";
+          try { errMsg = JSON.parse(errText).detail || errMsg; } catch (e) {}
+          throw new Error(errMsg);
+        }
+
+        data = await uriRes.json();
+        usedDirectUpload = true;
+
+      } catch (directUploadErr) {
+        console.warn("Subida directa falló o no disponible. Realizando fallback a /api/transcribe:", directUploadErr);
+        data = null; // Dispara el fallback abajo
       }
 
-      // 2. FALLBACK habitual con FormData si falló o no había clientApiKey
+      // 2. FALLBACK habitual con FormData si falló la subida directa
       if (!data) {
         setProgressStep("local");
         const formData = new FormData();

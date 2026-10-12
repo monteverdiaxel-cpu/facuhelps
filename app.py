@@ -8,6 +8,8 @@ import shutil
 import tempfile
 import time
 import unicodedata
+import urllib.error
+import urllib.request
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -361,9 +363,83 @@ async def transcribe_audio(
 
         gc.collect()
 
+class UploadSessionRequest(BaseModel):
+    filename: str
+    mime_type: str
+    file_size: int
+    api_key: Optional[str] = None
+
+@app.post("/api/get-upload-session")
+async def get_upload_session(req: UploadSessionRequest):
+    if not req.filename or not req.mime_type or not req.file_size:
+        raise HTTPException(status_code=400, detail="Faltan parámetros obligatorios (filename, mime_type, file_size).")
+
+    key_pool = parse_api_keys(req.api_key)
+    if not key_pool:
+        key_pool = parse_api_keys(os.getenv("GEMINI_API_KEY", ""))
+
+    if not key_pool:
+        raise HTTPException(
+            status_code=400,
+            detail="No se encontró ninguna API Key válida en el cliente ni en el archivo .env del servidor."
+        )
+
+    safe_name = sanitize_filename(req.filename)
+    payload_data = json.dumps({
+        "file": {
+            "display_name": safe_name
+        }
+    }).encode("utf-8")
+
+    last_error = None
+    for k_idx, current_key in enumerate(key_pool):
+        url = f"https://generativelanguage.googleapis.com/upload/v1beta/files?key={current_key}"
+        headers = {
+            "X-Goog-Upload-Protocol": "resumable",
+            "X-Goog-Upload-Command": "start",
+            "X-Goog-Upload-Header-Content-Length": str(req.file_size),
+            "X-Goog-Upload-Header-Content-Type": req.mime_type,
+            "Content-Type": "application/json"
+        }
+
+        try:
+            http_req = urllib.request.Request(url, data=payload_data, headers=headers, method="POST")
+            with urllib.request.urlopen(http_req, timeout=15) as response:
+                upload_url = response.headers.get("x-goog-upload-url")
+                if upload_url:
+                    return JSONResponse({
+                        "upload_url": upload_url,
+                        "key_index": k_idx
+                    })
+                else:
+                    raise Exception("No se recibió 'x-goog-upload-url' en las cabeceras de respuesta de Google.")
+        except urllib.error.HTTPError as http_err:
+            last_error = http_err
+            # Si es rotativo y hay más claves, rotar
+            if is_rotatable_error(http_err) and k_idx + 1 < len(key_pool):
+                time.sleep(1)
+                continue
+            if k_idx + 1 >= len(key_pool):
+                raise HTTPException(
+                    status_code=http_err.code if http_err.code in (400, 403, 429) else 500,
+                    detail=f"Google Files API rechazó la sesión de subida: {http_err.reason}"
+                )
+            raise http_err
+        except Exception as exc:
+            last_error = exc
+            if is_rotatable_error(exc) and k_idx + 1 < len(key_pool):
+                time.sleep(1)
+                continue
+            if k_idx + 1 >= len(key_pool):
+                raise HTTPException(status_code=500, detail=f"Error al iniciar sesión de subida con Google: {str(exc)}")
+            raise exc
+
+    raise HTTPException(status_code=500, detail=f"No se pudo crear sesión de subida con ninguna API Key: {str(last_error)}")
+
 class TranscribeFileUriRequest(BaseModel):
     file_name: str
-    api_key: str
+    api_key: Optional[str] = None
+    key_index: Optional[int] = 0
     audio_type: Optional[str] = "clase"
     keywords: Optional[str] = None
     model_name: Optional[str] = "gemini-3.8-flash"
@@ -372,8 +448,21 @@ class TranscribeFileUriRequest(BaseModel):
 async def transcribe_file_uri(req: TranscribeFileUriRequest):
     if not req.file_name or not req.file_name.strip():
         raise HTTPException(status_code=400, detail="El parámetro 'file_name' es obligatorio.")
-    if not req.api_key or not req.api_key.strip():
-        raise HTTPException(status_code=400, detail="El parámetro 'api_key' es obligatorio.")
+
+    # Resolver API Key activa
+    key_pool = parse_api_keys(req.api_key)
+    if not key_pool:
+        key_pool = parse_api_keys(os.getenv("GEMINI_API_KEY", ""))
+
+    if not key_pool:
+        raise HTTPException(
+            status_code=400,
+            detail="No se encontró ninguna API Key válida para transcribir el archivo."
+        )
+
+    # Seleccionar la clave correspondiente al key_index usado durante la subida (o la primera válida)
+    key_idx = req.key_index if req.key_index is not None and 0 <= req.key_index < len(key_pool) else 0
+    active_key = key_pool[key_idx]
 
     effective_audio_type = (req.audio_type or "clase").lower().strip()
     if effective_audio_type not in ["clase", "entrevista", "continuo", "radio"]:
@@ -391,13 +480,13 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=req.api_key.strip())
+        client = genai.Client(api_key=active_key)
 
         # 2. Obtener el archivo con client.files.get
         google_file = client.files.get(name=req.file_name.strip())
 
-        # 3. Si el estado es PROCESSING, esperar en bucle breve hasta que pase a ACTIVE (max 60s)
-        max_wait_seconds = 60
+        # 3. Si el estado es PROCESSING, esperar en bucle breve hasta que pase a ACTIVE (max 180s para audios grandes)
+        max_wait_seconds = 180
         start_time = time.time()
         while google_file.state.name == "PROCESSING":
             if time.time() - start_time > max_wait_seconds:
@@ -456,7 +545,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
             detail=f"Error durante la transcripción directa: {str(e)}"
         )
     finally:
-        # 5. En el bloque finally: eliminar siempre el archivo en Google
+        # 5. En el bloque finally: eliminar siempre el archivo en Google con la misma clave
         if client and req.file_name:
             try:
                 client.files.delete(name=req.file_name.strip())
