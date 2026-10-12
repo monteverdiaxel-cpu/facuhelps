@@ -360,6 +360,109 @@ async def transcribe_audio(
 
         gc.collect()
 
+class TranscribeFileUriRequest(BaseModel):
+    file_name: str
+    api_key: str
+    audio_type: Optional[str] = "clase"
+    keywords: Optional[str] = None
+    model_name: Optional[str] = "gemini-3.8-flash"
+
+@app.post("/api/transcribe-file-uri")
+async def transcribe_file_uri(req: TranscribeFileUriRequest):
+    if not req.file_name or not req.file_name.strip():
+        raise HTTPException(status_code=400, detail="El parámetro 'file_name' es obligatorio.")
+    if not req.api_key or not req.api_key.strip():
+        raise HTTPException(status_code=400, detail="El parámetro 'api_key' es obligatorio.")
+
+    effective_audio_type = (req.audio_type or "clase").lower().strip()
+    if effective_audio_type not in ["clase", "entrevista", "continuo", "radio"]:
+        effective_audio_type = "clase"
+
+    clean_keywords = (req.keywords or "").strip()
+    system_instruction = get_system_instruction(effective_audio_type)
+    user_prompt = get_user_prompt(effective_audio_type, clean_keywords)
+    target_model_name = "gemini-3.8-flash"
+
+    client = None
+    google_file = None
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=req.api_key.strip())
+
+        # 2. Obtener el archivo con client.files.get
+        google_file = client.files.get(name=req.file_name.strip())
+
+        # 3. Si el estado es PROCESSING, esperar en bucle breve hasta que pase a ACTIVE (max 60s)
+        max_wait_seconds = 60
+        start_time = time.time()
+        while google_file.state.name == "PROCESSING":
+            if time.time() - start_time > max_wait_seconds:
+                raise HTTPException(
+                    status_code=504,
+                    detail="Tiempo de espera agotado mientras Google procesaba el archivo."
+                )
+            time.sleep(1)
+            google_file = client.files.get(name=google_file.name)
+
+        if google_file.state.name != "ACTIVE":
+            raise Exception(f"Google no pudo procesar el archivo. Estado: {google_file.state.name}")
+
+        gen_config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.0,
+            max_output_tokens=65536,
+            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+        )
+
+        # 4. Ejecutar generate_content
+        response = None
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = client.models.generate_content(
+                    model=target_model_name,
+                    contents=[
+                        google_file,
+                        user_prompt
+                    ],
+                    config=gen_config
+                )
+                break
+            except Exception as gen_err:
+                if is_retriable_error(gen_err) and attempt < max_attempts:
+                    time.sleep(2)
+                else:
+                    raise gen_err
+
+        transcript_text = (response.text or "").strip() if response else ""
+        if not transcript_text:
+            raise Exception("La API de Gemini devolvió una transcripción vacía.")
+
+        return JSONResponse({
+            "transcript": transcript_text,
+            "filename": req.file_name,
+            "model_used": target_model_name
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error durante la transcripción directa: {str(e)}"
+        )
+    finally:
+        # 5. En el bloque finally: eliminar siempre el archivo en Google
+        if client and req.file_name:
+            try:
+                client.files.delete(name=req.file_name.strip())
+            except Exception:
+                pass
+        gc.collect()
+
 class SummarizeRequest(BaseModel):
     transcript: str
     api_key: Optional[str] = None

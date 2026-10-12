@@ -505,33 +505,151 @@ document.addEventListener("DOMContentLoaded", () => {
     setProgressStep("local");
 
     try {
-      const formData = new FormData();
-      formData.append("file", currentFile);
-      if (apiKey) {
-        formData.append("api_key", apiKey);
-      }
-      formData.append("audio_type", currentAudioType || "clase");
-      const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
-      formData.append("model_name", selectedModelName);
-      if (inputKeywords && inputKeywords.value.trim()) {
-        formData.append("keywords", inputKeywords.value.trim());
-      }
+      let data = null;
+      let usedDirectUpload = false;
 
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-      });
+      // Obtener la clave principal del Key Pool (o localStorage) para la subida directa
+      const clientApiKey = apiKey ? apiKey.split(/[,;\n\r]+/)[0].trim() : "";
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errMsg = "Error en el servidor al procesar el audio.";
+      // Mapeo seguro de tipo MIME según extensión
+      const getFileMimeType = (file) => {
+        const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+        const map = {
+          ".mp3": "audio/mp3",
+          ".m4a": "audio/mp4",
+          ".aac": "audio/aac",
+          ".ogg": "audio/ogg",
+          ".flac": "audio/flac",
+          ".webm": "audio/webm",
+          ".wma": "audio/x-ms-wma"
+        };
+        return map[ext] || file.type || "audio/mp3";
+      };
+
+      const cleanFileName = (file.name || "audio")
+        .normalize("NFKD")
+        .replace(/[^\w.-]/g, "_")
+        .replace(/_+/g, "_");
+
+      // 1. Intento de SUBIDA DIRECTA a Google AI Studio (Ahorro total de 0 MB en Render)
+      if (clientApiKey) {
         try {
-          errMsg = JSON.parse(errorText).detail || errMsg;
-        } catch (e) {}
-        throw new Error(errMsg);
+          setProgressStep("cloud");
+          const mimeType = getFileMimeType(currentFile);
+
+          // a) Iniciar subida resumible en Google
+          const startUploadRes = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${encodeURIComponent(clientApiKey)}`, {
+            method: "POST",
+            headers: {
+              "X-Goog-Upload-Protocol": "resumable",
+              "X-Goog-Upload-Command": "start",
+              "X-Goog-Upload-Header-Content-Length": currentFile.size.toString(),
+              "X-Goog-Upload-Header-Content-Type": mimeType,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              file: {
+                display_name: cleanFileName
+              }
+            })
+          });
+
+          if (!startUploadRes.ok) {
+            throw new Error(`Google upload handshake failed (${startUploadRes.status})`);
+          }
+
+          const uploadUrl = startUploadRes.headers.get("x-goog-upload-url");
+          if (!uploadUrl) {
+            throw new Error("No se recibió 'x-goog-upload-url' de Google AI Studio.");
+          }
+
+          // b) Subir el binario del audio directamente a Google
+          const uploadBinaryRes = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              "Content-Length": currentFile.size.toString(),
+              "X-Goog-Upload-Offset": "0",
+              "X-Goog-Upload-Command": "upload, finalize"
+            },
+            body: currentFile
+          });
+
+          if (!uploadBinaryRes.ok) {
+            throw new Error(`Google binary upload failed (${uploadBinaryRes.status})`);
+          }
+
+          const googleFileJson = await uploadBinaryRes.json();
+          const googleFileName = googleFileJson?.file?.name; // Ej: "files/abc123xyz"
+
+          if (!googleFileName) {
+            throw new Error("Google AI Studio no devolvió el identificador del archivo.");
+          }
+
+          // c) Procesar en el endpoint liviano de Render enviando únicamente el URI
+          setProgressStep("gemini");
+          const uriRes = await fetch("/api/transcribe-file-uri", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              file_name: googleFileName,
+              api_key: clientApiKey,
+              audio_type: currentAudioType || "clase",
+              keywords: inputKeywords ? inputKeywords.value.trim() : "",
+              model_name: (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash"
+            })
+          });
+
+          if (!uriRes.ok) {
+            const errText = await uriRes.text();
+            let errMsg = "Error al procesar transcripción por URI.";
+            try { errMsg = JSON.parse(errText).detail || errMsg; } catch (e) {}
+            throw new Error(errMsg);
+          }
+
+          data = await uriRes.json();
+          usedDirectUpload = true;
+
+        } catch (directUploadErr) {
+          console.warn("Subida directa falló o no disponible. Realizando fallback a /api/transcribe:", directUploadErr);
+          data = null; // Dispara el fallback abajo
+        }
       }
 
-      const data = await response.json();
+      // 2. FALLBACK habitual con FormData si falló o no había clientApiKey
+      if (!data) {
+        setProgressStep("local");
+        const formData = new FormData();
+        formData.append("file", currentFile);
+        if (apiKey) {
+          formData.append("api_key", apiKey);
+        }
+        formData.append("audio_type", currentAudioType || "clase");
+        const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
+        formData.append("model_name", selectedModelName);
+        if (inputKeywords && inputKeywords.value.trim()) {
+          formData.append("keywords", inputKeywords.value.trim());
+        }
+
+        setProgressStep("cloud");
+        const response = await fetch("/api/transcribe", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errMsg = "Error en el servidor al procesar el audio.";
+          try {
+            errMsg = JSON.parse(errorText).detail || errMsg;
+          } catch (e) {}
+          throw new Error(errMsg);
+        }
+
+        data = await response.json();
+      }
+
       rawTranscriptText = data.transcript || "";
 
       if (!rawTranscriptText.trim()) {
@@ -544,9 +662,9 @@ document.addEventListener("DOMContentLoaded", () => {
       resultSection.classList.remove("hidden");
       if (completedBadge) completedBadge.classList.remove("hidden");
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
-      currentActiveFileName = data.filename || (currentFile ? currentFile.name : "") || "audio.mp3";
+      currentActiveFileName = (currentFile ? currentFile.name : "") || data.filename || "audio.mp3";
       resultFileName.textContent = currentActiveFileName;
-      resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
+      resultModelBadge.textContent = `${data.model_used || "gemini-3.8-flash"} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
       setTimeout(() => {
