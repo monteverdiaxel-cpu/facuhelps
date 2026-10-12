@@ -512,8 +512,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const clientApiKey = apiKey ? apiKey.split(/[,;\n\r]+/)[0].trim() : "";
 
       // Mapeo seguro de tipo MIME según extensión
-      const getFileMimeType = (file) => {
-        const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+      const getFileMimeType = (audioFile = currentFile) => {
+        if (!audioFile) return "audio/mp3";
+        const ext = "." + (audioFile.name.split(".").pop() || "").toLowerCase();
         const map = {
           ".mp3": "audio/mp3",
           ".m4a": "audio/mp4",
@@ -523,10 +524,10 @@ document.addEventListener("DOMContentLoaded", () => {
           ".webm": "audio/webm",
           ".wma": "audio/x-ms-wma"
         };
-        return map[ext] || file.type || "audio/mp3";
+        return map[ext] || audioFile.type || "audio/mp3";
       };
 
-      const cleanFileName = (file.name || "audio")
+      const cleanFileName = ((currentFile && currentFile.name) || "audio")
         .normalize("NFKD")
         .replace(/[^\w.-]/g, "_")
         .replace(/_+/g, "_");
