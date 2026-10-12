@@ -242,8 +242,7 @@ async def transcribe_audio(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536,
-            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+            max_output_tokens=65536
         )
 
         transcript_text = ""
@@ -503,8 +502,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536,
-            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+            max_output_tokens=65536
         )
 
         # 4. Ejecutar generate_content
