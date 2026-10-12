@@ -1523,8 +1523,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setTabButtonState(btn, isActive, activeTitle, inactiveSub, activeSub) {
     if (!btn) return;
-    const activeClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border-2 border-[#ffc700] bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] font-semibold text-xs transition-all shadow-xs text-left";
-    const inactiveClasses = "nav-tab-btn flex-1 lg:flex-initial flex items-center gap-3 px-3.5 py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
+    const activeClasses = "nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border-2 border-[#ffc700] bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] font-semibold text-xs transition-all shadow-xs text-left";
+    const inactiveClasses = "nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
 
     btn.className = isActive ? activeClasses : inactiveClasses;
     const iconContainer = btn.querySelector("div");

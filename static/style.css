@@ -49,6 +49,15 @@
   background: #94a3b8;
 }
 
+/* Ocultar barra de scroll en móviles pero permitir deslizamiento libre */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Estilos de los pasos del proceso */
 .step-item.active .step-icon {
   background-color: #001b44;
