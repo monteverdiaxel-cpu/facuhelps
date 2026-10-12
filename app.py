@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import time
 import unicodedata
 import uuid
@@ -34,8 +35,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-TEMP_DIR = Path("temp_uploads")
-TEMP_DIR.mkdir(exist_ok=True)
+TEMP_DIR = Path(tempfile.gettempdir()) / "temp_uploads"
+TEMP_DIR.mkdir(exist_ok=True, parents=True)
 
 # Mapeo de extensiones comunes a MIME types para Google Files API (se excluye .wav por tamaño excesivo)
 MIME_MAP = {
@@ -952,7 +953,11 @@ async def export_docx(req: DocxExportRequest):
 
 # Montar carpeta estática
 STATIC_DIR = Path("static")
-STATIC_DIR.mkdir(exist_ok=True)
+if not STATIC_DIR.exists():
+    try:
+        STATIC_DIR.mkdir(exist_ok=True, parents=True)
+    except Exception:
+        pass
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
