@@ -3680,21 +3680,40 @@ document.addEventListener("DOMContentLoaded", () => {
     ]
   };
 
-  // Requisitos transversales de Etapa 2
-  const CAREER_STAGE2_COMMON = [
-    { id: "opt_1", name: "Seminario Optativo I", area: "Optativo" },
-    { id: "opt_2", name: "Seminario Optativo II", area: "Optativo" },
-    { id: "idiom_1", name: "Idioma Extranjero - Nivel I", area: "Idioma" },
-    { id: "idiom_2", name: "Idioma Extranjero - Nivel II", area: "Idioma" },
-    { id: "idiom_3", name: "Idioma Extranjero - Nivel III", area: "Idioma" },
-    { id: "ppp_2", name: "Prácticas Preprofesionales II (PPP II - 60 hs)", area: "Prácticas Profesionales" },
-    { id: "tif", name: "Taller de TIF (Trabajo Integrador Final)", area: "TIF de Grado" }
+  // Requisitos transversales (Habilitados desde el tramo inicial)
+  const CAREER_LANGUAGES = [
+    { id: "idiom_1", name: "Idioma Extranjero - Nivel I", area: "Idioma (Nivel I)", level: "I" },
+    { id: "idiom_2", name: "Idioma Extranjero - Nivel II", area: "Idioma (Nivel II)", level: "II" },
+    { id: "idiom_3", name: "Idioma Extranjero - Nivel III", area: "Idioma (Nivel III)", level: "III" }
+  ];
+
+  const CAREER_SEMINARS = [
+    { id: "opt_1", name: "Seminario Optativo I", area: "Seminario de Grado" },
+    { id: "opt_2", name: "Seminario Optativo II", area: "Seminario de Grado" }
+  ];
+
+  // Instancia final de graduación y titulación
+  const CAREER_GRADUATION = [
+    { 
+      id: "ppp_2", 
+      name: "Prácticas Preprofesionales II (PPP II)", 
+      subtitle: "60 hs de práctica asistida en institución u organización", 
+      area: "Práctica Supervisada",
+      isPpp2: true
+    },
+    { 
+      id: "tif", 
+      name: "Taller de TIF (Trabajo Integrador Final)", 
+      subtitle: "Elaboración, tutoría y defensa de tesis o proyecto de grado", 
+      area: "Instancia Final de Grado",
+      isTif: true
+    }
   ];
 
   // Estado local del plan de carrera en memoria
   let careerPlanData = {
     selectedOrientation: "periodismo",
-    grades: {} // { [subjectId]: { p1, p2, finalGrade, status, finalScore } }
+    grades: {} // { [subjectId]: { p1, p2, finalGrade, status, finalScore, isSufficiency, customName, isAccredited } }
   };
 
   // Operaciones DB: Career Plan
@@ -3729,7 +3748,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Lógica de Estado UBA para Notas
-  function calculateSubjectStatus(p1Val, p2Val, finalVal) {
+  function calculateSubjectStatus(p1Val, p2Val, finalVal, isSufficiency = false) {
+    if (isSufficiency) {
+      return { 
+        status: "sufficiency", 
+        label: "✓ Suficiencia / Libre", 
+        badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold", 
+        score: null, 
+        isPassed: true 
+      };
+    }
+
     const p1 = (p1Val !== "" && p1Val !== null && !isNaN(Number(p1Val))) ? Number(p1Val) : null;
     const p2 = (p2Val !== "" && p2Val !== null && !isNaN(Number(p2Val))) ? Number(p2Val) : null;
     const fin = (finalVal !== "" && finalVal !== null && !isNaN(Number(finalVal))) ? Number(finalVal) : null;
@@ -3778,16 +3807,22 @@ document.addEventListener("DOMContentLoaded", () => {
       careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, saved);
     }
 
-    // 2. Renderizar Orientaciones
-    renderCareerOrientations();
-
-    // 3. Renderizar Malla Curricular Etapa 1
+    // 2. Renderizar Malla Curricular Etapa 1
     renderCareerStage1();
 
-    // 4. Renderizar Malla Curricular Etapa 2
+    // 3. Renderizar Requisitos Transversales (Idiomas + Seminarios)
+    renderCareerTransversal();
+
+    // 4. Renderizar Orientaciones (Conmutador 3x2)
+    renderCareerOrientations();
+
+    // 5. Renderizar Malla Curricular Etapa 2 (9 materias de la orientación)
     renderCareerStage2();
 
-    // 5. Actualizar Tablero de Métricas
+    // 6. Renderizar Instancia de Graduación (PPP II + TIF)
+    renderCareerGraduation();
+
+    // 7. Actualizar Tablero de Métricas
     updateCareerMetrics();
 
     if (window.lucide) window.lucide.createIcons();
@@ -4076,6 +4111,272 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 3. Renderizar Requisitos Transversales (Idiomas + Seminarios)
+  function createLanguageCardElement(subject) {
+    const gradeObj = careerPlanData.grades[subject.id] || { p1: "", p2: "", finalGrade: "", isSufficiency: false };
+    const isSuff = !!gradeObj.isSufficiency;
+    const evalResult = calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade, isSuff);
+
+    const card = document.createElement("div");
+    card.className = `p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+      evalResult.isPassed 
+        ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+        : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+    }`;
+
+    card.innerHTML = `
+      <div>
+        <div class="flex items-start justify-between gap-1.5 mb-1.5">
+          <span class="text-[10px] text-slate-400 font-medium truncate">${subject.area}</span>
+          <span class="badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${evalResult.badgeClass}">
+            ${evalResult.label}
+          </span>
+        </div>
+        <h5 class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-snug">
+          ${subject.name}
+        </h5>
+        <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              class="checkbox-sufficiency rounded text-amber-500 focus:ring-amber-400 border-slate-300 dark:border-slate-600 dark:bg-slate-800 w-3.5 h-3.5"
+              ${isSuff ? "checked" : ""}
+            >
+            <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+              Aprobado por Examen Libre / Suficiencia
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 ${isSuff ? 'opacity-40 pointer-events-none' : ''} grades-container">
+        <div class="flex items-center gap-1.5">
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">P1</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.p1 ?? ''}" 
+              class="input-p1 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+            >
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">P2</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.p2 ?? ''}" 
+              class="input-p2 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+            >
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end">
+          <span class="text-[9px] text-slate-400 font-medium mb-0.5">Final</span>
+          <input 
+            type="number" 
+            min="1" 
+            max="10" 
+            step="0.5" 
+            placeholder="-" 
+            value="${gradeObj.finalGrade ?? ''}" 
+            class="input-final w-11 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+          >
+        </div>
+      </div>
+    `;
+
+    const chkSuff = card.querySelector(".checkbox-sufficiency");
+    const gradesBox = card.querySelector(".grades-container");
+    const inputP1 = card.querySelector(".input-p1");
+    const inputP2 = card.querySelector(".input-p2");
+    const inputFinal = card.querySelector(".input-final");
+
+    const saveAndRefresh = async () => {
+      const isSuffActive = chkSuff.checked;
+      const p1 = inputP1.value.trim();
+      const p2 = inputP2.value.trim();
+      const fin = inputFinal.value.trim();
+
+      careerPlanData.grades[subject.id] = {
+        isSufficiency: isSuffActive,
+        p1: p1 ? Number(p1) : "",
+        p2: p2 ? Number(p2) : "",
+        finalGrade: fin ? Number(fin) : ""
+      };
+
+      await dbSaveCareerPlan(careerPlanData);
+
+      const newEval = calculateSubjectStatus(p1, p2, fin, isSuffActive);
+      const badgeElem = card.querySelector(".badge-status");
+      if (badgeElem) {
+        badgeElem.className = `badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${newEval.badgeClass}`;
+        badgeElem.textContent = newEval.label;
+      }
+
+      if (isSuffActive) {
+        gradesBox.classList.add("opacity-40", "pointer-events-none");
+      } else {
+        gradesBox.classList.remove("opacity-40", "pointer-events-none");
+      }
+
+      card.className = `p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+        newEval.isPassed 
+          ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+      }`;
+
+      updateCareerMetrics();
+    };
+
+    chkSuff.addEventListener("change", saveAndRefresh);
+    inputP1.addEventListener("change", saveAndRefresh);
+    inputP2.addEventListener("change", saveAndRefresh);
+    inputFinal.addEventListener("change", saveAndRefresh);
+
+    return card;
+  }
+
+  function createSeminarCardElement(subject) {
+    const gradeObj = careerPlanData.grades[subject.id] || { p1: "", p2: "", finalGrade: "", customName: "" };
+    const evalResult = calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade);
+
+    const card = document.createElement("div");
+    card.className = `p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+      evalResult.isPassed 
+        ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+        : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+    }`;
+
+    card.innerHTML = `
+      <div>
+        <div class="flex items-start justify-between gap-1.5 mb-1.5">
+          <span class="text-[10px] text-slate-400 font-medium truncate">${subject.area}</span>
+          <span class="badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${evalResult.badgeClass}">
+            ${evalResult.label}
+          </span>
+        </div>
+        <h5 class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-snug">
+          ${subject.name}
+        </h5>
+        <div class="mt-2">
+          <input 
+            type="text" 
+            placeholder="Escribí el nombre del seminario cursado..." 
+            value="${gradeObj.customName || ''}" 
+            class="input-seminar-name w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
+          >
+        </div>
+      </div>
+
+      <div class="pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5">
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">P1</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.p1 ?? ''}" 
+              class="input-p1 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+            >
+          </div>
+          <div class="flex flex-col">
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">P2</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.p2 ?? ''}" 
+              class="input-p2 w-9 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+            >
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end">
+          <span class="text-[9px] text-slate-400 font-medium mb-0.5">Final</span>
+          <input 
+            type="number" 
+            min="1" 
+            max="10" 
+            step="0.5" 
+            placeholder="-" 
+            value="${gradeObj.finalGrade ?? ''}" 
+            class="input-final w-11 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+          >
+        </div>
+      </div>
+    `;
+
+    const inputName = card.querySelector(".input-seminar-name");
+    const inputP1 = card.querySelector(".input-p1");
+    const inputP2 = card.querySelector(".input-p2");
+    const inputFinal = card.querySelector(".input-final");
+
+    const saveSeminar = async () => {
+      const customName = inputName.value.trim();
+      const p1 = inputP1.value.trim();
+      const p2 = inputP2.value.trim();
+      const fin = inputFinal.value.trim();
+
+      careerPlanData.grades[subject.id] = {
+        customName,
+        p1: p1 ? Number(p1) : "",
+        p2: p2 ? Number(p2) : "",
+        finalGrade: fin ? Number(fin) : ""
+      };
+
+      await dbSaveCareerPlan(careerPlanData);
+
+      const newEval = calculateSubjectStatus(p1, p2, fin);
+      const badgeElem = card.querySelector(".badge-status");
+      if (badgeElem) {
+        badgeElem.className = `badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${newEval.badgeClass}`;
+        badgeElem.textContent = newEval.label;
+      }
+
+      card.className = `p-3 sm:p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+        newEval.isPassed 
+          ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+      }`;
+
+      updateCareerMetrics();
+    };
+
+    inputName.addEventListener("change", saveSeminar);
+    inputP1.addEventListener("change", saveSeminar);
+    inputP2.addEventListener("change", saveSeminar);
+    inputFinal.addEventListener("change", saveSeminar);
+
+    return card;
+  }
+
+  function renderCareerTransversal() {
+    const listIdiomas = document.getElementById("careerListIdiomas");
+    const listSeminarios = document.getElementById("careerListSeminarios");
+
+    if (listIdiomas) {
+      listIdiomas.innerHTML = "";
+      CAREER_LANGUAGES.forEach(sub => listIdiomas.appendChild(createLanguageCardElement(sub)));
+    }
+    if (listSeminarios) {
+      listSeminarios.innerHTML = "";
+      CAREER_SEMINARS.forEach(sub => listSeminarios.appendChild(createSeminarCardElement(sub)));
+    }
+  }
+
+  // 5. Renderizar Malla Curricular Etapa 2 (Solo las 9 materias de la orientación)
   function renderCareerStage2() {
     const container = document.getElementById("careerStage2Container");
     const badge = document.getElementById("careerStage2OrientationBadge");
@@ -4088,15 +4389,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2.1 Asignaturas Introductorias (3)
     const cardIntro = document.createElement("div");
-    cardIntro.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardIntro.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5";
     cardIntro.innerHTML = `
       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
         <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <span>📖 Asignaturas Introductorias</span>
-          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(3 de la orientación)</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(3 materias de la orientación)</span>
         </h4>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="stage2ListIntro"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3" id="stage2ListIntro"></div>
     `;
     container.appendChild(cardIntro);
     const listIntro = cardIntro.querySelector("#stage2ListIntro");
@@ -4104,15 +4405,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2.2 Asignaturas Aplicadas (4)
     const cardApp = document.createElement("div");
-    cardApp.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardApp.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5";
     cardApp.innerHTML = `
       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
         <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <span>🎯 Asignaturas Aplicadas</span>
-          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(4 de la orientación)</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(4 materias de la orientación)</span>
         </h4>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" id="stage2ListApp"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3" id="stage2ListApp"></div>
     `;
     container.appendChild(cardApp);
     const listApp = cardApp.querySelector("#stage2ListApp");
@@ -4120,59 +4421,227 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2.3 Talleres Específicos (2)
     const cardTall = document.createElement("div");
-    cardTall.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
+    cardTall.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5";
     cardTall.innerHTML = `
       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
         <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <span>🛠️ Asignaturas Específicas / Talleres</span>
-          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(2 de la orientación)</span>
+          <span>🛠️ Talleres Específicos</span>
+          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(2 talleres de la orientación)</span>
         </h4>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="stage2ListTall"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3" id="stage2ListTall"></div>
     `;
     container.appendChild(cardTall);
     const listTall = cardTall.querySelector("#stage2ListTall");
     currentOri.stage2.workshops.forEach(sub => listTall.appendChild(createSubjectCardElement(sub)));
+  }
 
-    // 2.4 Requisitos Generales: Optativos, Idiomas, PPP II y TIF
-    const cardGeneral = document.createElement("div");
-    cardGeneral.className = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3";
-    cardGeneral.innerHTML = `
-      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
-        <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <span>🌐 Seminarios, Idiomas, PPP II y TIF</span>
-          <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(Requisitos finales del plan de grado)</span>
-        </h4>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="stage2ListGeneral"></div>
-    `;
-    container.appendChild(cardGeneral);
-    const listGen = cardGeneral.querySelector("#stage2ListGeneral");
-    CAREER_STAGE2_COMMON.forEach(sub => listGen.appendChild(createSubjectCardElement(sub)));
+  // 6. Renderizar Instancia de Graduación / Cierre (PPP II + TIF)
+  function createGraduationCardElement(subject) {
+    const gradeObj = careerPlanData.grades[subject.id] || { p1: "", p2: "", finalGrade: "", isAccredited: false };
+    const isAccredited = !!gradeObj.isAccredited;
+    const evalResult = subject.isPpp2 
+      ? (isAccredited 
+          ? { isPassed: true, label: "✓ Acreditada (60 hs)", badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold", score: null } 
+          : calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade))
+      : calculateSubjectStatus(gradeObj.p1, gradeObj.p2, gradeObj.finalGrade);
+
+    const card = document.createElement("div");
+    card.className = `p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+      evalResult.isPassed 
+        ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+        : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+    }`;
+
+    if (subject.isPpp2) {
+      card.innerHTML = `
+        <div>
+          <div class="flex items-start justify-between gap-1.5 mb-1.5">
+            <span class="text-[10px] text-slate-400 font-medium truncate">${subject.area}</span>
+            <span class="badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${evalResult.badgeClass}">
+              ${evalResult.label}
+            </span>
+          </div>
+          <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
+            ${subject.name}
+          </h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            ${subject.subtitle}
+          </p>
+          <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                class="checkbox-accredited rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-slate-600 dark:bg-slate-800 w-4 h-4"
+                ${isAccredited ? "checked" : ""}
+              >
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                Acreditar 60 hs cumplidas en convenio / organización
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs text-slate-400">
+          <span class="text-[11px]">Requiere Ciclo Orientado + PPP I</span>
+          <span class="font-mono text-[11px] text-slate-500">${isAccredited ? '60/60 hs ✓' : '0/60 hs'}</span>
+        </div>
+      `;
+
+      const chk = card.querySelector(".checkbox-accredited");
+      chk.addEventListener("change", async () => {
+        const val = chk.checked;
+        careerPlanData.grades[subject.id] = { isAccredited: val };
+        await dbSaveCareerPlan(careerPlanData);
+
+        const newEval = val 
+          ? { isPassed: true, label: "✓ Acreditada (60 hs)", badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold" }
+          : { isPassed: false, label: "Cursada pendiente", badgeClass: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" };
+
+        const badgeElem = card.querySelector(".badge-status");
+        if (badgeElem) {
+          badgeElem.className = `badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${newEval.badgeClass}`;
+          badgeElem.textContent = newEval.label;
+        }
+
+        card.className = `p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+          newEval.isPassed 
+            ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+        }`;
+
+        updateCareerMetrics();
+      });
+    } else {
+      // TIF
+      card.innerHTML = `
+        <div>
+          <div class="flex items-start justify-between gap-1.5 mb-1.5">
+            <span class="text-[10px] text-slate-400 font-medium truncate">${subject.area}</span>
+            <span class="badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${evalResult.badgeClass}">
+              ${evalResult.label}
+            </span>
+          </div>
+          <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
+            ${subject.name}
+          </h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+            ${subject.subtitle}
+          </p>
+        </div>
+
+        <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5">
+            <div class="flex flex-col">
+              <span class="text-[9px] text-slate-400 font-medium mb-0.5">P1 (Avance)</span>
+              <input 
+                type="number" 
+                min="1" 
+                max="10" 
+                step="0.5" 
+                placeholder="-" 
+                value="${gradeObj.p1 ?? ''}" 
+                class="input-p1 w-10 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+              >
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[9px] text-slate-400 font-medium mb-0.5">P2 (Borrador)</span>
+              <input 
+                type="number" 
+                min="1" 
+                max="10" 
+                step="0.5" 
+                placeholder="-" 
+                value="${gradeObj.p2 ?? ''}" 
+                class="input-p2 w-10 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+              >
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end">
+            <span class="text-[9px] text-slate-400 font-medium mb-0.5">Defensa / Nota Final</span>
+            <input 
+              type="number" 
+              min="1" 
+              max="10" 
+              step="0.5" 
+              placeholder="-" 
+              value="${gradeObj.finalGrade ?? ''}" 
+              class="input-final w-14 h-7 text-center text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition shadow-2xs"
+            >
+          </div>
+        </div>
+      `;
+
+      const inputP1 = card.querySelector(".input-p1");
+      const inputP2 = card.querySelector(".input-p2");
+      const inputFinal = card.querySelector(".input-final");
+
+      const handleTifChange = async () => {
+        const p1 = inputP1.value.trim();
+        const p2 = inputP2.value.trim();
+        const fin = inputFinal.value.trim();
+
+        careerPlanData.grades[subject.id] = {
+          p1: p1 ? Number(p1) : "",
+          p2: p2 ? Number(p2) : "",
+          finalGrade: fin ? Number(fin) : ""
+        };
+
+        await dbSaveCareerPlan(careerPlanData);
+
+        const newEval = calculateSubjectStatus(p1, p2, fin);
+        const badgeElem = card.querySelector(".badge-status");
+        if (badgeElem) {
+          badgeElem.className = `badge-status text-[10px] px-2 py-0.5 rounded-full shrink-0 ${newEval.badgeClass}`;
+          badgeElem.textContent = newEval.label;
+        }
+
+        card.className = `p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+          newEval.isPassed 
+            ? "border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-2xs" 
+            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs"
+        }`;
+
+        updateCareerMetrics();
+      };
+
+      inputP1.addEventListener("change", handleTifChange);
+      inputP2.addEventListener("change", handleTifChange);
+      inputFinal.addEventListener("change", handleTifChange);
+    }
+
+    return card;
+  }
+
+  function renderCareerGraduation() {
+    const container = document.getElementById("careerGraduationContainer");
+    if (!container) return;
+    container.innerHTML = "";
+    CAREER_GRADUATION.forEach(sub => container.appendChild(createGraduationCardElement(sub)));
   }
 
   function updateCareerMetrics() {
-    // 1. Contar aprobadas por área del Ciclo Inicial
-    const countPassed = (list) => {
-      return list.filter(sub => {
-        const g = careerPlanData.grades[sub.id];
-        if (!g) return false;
-        return calculateSubjectStatus(g.p1, g.p2, g.finalGrade).isPassed;
-      }).length;
+    const isSubjectPassed = (subId) => {
+      const g = careerPlanData.grades[subId];
+      if (!g) return false;
+      if (g.isSufficiency || g.isAccredited) return true;
+      return calculateSubjectStatus(g.p1, g.p2, g.finalGrade, !!g.isSufficiency).isPassed;
     };
 
+    const countPassed = (list) => {
+      return list.filter(sub => isSubjectPassed(sub.id)).length;
+    };
+
+    // 1. Contar aprobadas por área del Ciclo Inicial (18)
     const passedCom = countPassed(CAREER_STAGE1.comunicacional);
     const passedPract = countPassed(CAREER_STAGE1.practica);
-    // Para sociales son máximo 3 que computan para el inicial
     const passedSocRaw = countPassed(CAREER_STAGE1.sociales);
     const passedSoc = Math.min(3, passedSocRaw);
-    // Para problemas son máximo 2 que computan para el inicial
     const passedProbRaw = countPassed(CAREER_STAGE1.problemas);
     const passedProb = Math.min(2, passedProbRaw);
-
     const stage1TotalPassed = passedCom + passedPract + passedSoc + passedProb;
 
-    // Actualizar etiquetas en pantalla
     const elCom = document.getElementById("careerCountComArea");
     if (elCom) elCom.textContent = `${passedCom}/9`;
     const elPract = document.getElementById("careerCountPractArea");
@@ -4185,26 +4654,86 @@ document.addEventListener("DOMContentLoaded", () => {
     const elStage1Count = document.getElementById("careerStage1Count");
     if (elStage1Count) elStage1Count.textContent = `${stage1TotalPassed} / 18 aprobadas`;
 
-    // 2. Contar aprobadas de la Etapa 2
+    // Tarjeta interactiva de acreditación de PPP I en Bloque 2
+    const ppp1Card = document.getElementById("careerPpp1AccreditationCard");
+    const ppp1Icon = document.getElementById("careerPpp1AccreditationIcon");
+    const ppp1Badge = document.getElementById("careerPpp1Badge");
+    const ppp1Desc = document.getElementById("careerPpp1Desc");
+    const ppp1StatusBox = document.getElementById("careerPpp1StatusBox");
+
+    if (passedPract >= 2) {
+      if (ppp1Card) {
+        ppp1Card.className = "rounded-2xl border p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs border-emerald-300 dark:border-emerald-700 bg-emerald-50/40 dark:bg-emerald-950/25";
+      }
+      if (ppp1Icon) {
+        ppp1Icon.className = "w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center justify-center shrink-0 transition-colors";
+      }
+      if (ppp1Badge) {
+        ppp1Badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200";
+        ppp1Badge.textContent = `✓ Acreditada automáticamente (${passedPract}/4 talleres aprobados)`;
+      }
+      if (ppp1Desc) {
+        ppp1Desc.textContent = "¡Felicitaciones! Cumpliste con el requisito de 2 talleres del Área Práctica. PPP I acreditada para tu legajo.";
+      }
+      if (ppp1StatusBox) {
+        ppp1StatusBox.className = "shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-300/80 dark:border-emerald-700 bg-emerald-100/70 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 transition-colors";
+        ppp1StatusBox.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i><span>Acreditada ✓</span>';
+      }
+    } else {
+      if (ppp1Card) {
+        ppp1Card.className = "rounded-2xl border p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900";
+      }
+      if (ppp1Icon) {
+        ppp1Icon.className = "w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center shrink-0 transition-colors";
+      }
+      if (ppp1Badge) {
+        ppp1Badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+        ppp1Badge.textContent = `Pendiente (${passedPract}/2 talleres)`;
+      }
+      if (ppp1Desc) {
+        ppp1Desc.textContent = "Se acredita automáticamente al aprobar al menos 2 de los 4 talleres del Área Práctica (Escritura, Redacción, Radial o Audiovisual).";
+      }
+      if (ppp1StatusBox) {
+        ppp1StatusBox.className = "shrink-0 flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 transition-colors";
+        ppp1StatusBox.innerHTML = '<i data-lucide="clock" class="w-4 h-4"></i><span>Requiere 2 talleres</span>';
+      }
+    }
+
+    // 2. Requisitos Transversales (5: 3 idiomas + 2 seminarios)
+    const passedIdiomas = countPassed(CAREER_LANGUAGES);
+    const passedSeminarios = countPassed(CAREER_SEMINARS);
+    const transversalTotalPassed = passedIdiomas + passedSeminarios;
+
+    const elIdiomas = document.getElementById("careerCountIdiomas");
+    if (elIdiomas) elIdiomas.textContent = `${passedIdiomas}/3`;
+    const elSeminarios = document.getElementById("careerCountSeminarios");
+    if (elSeminarios) elSeminarios.textContent = `${passedSeminarios}/2`;
+    const elTransversalCount = document.getElementById("careerTransversalCount");
+    if (elTransversalCount) elTransversalCount.textContent = `${transversalTotalPassed} / 5 aprobados`;
+
+    // 3. Etapa 2: Orientación (9 materias)
     const currentOri = CAREER_ORIENTATIONS.find(o => o.id === careerPlanData.selectedOrientation) || CAREER_ORIENTATIONS[0];
     const stage2Subs = [
       ...currentOri.stage2.introductory,
       ...currentOri.stage2.applied,
-      ...currentOri.stage2.workshops,
-      ...CAREER_STAGE2_COMMON
+      ...currentOri.stage2.workshops
     ];
     const stage2TotalPassed = countPassed(stage2Subs);
 
     const elStage2Count = document.getElementById("careerStage2Count");
-    if (elStage2Count) elStage2Count.textContent = `${stage2TotalPassed} aprobadas`;
+    if (elStage2Count) elStage2Count.textContent = `${stage2TotalPassed} / 9 aprobadas`;
 
-    // 3. Métrica Total (30 materias de grado)
-    // El plan de Sociales consta de 18 iniciales + 12 orientadas = 30 asignaturas totales
-    const totalPassedAll = Math.min(30, stage1TotalPassed + stage2TotalPassed);
-    const progressPercent = Math.round((totalPassedAll / 30) * 100);
+    // 4. Instancia de Graduación (2: PPP II + TIF)
+    const graduationTotalPassed = countPassed(CAREER_GRADUATION);
+    const elGraduationCount = document.getElementById("careerGraduationCount");
+    if (elGraduationCount) elGraduationCount.textContent = `${graduationTotalPassed} / 2 cumplidos`;
+
+    // 5. Total Carrera (34 requisitos globales)
+    const totalPassedAll = Math.min(34, stage1TotalPassed + transversalTotalPassed + stage2TotalPassed + graduationTotalPassed);
+    const progressPercent = Math.round((totalPassedAll / 34) * 100);
 
     const elPassedCount = document.getElementById("careerMetricPassedCount");
-    if (elPassedCount) elPassedCount.textContent = `${totalPassedAll} de 30`;
+    if (elPassedCount) elPassedCount.textContent = `${totalPassedAll} de 34`;
 
     const elPercent = document.getElementById("careerMetricPercent");
     if (elPercent) elPercent.textContent = `${progressPercent}%`;
@@ -4212,13 +4741,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const elProgressBar = document.getElementById("careerProgressBar");
     if (elProgressBar) elProgressBar.style.width = `${progressPercent}%`;
 
-    // 4. Promedio General Académico
+    // 6. Promedio General Académico
     let scoresSum = 0;
     let scoresCount = 0;
 
-    // Recorrer todas las materias con nota aprobada registrada
     Object.values(careerPlanData.grades).forEach(g => {
-      const res = calculateSubjectStatus(g.p1, g.p2, g.finalGrade);
+      const res = calculateSubjectStatus(g.p1, g.p2, g.finalGrade, !!g.isSufficiency);
       if (res.isPassed && res.score !== null) {
         scoresSum += res.score;
         scoresCount++;
@@ -4235,7 +4763,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // 5. Alerta de PPP I (2 de 4 talleres)
+    // 7. Alertas superiores (PPP I y Pase a Orientación)
     const cardPpp1 = document.getElementById("careerCardAlertPpp1");
     const iconPpp1 = document.getElementById("careerIconPpp1");
     const textPpp1 = document.getElementById("careerStatusPpp1Text");
@@ -4264,7 +4792,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // 6. Alerta de Pase a Ciclo Orientado (18 materias del Ciclo Inicial)
     const cardOriented = document.getElementById("careerCardAlertOriented");
     const iconOriented = document.getElementById("careerIconOriented");
     const textOriented = document.getElementById("careerStatusOrientedText");
@@ -4292,6 +4819,8 @@ document.addEventListener("DOMContentLoaded", () => {
         textOriented.textContent = `${stage1TotalPassed} de 18 del Inicial`;
       }
     }
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   // Inicializar
