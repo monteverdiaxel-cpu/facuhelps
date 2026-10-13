@@ -465,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // 6. Formateo y Renderizado de Transcripción
+  // 6. Formateo y Renderizado de Transcripción (Con colores acordes a FacuHelps y Modo Oscuro)
   function formatTranscript(text) {
     if (!text) return "";
     
@@ -475,22 +475,29 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // Reemplazar negrita de Markdown **texto** (oradores y énfasis)
-    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>');
+    // Reemplazar negrita de Markdown **texto** (destacado en dorado FacuHelps en modo oscuro)
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-[#001b44] dark:text-[#ffc700]">$1</strong>');
 
-    // Reemplazar timestamps tipo [00:01:23] o [01:23]
+    // Reemplazar timestamps tipo o con insignia estilizada
     clean = clean.replace(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g, (match, p1) => {
-      return `<span class="timestamp-tag">[${p1}]</span>`;
+      return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-amber-300 border border-blue-200/50 dark:border-amber-400/30 mr-1.5">[${p1}]</span>`;
     });
 
-    // Reemplazar indicadores de hablantes en negrita si no vinieron en markdown
+    // Reemplazar indicadores de hablantes en negrita si no vinieron con asteriscos
     clean = clean.replace(/(?:^|\n)(Docente|Profesor|Profesora|Alumno|Alumna|Estudiante|Entrevistador|Entrevistadora|Entrevistado|Orador|Persona\s*\d*|Hablante\s*\d*):/gi, (match, p1) => {
-      return `\n<strong class="speaker-tag font-semibold text-slate-900">${p1}:</strong>`;
+      return `\n<strong class="speaker-tag font-bold text-[#001b44] dark:text-[#ffc700]">${p1}:</strong>`;
     });
 
-    // Convertir saltos de línea en párrafos legibles
+    // Convertir saltos de línea en párrafos limpios, legibles y de alto contraste
     const paragraphs = clean.split(/\n\s*\n/);
-    return paragraphs.map((p) => `<p class="mb-3 text-slate-700 leading-relaxed">${p.replace(/\n/g, "<br>")}</p>`).join("");
+    return paragraphs
+      .map((p) => {
+        const trimmed = p.trim();
+        if (!trimmed) return "";
+        return `<p class="mb-3.5 text-sm sm:text-[15px] text-slate-800 dark:text-slate-200 leading-relaxed text-left">${trimmed.replace(/\n/g, "<br>")}</p>`;
+      })
+      .filter(Boolean)
+      .join("");
   }
 
   function getSystemInstructionJS(audioType = "clase") {
