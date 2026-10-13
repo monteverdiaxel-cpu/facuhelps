@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FacuHelps — Transcripción Inteligente de Clases y Entrevistas</title>
+  <!-- Open Graph / WhatsApp Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://facuhelps-comuuba.onrender.com/">
+  <meta property="og:title" content="FacuHelps — Copiloto de Estudio Comu UBA">
+  <meta property="og:description" content="Transcriptor inteligente de clases, organizador de materias con PDFs y plan de estudios interactivo (Plan 504).">
+  <meta name="theme-color" content="#001b44">
+  <meta name="description" content="FacuHelps: Tu espacio integral de estudio universitario para Ciencias de la Comunicación (UBA Sociales).">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Crect width='48' height='48' rx='12' fill='%23001b44' stroke='%23ffc700' stroke-width='1.5' stroke-opacity='0.5'/%3E%3Cpath d='M8 24v0M11 20v8M14 17v14' stroke='%23ffc700' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M17 34c4-3 9-2 15-4 4-1 6-4 6-9V13c-2 4-5 5-9 6-5 1-9 0-12 3' stroke='%23ffc700' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 30v-9' stroke='%23ffc700' stroke-width='1.8' stroke-linecap='round' opacity='0.7'/%3E%3Cpath d='M17 13h13l-3 4H22v4h6l-3 4H22v9h-5V13z' fill='%23ffffff'/%3E%3Cpath d='M41 24v0M38 21v6' stroke='%23ffc700' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -100,20 +107,29 @@
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
-      <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-        Ingresa una o varias claves gratuitas de Google AI Studio separadas por comas. Si se agota la cuota (error 429), el sistema rotará automáticamente a la siguiente clave disponible.
-      </p>
+      <div class="bg-blue-50/60 dark:bg-blue-950/30 p-3.5 rounded-xl border border-blue-100 dark:border-blue-900/40 mb-4 text-xs space-y-2">
+        <p class="font-semibold text-slate-800 dark:text-slate-200">¿Cómo conseguir tu clave gratuita en 1 minuto?</p>
+        <ol class="list-decimal ml-4 space-y-1 text-slate-600 dark:text-slate-300">
+          <li>Hacé clic en el enlace azul de abajo y entrá con tu cuenta de <strong>Google / Gmail</strong>.</li>
+          <li>Tocá el botón azul <strong>"Create API Key"</strong> y copiala.</li>
+          <li>Pegala en el recuadro de abajo y tocá <strong>Guardar</strong>.</li>
+        </ol>
+        <p class="text-[11px] text-amber-700 dark:text-amber-300 font-medium">✨ Es 100% oficial de Google, completamente gratuita y no te pide tarjeta de crédito.</p>
+      </div>
 
       <div class="space-y-4">
         <div>
-          <label for="inputApiKey" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Google AI Studio API Keys (separadas por coma)
-          </label>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="inputApiKey" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Google AI Studio API Key
+            </label>
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Admite varias separadas por coma</span>
+          </div>
           <div class="relative">
             <textarea 
               id="inputApiKey" 
               rows="3"
-              placeholder="AIzaSyKey1..., AIzaSyKey2..., AIzaSyKey3..." 
+              placeholder="Pegá tu clave acá (ej: AIzaSy...)" 
               class="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition resize-none"
             ></textarea>
             <button id="btnToggleShowKey" type="button" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Ver / Ocultar claves">
