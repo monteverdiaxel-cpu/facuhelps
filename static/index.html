@@ -47,13 +47,27 @@
   <!-- Header -->
   <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 transition-colors">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
-      <div id="btnHeaderLogoHome" class="flex items-center gap-2 sm:gap-3 min-w-0 shrink cursor-pointer group" title="Ir al Inicio">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-[#ffc700]/40 shadow-sm shadow-[#001b44]/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform" style="background-color: #001b44;">
-          <i data-lucide="audio-lines" class="w-4 h-4 sm:w-5 sm:h-5" style="color: #ffc700;"></i>
+      <div id="btnHeaderLogoHome" class="flex items-center gap-2.5 sm:gap-3 min-w-0 shrink cursor-pointer group" title="Ir al Inicio">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-[#ffc700]/30 shadow-sm shadow-[#001b44]/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform p-1.5" style="background-color: #001b44;">
+          <!-- SVG: Ondas de audio emergiendo desde páginas de un libro académico abierto -->
+          <svg class="w-full h-full" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Libro abierto base -->
+            <path d="M16 23C13.5 21.5 8 21.5 5 23V11C8 9.5 13.5 9.5 16 11M16 23C18.5 21.5 24 21.5 27 23V11C24 9.5 18.5 9.5 16 11M16 23V11" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            <!-- Ondas de audio verticales emergiendo en dorado -->
+            <line x1="10" y1="7" x2="10" y2="4" stroke="#ffc700" stroke-width="1.8" stroke-linecap="round" />
+            <line x1="14" y1="8" x2="14" y2="2" stroke="#ffc700" stroke-width="1.8" stroke-linecap="round" />
+            <line x1="18" y1="8" x2="18" y2="2" stroke="#ffc700" stroke-width="1.8" stroke-linecap="round" />
+            <line x1="22" y1="7" x2="22" y2="4" stroke="#ffc700" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
         </div>
         <div class="min-w-0">
-          <h1 class="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-tight truncate transition-colors">FacuHelps</h1>
-          <p class="hidden sm:block text-xs text-slate-500 dark:text-slate-400 font-medium truncate">Tu copiloto para clases, entrevistas y conferencias</p>
+          <div class="flex items-center tracking-tight leading-none">
+            <span class="font-heading font-extrabold text-slate-900 dark:text-white text-base sm:text-lg tracking-tight">Facu</span>
+            <span class="font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-500 text-base sm:text-lg tracking-tight ml-0.5">Helps</span>
+          </div>
+          <p class="hidden sm:block text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5 font-sans">
+            Copiloto de IA y gestión académica universitaria
+          </p>
         </div>
       </div>
 
@@ -517,32 +531,56 @@
         <!-- Vista 1: Transcriptor (oculta por defecto) -->
         <div id="viewTranscriptor" class="space-y-6 hidden">
 
-      <!-- Hero / Intro -->
-      <div class="text-center max-w-2xl mx-auto pt-2 pb-4">
-        <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          Transcripción de audio inteligente
-        </h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-          Sube grabaciones de clases universitarias, entrevistas o conferencias de hasta 2 horas. FacuHelps genera una transcripción fiel palabra por palabra, estructurada por oradores y párrafos con exportación a Word.
-        </p>
+      <!-- Hero / Intro Banner Estilizado -->
+      <div class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 text-center shadow-sm">
+        <div class="absolute inset-0 bg-grid-subtle pointer-events-none opacity-50"></div>
+        <div class="relative z-10 max-w-2xl mx-auto">
+          <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-950 dark:text-amber-300 font-semibold mb-3 border border-amber-400/40 text-[11px] shadow-2xs">
+            <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-500"></i>
+            <span>🎙️ Motor de Transcripción con IA</span>
+          </div>
+          <h2 class="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Transcripción de Alta Fidelidad
+          </h2>
+          <p class="font-editorial italic text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-2">
+            Transformá clases y conferencias de hasta 2 horas en texto estructurado
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl mx-auto font-sans">
+            Fidelidad textual palabra por palabra sin omitir contenido, diferenciación de oradores y exportación directa a Word (.docx) y PDF.
+          </p>
+        </div>
       </div>
 
     <!-- Dropzone Card -->
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 transition-colors">
       <div 
         id="dropZone" 
-        class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-blue-50/30 dark:hover:bg-slate-800/60 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+        class="relative overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-blue-50/30 dark:hover:bg-slate-800/60 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
       >
+        <!-- Ondas de audio sutiles de fondo para dinamismo -->
+        <div class="absolute inset-x-0 bottom-0 h-16 opacity-10 dark:opacity-20 pointer-events-none flex items-end justify-center gap-1.5 px-4 overflow-hidden">
+          <span class="w-1.5 h-6 bg-blue-900 dark:bg-amber-400 rounded-full animate-pulse"></span>
+          <span class="w-1.5 h-10 bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 150ms;"></span>
+          <span class="w-1.5 h-14 bg-blue-900 dark:bg-amber-400 rounded-full animate-pulse" style="animation-delay: 300ms;"></span>
+          <span class="w-1.5 h-8 bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 75ms;"></span>
+          <span class="w-1.5 h-12 bg-blue-900 dark:bg-amber-400 rounded-full animate-pulse" style="animation-delay: 220ms;"></span>
+          <span class="w-1.5 h-5 bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 380ms;"></span>
+          <span class="w-1.5 h-9 bg-blue-900 dark:bg-amber-400 rounded-full animate-pulse" style="animation-delay: 120ms;"></span>
+          <span class="w-1.5 h-13 bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 290ms;"></span>
+          <span class="w-1.5 h-7 bg-blue-900 dark:bg-amber-400 rounded-full animate-pulse" style="animation-delay: 180ms;"></span>
+          <span class="w-1.5 h-11 bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 340ms;"></span>
+        </div>
+
         <input type="file" id="fileInput" accept="audio/*, .mp3, .m4a, .aac, .ogg, audio/mp3, audio/mpeg, audio/mp4, audio/x-m4a, audio/aac, audio/ogg" class="hidden">
         
-        <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner">
+        <div class="relative z-10 w-14 h-14 rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner border border-blue-900/10 dark:border-amber-400/20">
           <i data-lucide="upload-cloud" class="w-7 h-7"></i>
         </div>
 
-        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">
+        <p class="relative z-10 text-sm font-semibold text-slate-800 dark:text-slate-200 font-sans">
           Arrastra tu archivo de audio aquí o <span class="text-blue-900 dark:text-amber-400 group-hover:underline">haz clic para examinar</span>
         </p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
+        <p class="relative z-10 text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium font-sans">
           Formatos compatibles: MP3, M4A, AAC, OGG (no se admite WAV por tamaño excesivo)
         </p>
       </div>
@@ -872,17 +910,23 @@
     <div id="viewOrganizer" class="space-y-6 hidden">
 
       <!-- Encabezado del Organizador y Migas de Pan (Breadcrumbs) -->
-      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-4 sm:p-6 transition-colors">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="bg-gradient-to-b from-slate-50 via-amber-50/20 to-white dark:from-slate-900 dark:via-amber-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-5 sm:p-7 transition-colors relative overflow-hidden">
+        <div class="absolute inset-0 bg-grid-subtle pointer-events-none opacity-40"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="min-w-0">
+            <!-- Badge superior unificado -->
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/70 border border-amber-400/40 text-amber-900 dark:text-amber-300 text-[11px] font-semibold mb-2 shadow-2xs">
+              <i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>📁 Biblioteca de Cursada & Apuntes</span>
+            </div>
             <!-- Migas de Pan dinámicas -->
-            <nav id="orgBreadcrumbs" aria-label="Migas de pan" class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium overflow-x-auto py-1">
+            <nav id="orgBreadcrumbs" aria-label="Migas de pan" class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium overflow-x-auto py-0.5">
               <!-- Renderizado dinámico: Materias > Materia > Subcarpeta -->
             </nav>
-            <h2 id="orgCurrentTitle" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 truncate">
+            <h2 id="orgCurrentTitle" class="font-heading text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 truncate">
               Materias
             </h2>
-            <p id="orgCurrentSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p id="orgCurrentSubtitle" class="font-editorial italic text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               Organizador académico 100% privado en tu navegador (IndexedDB local)
             </p>
           </div>
@@ -893,7 +937,7 @@
               id="btnNewSubjectModal" 
               type="button" 
               style="background-color: #001b44; color: #ffffff;"
-              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-medium text-xs shadow-sm transition"
+              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-semibold text-xs shadow-sm transition border border-[#ffc700]/30"
             >
               <i data-lucide="plus" class="w-4 h-4 text-[#ffc700]"></i>
               <span>+ Nueva Materia</span>
@@ -902,7 +946,7 @@
               id="btnNewFolderModal" 
               type="button" 
               style="background-color: #001b44; color: #ffffff;"
-              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-medium text-xs shadow-sm transition"
+              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-semibold text-xs shadow-sm transition border border-[#ffc700]/30"
             >
               <i data-lucide="folder-plus" class="w-4 h-4 text-[#ffc700]"></i>
               <span>+ Nueva Subcarpeta</span>
@@ -916,15 +960,35 @@
         <div id="orgSubjectsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <!-- Renderizado dinámico de tarjetas de materias -->
         </div>
-        <div id="orgSubjectsEmpty" class="hidden py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-8">
-          <div class="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-3">
-            <i data-lucide="folder" class="w-7 h-7"></i>
+        <div id="orgSubjectsEmpty" class="hidden py-14 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-xs">
+          <!-- Micro-ilustración vectorial: libreta académica y pluma en azul marino y oro -->
+          <div class="w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-full h-full" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="18" y="16" width="52" height="64" rx="6" fill="#001b44" stroke="#ffc700" stroke-width="2" />
+              <!-- Espiral del cuaderno -->
+              <circle cx="26" cy="24" r="3" fill="#ffffff" />
+              <circle cx="26" cy="36" r="3" fill="#ffffff" />
+              <circle cx="26" cy="48" r="3" fill="#ffffff" />
+              <circle cx="26" cy="60" r="3" fill="#ffffff" />
+              <circle cx="26" cy="72" r="3" fill="#ffffff" />
+              <!-- Líneas de notas -->
+              <line x1="36" y1="28" x2="60" y2="28" stroke="#ffc700" stroke-width="2" stroke-linecap="round" />
+              <line x1="36" y1="38" x2="56" y2="38" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+              <line x1="36" y1="48" x2="58" y2="48" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+              <line x1="36" y1="58" x2="52" y2="58" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+              <!-- Pluma en perspectiva cruzada -->
+              <g transform="translate(48, 28) rotate(25)">
+                <path d="M12 0L20 8L10 38L2 38L0 30L12 0Z" fill="#ffc700" />
+                <path d="M10 38L0 44L2 38H10Z" fill="#001b44" />
+                <line x1="12" y1="0" x2="2" y2="38" stroke="#001b44" stroke-width="1.2" />
+              </g>
+            </svg>
           </div>
-          <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">No hay materias creadas todavía</h3>
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
+          <h3 class="font-heading text-base font-bold text-slate-900 dark:text-slate-100">No hay materias creadas todavía</h3>
+          <p class="font-editorial italic text-xs text-slate-400 dark:text-slate-500 mt-1.5 max-w-sm mx-auto">
             Crea tu primera materia para comenzar a organizar apuntes, clases y lecturas en PDF.
           </p>
-          <button id="btnNewSubjectEmpty" style="background-color: #001b44; color: #ffffff;" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-[#002d72] font-medium text-xs shadow-sm transition">
+          <button id="btnNewSubjectEmpty" style="background-color: #001b44; color: #ffffff;" class="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl hover:bg-[#002d72] font-semibold text-xs shadow-sm transition border border-[#ffc700]/40">
             <i data-lucide="plus" class="w-4 h-4 text-[#ffc700]"></i>
             <span>Crear primera materia</span>
           </button>
@@ -965,10 +1029,20 @@
             <!-- Render dinámico de tarjetas de notas -->
           </div>
 
-          <!-- Estado Vacío de Notas -->
-          <div id="orgNotesEmpty" class="py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20">
-            <p class="text-xs text-slate-400 dark:text-slate-500">
-              No hay notas en esta materia. Creá tu primera nota para anotar fechas, dudas o recordatorios.
+          <!-- Estado Vacío de Notas con Micro-ilustración -->
+          <div id="orgNotesEmpty" class="py-8 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/20">
+            <div class="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+              <svg class="w-full h-full" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="14" y="10" width="36" height="44" rx="4" fill="#ffffff" class="dark:fill-slate-800" stroke="#001b44" stroke-width="1.8" />
+                <path d="M22 20H42" stroke="#ffc700" stroke-width="2" stroke-linecap="round" />
+                <path d="M22 28H38" stroke="#cbd5e1" class="dark:stroke-slate-600" stroke-width="1.6" stroke-linecap="round" />
+                <path d="M22 36H40" stroke="#cbd5e1" class="dark:stroke-slate-600" stroke-width="1.6" stroke-linecap="round" />
+                <circle cx="44" cy="44" r="7" fill="#001b44" stroke="#ffc700" stroke-width="1.4" />
+                <path d="M42 44L43.5 45.5L46.5 42.5" stroke="#ffc700" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400">
+              No hay notas en esta materia. Creá tu primera nota para registrar fechas de parciales, dudas o conceptos.
             </p>
           </div>
         </div>
@@ -981,8 +1055,8 @@
                 <i data-lucide="folder-tree" class="w-4 h-4"></i>
               </div>
               <div>
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Subcarpetas temáticas</h3>
-                <p class="text-[11px] text-slate-500 dark:text-slate-400">Opcional: Organiza por Teóricos, Prácticos o Bibliografía si lo deseas</p>
+                <h3 class="font-heading text-sm font-semibold text-slate-900 dark:text-slate-100">Subcarpetas temáticas</h3>
+                <p class="font-editorial italic text-[11px] text-slate-500 dark:text-slate-400">Opcional: Organiza por Teóricos, Prácticos o Bibliografía si lo deseas</p>
               </div>
             </div>
           </div>
@@ -991,7 +1065,7 @@
             <!-- Renderizado dinámico de tarjetas de subcarpetas -->
           </div>
           <div id="orgFoldersEmpty" class="py-6 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-            <p class="text-xs text-slate-400 dark:text-slate-500">Sin subcarpetas creadas (puedes subir tus PDFs directamente abajo)</p>
+            <p class="font-editorial italic text-xs text-slate-400 dark:text-slate-500">Sin subcarpetas creadas (puedes subir tus PDFs directamente abajo)</p>
           </div>
         </div>
 
@@ -1009,7 +1083,7 @@
             <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
               <span id="orgPdfDropZoneLabel">Arrastra tus archivos PDF aquí a la materia</span> o <span class="text-[#002d72] dark:text-[#ffc700] group-hover:underline">haz clic para examinar</span>
             </p>
-            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-sans">
               Solo archivos .pdf • Almacenamiento local persistente con IndexedDB
             </p>
           </div>
@@ -1017,7 +1091,7 @@
           <!-- Lista de PDFs -->
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 font-heading">
                 <i data-lucide="files" class="w-4 h-4 text-[#ffc700]"></i>
                 <span id="orgPdfSectionTitle">Documentos PDF de la materia</span>
               </span>
@@ -1028,12 +1102,24 @@
               <!-- Renderizado dinámico de filas de PDFs -->
             </div>
 
-            <div id="orgPdfEmpty" class="hidden py-12 text-center p-6">
-              <div class="w-10 h-10 mx-auto rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-2">
-                <i data-lucide="file-text" class="w-5 h-5"></i>
+            <!-- Estado Vacío de PDFs con Micro-ilustración -->
+            <div id="orgPdfEmpty" class="hidden py-10 text-center p-6">
+              <div class="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Carpeta en perspectiva -->
+                  <path d="M10 22C10 19.8 11.8 18 14 18H26L31 23H50C52.2 23 54 24.8 54 27V48C54 50.2 52.2 52 50 52H14C11.8 52 10 50.2 10 48V22Z" fill="#001b44" stroke="#ffc700" stroke-width="1.6" />
+                  <!-- Hoja PDF asomando -->
+                  <g transform="translate(24, 12)">
+                    <rect x="0" y="0" width="22" height="28" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2" />
+                    <rect x="3" y="3" width="7" height="4" rx="1" fill="#001b44" />
+                    <line x1="3" y1="11" x2="19" y2="11" stroke="#ffc700" stroke-width="1.5" stroke-linecap="round" />
+                    <line x1="3" y1="16" x2="19" y2="16" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round" />
+                    <line x1="3" y1="20" x2="15" y2="20" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round" />
+                  </g>
+                </svg>
               </div>
-              <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Aún no hay archivos PDF guardados aquí</p>
-              <p class="text-[11px] text-slate-400 mt-0.5">Arrastra uno en la zona superior para guardarlo localmente.</p>
+              <p class="font-heading text-xs font-semibold text-slate-700 dark:text-slate-300">Aún no hay archivos PDF guardados aquí</p>
+              <p class="font-editorial italic text-[11px] text-slate-400 mt-0.5">Arrastra uno en la zona superior para guardarlo localmente.</p>
             </div>
           </div>
         </div>
@@ -1055,10 +1141,10 @@
               <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-amber-500"></i>
               <span>Plan de Estudios 504 • FSOC UBA</span>
             </div>
-            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+            <h2 class="font-heading text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               Lic. en Ciencias de la Comunicación
             </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Seguimiento académico de materias, cálculo automático de notas y explorador de orientaciones.
             </p>
           </div>
@@ -1076,15 +1162,15 @@
         <!-- Métrica 1: Progreso de Materias -->
         <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Materias Aprobadas</span>
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Materias Aprobadas</span>
             <div class="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-amber-300 flex items-center justify-center">
               <i data-lucide="book-check" class="w-4 h-4"></i>
             </div>
           </div>
           <div class="mt-2.5">
             <div class="flex items-baseline justify-between gap-1">
-              <span id="careerMetricPassedCount" class="text-2xl font-extrabold text-slate-900 dark:text-slate-100">0 de 34</span>
-              <span id="careerMetricPercent" class="text-xs font-bold text-[#001b44] dark:text-[#ffc700]">0%</span>
+              <span id="careerMetricPassedCount" class="font-heading text-2xl font-extrabold text-slate-900 dark:text-slate-100">0 de 34</span>
+              <span id="careerMetricPercent" class="font-heading text-xs font-bold text-[#001b44] dark:text-[#ffc700]">0%</span>
             </div>
             <!-- Barra de progreso -->
             <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mt-1.5 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
@@ -1100,17 +1186,17 @@
         <!-- Métrica 2: Promedio General Académico -->
         <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Promedio General</span>
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Promedio General</span>
             <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-300 flex items-center justify-center">
               <i data-lucide="award" class="w-4 h-4"></i>
             </div>
           </div>
           <div class="mt-2.5">
             <div class="flex items-baseline gap-2">
-              <span id="careerMetricAverage" class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100">-</span>
-              <span class="text-xs text-slate-400">en vivo</span>
+              <span id="careerMetricAverage" class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100">-</span>
+              <span class="font-editorial italic text-xs text-slate-400">en vivo</span>
             </div>
-            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+            <p class="font-editorial italic text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
               Basado en promociones y exámenes finales
             </p>
           </div>
@@ -1119,16 +1205,16 @@
         <!-- Métrica 3: Alerta de PPP I -->
         <div id="careerCardAlertPpp1" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Habilitación PPP I</span>
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Habilitación PPP I</span>
             <div id="careerIconPpp1" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors">
               <i data-lucide="check-circle-2" class="w-4 h-4"></i>
             </div>
           </div>
           <div class="mt-2.5">
-            <div id="careerStatusPpp1Text" class="text-sm font-bold text-slate-700 dark:text-slate-300">
+            <div id="careerStatusPpp1Text" class="font-heading text-sm font-bold text-slate-700 dark:text-slate-300">
               Pendiente (0/2 talleres)
             </div>
-            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+            <p class="font-editorial italic text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
               Requiere 2 de los 4 talleres del Área Práctica
             </p>
           </div>
@@ -1137,16 +1223,16 @@
         <!-- Métrica 4: Alerta de Pase a Ciclo Orientado -->
         <div id="careerCardAlertOriented" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Pase a Ciclo Orientado</span>
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Pase a Ciclo Orientado</span>
             <div id="careerIconOriented" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors">
               <i data-lucide="compass" class="w-4 h-4"></i>
             </div>
           </div>
           <div class="mt-2.5">
-            <div id="careerStatusOrientedText" class="text-sm font-bold text-slate-700 dark:text-slate-300">
+            <div id="careerStatusOrientedText" class="font-heading text-sm font-bold text-slate-700 dark:text-slate-300">
               0 de 18 del Inicial
             </div>
-            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+            <p class="font-editorial italic text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
               Requiere completar las 18 materias del Ciclo Inicial
             </p>
           </div>
@@ -1157,11 +1243,11 @@
       <div class="space-y-3.5">
         <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>📘 Etapa 1: Ciclo Inicial</span>
               <span class="text-xs bg-[#001b44] text-[#ffc700] font-bold px-2.5 py-0.5 rounded-full">18 Asignaturas</span>
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Tronco común universitario: Área Comunicacional, Talleres Prácticos, Ciencias Sociales y Problemas del Campo.
             </p>
           </div>
@@ -1173,9 +1259,9 @@
           <!-- 1.1 Área Comunicacional (9 obligatorias) -->
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
-              <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>🗣️ Área Comunicacional</span>
-                <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(9 materias obligatorias)</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(9 materias obligatorias)</span>
               </h4>
               <span id="careerCountComArea" class="text-xs font-mono text-slate-400">0/9</span>
             </div>
@@ -1185,9 +1271,9 @@
           <!-- 1.2 Área Práctica (4 talleres obligatorios) -->
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
-              <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>✍️ Área Práctica</span>
-                <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(4 talleres obligatorios • 2 habilitan PPP I)</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(4 talleres obligatorios • 2 habilitan PPP I)</span>
               </h4>
               <span id="careerCountPractArea" class="text-xs font-mono text-slate-400">0/4</span>
             </div>
@@ -1202,12 +1288,12 @@
               </div>
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100">Prácticas Preprofesionales I (PPP I)</h4>
+                  <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100">Prácticas Preprofesionales I (PPP I)</h4>
                   <span id="careerPpp1Badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                     Pendiente (0/2 talleres)
                   </span>
                 </div>
-                <p id="careerPpp1Desc" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p id="careerPpp1Desc" class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Se acredita automáticamente al aprobar al menos 2 de los 4 talleres del Área Práctica (Escritura, Redacción, Radial o Audiovisual).
                 </p>
               </div>
@@ -1221,9 +1307,9 @@
           <!-- 1.3 Área Ciencias Sociales (Se eligen 3 de 5) -->
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
-              <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>📚 Área Ciencias Sociales</span>
-                <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(Elegí 3 de las 5 disponibles • Con perfilado)</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(Elegí 3 de las 5 disponibles • Con perfilado)</span>
               </h4>
               <span id="careerCountSocArea" class="text-xs font-mono text-slate-400">0/3</span>
             </div>
@@ -1233,9 +1319,9 @@
           <!-- 1.4 Área Problemas del Campo (Se eligen 2 de 3) -->
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
-              <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>🧭 Área Problemas del Campo</span>
-                <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(Elegí 2 de las 3 disponibles • Requiere 7 materias + 1 taller)</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(Elegí 2 de las 3 disponibles • Requiere 7 materias + 1 taller)</span>
               </h4>
               <span id="careerCountProbArea" class="text-xs font-mono text-slate-400">0/2</span>
             </div>
@@ -1248,13 +1334,13 @@
       <div class="space-y-3.5">
         <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>🌐 Requisitos Transversales</span>
               <span class="text-xs bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-300/40">
                 Habilitados desde el tramo inicial
               </span>
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Idiomas extranjeros y Seminarios optativos: podés rendirlos o cursarlos en paralelo sin esperar a terminar el Ciclo Inicial.
             </p>
           </div>
@@ -1266,7 +1352,7 @@
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
               <div class="flex items-center gap-2 flex-wrap">
-                <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span>🌍 Idiomas Extranjeros</span>
                 </h4>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
@@ -1282,11 +1368,11 @@
           <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
               <div class="flex items-center gap-2 flex-wrap">
-                <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span>📑 Seminarios Optativos</span>
-                  <span class="text-[11px] font-normal text-slate-400 dark:text-slate-500">(2 seminarios de grado a elección)</span>
+                  <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(2 seminarios de grado a elección)</span>
                 </h4>
-                <span class="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                <span class="font-editorial italic text-[10px] text-slate-400 dark:text-slate-500">
                   Podés personalizar el nombre de cada seminario cursado
                 </span>
               </div>
@@ -1301,11 +1387,11 @@
       <div class="space-y-3 p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 shadow-xs">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/60 dark:border-slate-800 pb-2.5">
           <div class="flex items-center gap-2 flex-wrap">
-            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 class="font-heading text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <i data-lucide="compass" class="w-4 h-4 text-[#001b44] dark:text-[#ffc700]"></i>
               <span>Orientaciones Profesionales</span>
             </h3>
-            <span class="text-[11px] text-slate-500 dark:text-slate-400">Conmutador rápido (actualiza el Ciclo Orientado debajo)</span>
+            <span class="font-editorial italic text-[11px] text-slate-500 dark:text-slate-400">Conmutador rápido (actualiza el Ciclo Orientado debajo)</span>
           </div>
           <div id="careerCurrentOrientationBadge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-[#ffc700]/40 text-blue-900 dark:text-[#ffc700] text-[11px] font-semibold">
             <i data-lucide="check" class="w-3 h-3 text-[#ffc700]"></i>
@@ -1322,11 +1408,11 @@
       <div class="space-y-3.5">
         <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>🎓 Etapa 2: Ciclo Orientado</span>
               <span id="careerStage2OrientationBadge" class="text-xs bg-[#ffc700] text-[#001b44] font-bold px-2.5 py-0.5 rounded-full">Orientación Seleccionada</span>
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               9 asignaturas específicas de la orientación (3 Introductorias, 4 Aplicadas y 2 Talleres).
             </p>
           </div>
@@ -1342,13 +1428,13 @@
       <div class="space-y-3.5">
         <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>🎯 Instancia de Graduación / Cierre</span>
               <span class="text-xs bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300/40">
                 Título de Grado
               </span>
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Prácticas Preprofesionales II (60 hs de trabajo asistido) y Taller de Trabajo Integrador Final (TIF).
             </p>
           </div>
