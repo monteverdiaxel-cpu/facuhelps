@@ -646,44 +646,6 @@ document.addEventListener("DOMContentLoaded", () => {
         data = await uriRes.json();
         usedDirectUpload = true;
 
-      } catch (directUploadErr) {
-        console.warn("Subida directa falló o no disponible. Realizando fallback a /api/transcribe:", directUploadErr);
-        data = null; // Dispara el fallback abajo
-      }
-
-      // 2. FALLBACK habitual con FormData si falló la subida directa
-      if (!data) {
-        setProgressStep("local");
-        const formData = new FormData();
-        formData.append("file", currentFile);
-        if (apiKey) {
-          formData.append("api_key", apiKey);
-        }
-        formData.append("audio_type", currentAudioType || "clase");
-        const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
-        formData.append("model_name", selectedModelName);
-        if (inputKeywords && inputKeywords.value.trim()) {
-          formData.append("keywords", inputKeywords.value.trim());
-        }
-
-        setProgressStep("cloud");
-        const response = await fetch("/api/transcribe", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errMsg = "Error en el servidor al procesar el audio.";
-          try {
-            errMsg = JSON.parse(errorText).detail || errMsg;
-          } catch (e) {}
-          throw new Error(errMsg);
-        }
-
-        data = await response.json();
-      }
-
       rawTranscriptText = data.transcript || "";
 
       if (!rawTranscriptText.trim()) {
