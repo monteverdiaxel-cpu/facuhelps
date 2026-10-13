@@ -179,6 +179,15 @@ async def get_config():
         "default_model": os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     }
 
+@app.get("/api/key-pool")
+async def get_key_pool():
+    keys = parse_api_keys(os.getenv("GEMINI_API_KEY", ""))
+    return {
+        "has_keys": len(keys) > 0,
+        "keys": keys,
+        "default_model": os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    }
+
 @app.post("/api/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),

@@ -107,6 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let rawSummaryText = "";
   let isSummaryCollapsed = false;
   let hasServerApiKey = false;
+  let serverKeyPool = [];
 
   function getActiveBaseName() {
     let name = currentActiveFileName || (currentFile ? currentFile.name : "") || "transcripcion";
@@ -164,19 +165,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch("/api/config");
+      const res = await fetch("/api/key-pool");
       if (res.ok) {
         const data = await res.json();
-        hasServerApiKey = data.has_server_api_key;
+        serverKeyPool = Array.isArray(data.keys) ? data.keys : [];
+        hasServerApiKey = Boolean(data.has_keys || serverKeyPool.length > 0);
         if (hasServerApiKey) {
           envKeyNotice.classList.remove("hidden");
           if (!savedKey) {
-            updateApiKeyStatus(true, "Clave en .env");
+            updateApiKeyStatus(true, serverKeyPool.length > 1 ? `${serverKeyPool.length} Claves (.env)` : "Clave en .env");
+          }
+        }
+      } else {
+        // Fallback a /api/config si /api/key-pool no respondiera
+        const cfgRes = await fetch("/api/config");
+        if (cfgRes.ok) {
+          const cfgData = await cfgRes.json();
+          hasServerApiKey = cfgData.has_server_api_key;
+          if (hasServerApiKey) {
+            envKeyNotice.classList.remove("hidden");
+            if (!savedKey) updateApiKeyStatus(true, "Clave en .env");
           }
         }
       }
     } catch (e) {
-      console.warn("No se pudo verificar /api/config:", e);
+      console.warn("No se pudo verificar configuración del servidor:", e);
     }
   }
 
@@ -480,13 +493,82 @@ document.addEventListener("DOMContentLoaded", () => {
     return paragraphs.map((p) => `<p class="mb-3 text-slate-700 leading-relaxed">${p.replace(/\n/g, "<br>")}</p>`).join("");
   }
 
-  // 7. Iniciar Proceso de Transcripción
+  function getSystemInstructionJS(audioType = "clase") {
+    let speakerRules = "";
+    if (audioType === "continuo") {
+      speakerRules = `3. SIN DIFERENCIAR HABLANTES (TEXTO CONTINUO EN PÁRRAFOS):
+   - NO incluyas NINGUNA etiqueta de orador bajo ninguna circunstancia.
+   - Transcribe todo de corrido organizado únicamente en párrafos limpios con puntos y aparte claros.`;
+    } else if (audioType === "entrevista") {
+      speakerRules = `3. UNIFORMIDAD TOTAL DE ORADORES (ENTREVISTA):
+   - NO utilices nombres propios como etiquetas.
+   - Utiliza OBLIGATORIAMENTE las etiquetas en negrita: **Entrevistador:** y **Entrevistado:**.`;
+    } else if (audioType === "radio") {
+      speakerRules = `3. UNIFORMIDAD TOTAL DE ORADORES (RADIO / PODCAST / DEBATE):
+   - Identifica y distingue a todos los hablantes usando ESTRICTAMENTE: **Persona 1:**, **Persona 2:**, etc.`;
+    } else {
+      speakerRules = `3. UNIFORMIDAD TOTAL DE ORADORES (CLASE / TEÓRICO):
+   - Utiliza OBLIGATORIAMENTE las etiquetas en negrita: **Docente:** y **Estudiante:**.`;
+    }
+
+    return `Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
+Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma fiel, con una estructura de lectura limpia, clara y sin marcas de tiempo.
+
+REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
+1. FIDELIDAD TEXTUAL SIN RESUMIR: Transcribe el contenido íntegro hasta la última palabra sin omitir nada.
+2. FILTRO Y TOLERANCIA A RUIDO Y ECO: Aísla la voz principal del orador e ignora el ruido ambiente.
+${speakerRules}
+4. LIMPIEZA DE HABLA: Elimina tartamudeos involuntarios y muletillas sonoras ("eh", "mmm").
+5. USO DE COMILLAS: Emplea exclusivamente comillas dobles estándar ("...").
+6. PROHIBIDAS LAS MARCAS DE TIEMPO: Cero timestamps [mm:ss].
+7. SIN INTRODUCCIONES NI NOTAS: Comienza directamente con la transcripción.`;
+  }
+
+  function getUserPromptJS(audioType = "clase", keywords = "") {
+    let speakerHint = "";
+    if (audioType === "continuo") speakerHint = "- Formato: SIN etiquetas de orador.";
+    else if (audioType === "entrevista") speakerHint = "- Formato: **Entrevistador:** y **Entrevistado:**.";
+    else if (audioType === "radio") speakerHint = "- Formato: **Persona 1:**, **Persona 2:**, etc.";
+    else speakerHint = "- Formato: **Docente:** y **Estudiante:**.";
+
+    const kw = keywords.trim() ? `\n- Atención a vocabulario específico: asegura correcta ortografía en: ${keywords.trim()}.` : "";
+    return `Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
+${speakerHint}${kw}
+- Limpieza de habla: elimina tartamudeos y muletillas ("eh", "mmm").
+- Comillas dobles estándar ("...").
+- PROHIBIDO incluir marcas de tiempo o timestamps.`;
+  }
+
+  // 7. Iniciar Proceso de Transcripción (Opción 2: Client-Side Directo Navegador ➔ Google AI Studio con Streaming)
   btnStartTranscribe.addEventListener("click", async () => {
     if (!currentFile) return;
 
-    const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
-    if (!apiKey && !hasServerApiKey) {
-      showError("Falta la API Key", "Por favor ingresa tu API Key de Google AI Studio en el botón superior antes de continuar.");
+    // Asegurar que tengamos las claves del servidor si no se cargaron previamente
+    if (serverKeyPool.length === 0) {
+      try {
+        const poolRes = await fetch("/api/key-pool");
+        if (poolRes.ok) {
+          const poolData = await poolRes.json();
+          serverKeyPool = Array.isArray(poolData.keys) ? poolData.keys : [];
+          hasServerApiKey = Boolean(poolData.has_keys || serverKeyPool.length > 0);
+        }
+      } catch (e) {
+        console.warn("No se pudo refrescar /api/key-pool:", e);
+      }
+    }
+
+    // Resolver Pool de Claves: Claves de LocalStorage + Claves del .env del servidor
+    const localRaw = (localStorage.getItem("gemini_api_key") || "").trim();
+    const localKeys = localRaw
+      ? localRaw.split(/[,;\n\r]+/).map((k) => k.trim()).filter((k) => k.length > 0)
+      : [];
+
+    const activeKeyPool = [];
+    localKeys.forEach((k) => { if (!activeKeyPool.includes(k)) activeKeyPool.push(k); });
+    serverKeyPool.forEach((k) => { if (!activeKeyPool.includes(k)) activeKeyPool.push(k); });
+
+    if (activeKeyPool.length === 0) {
+      showError("Falta la API Key", "Por favor ingresa tu API Key gratuita de Google AI Studio en el botón superior antes de continuar.");
       apiKeyModal.classList.remove("hidden");
       return;
     }
@@ -498,93 +580,76 @@ document.addEventListener("DOMContentLoaded", () => {
     if (searchTranscript) searchTranscript.value = "";
     if (searchCount) searchCount.classList.add("hidden");
     rawSummaryText = "";
+    rawTranscriptText = "";
     progressCard.classList.remove("hidden");
     btnStartTranscribe.disabled = true;
 
     startTimer();
     setProgressStep("local");
 
-    try {
-      let data = null;
-
-      const clientApiKey = apiKey ? apiKey.split(/[,;\n\r]+/)[0].trim() : "";
-
-      const getFileMimeType = (audioFile = currentFile) => {
-        if (!audioFile) return "audio/mp3";
-        const ext = "." + (audioFile.name.split(".").pop() || "").toLowerCase();
-        const map = {
-          ".mp3": "audio/mp3",
-          ".m4a": "audio/mp4",
-          ".aac": "audio/aac",
-          ".ogg": "audio/ogg",
-          ".flac": "audio/flac",
-          ".webm": "audio/webm",
-          ".wma": "audio/x-ms-wma"
-        };
-        return map[ext] || audioFile.type || "audio/mp3";
+    const getFileMimeType = (audioFile = currentFile) => {
+      if (!audioFile) return "audio/mp3";
+      const ext = "." + (audioFile.name.split(".").pop() || "").toLowerCase();
+      const map = {
+        ".mp3": "audio/mp3",
+        ".m4a": "audio/mp4",
+        ".aac": "audio/aac",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".webm": "audio/webm",
+        ".wma": "audio/x-ms-wma"
       };
+      return map[ext] || audioFile.type || "audio/mp3";
+    };
 
-      const cleanFileName = ((currentFile && currentFile.name) || "audio")
-        .normalize("NFKD")
-        .replace(/[^\w.-]/g, "_")
-        .replace(/_+/g, "_");
+    const cleanFileName = ((currentFile && currentFile.name) || "audio")
+      .normalize("NFKD")
+      .replace(/[^\w.-]/g, "_")
+      .replace(/_+/g, "_");
 
+    const mimeType = getFileMimeType(currentFile);
+    const selectedModel = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
+
+    const cleanKw = inputKeywords ? inputKeywords.value.trim() : "";
+    const systemInstructionText = getSystemInstructionJS(currentAudioType || "clase");
+    const userPromptText = getUserPromptJS(currentAudioType || "clase", cleanKw);
+
+    let success = false;
+    let lastError = null;
+
+    try {
+      // 1. Solicitar sesión de subida a nuestro endpoint backend (evita CORS al crear la sesión)
       setProgressStep("cloud");
-      const mimeType = getFileMimeType(currentFile);
-      let uploadUrl = null;
-      let usedKeyIndex = 0;
+      progressTitle.textContent = "Iniciando sesión de subida...";
+      progressSubtitle.textContent = "Conectando con Google AI Studio a través de nuestro servidor...";
 
-      if (clientApiKey) {
-        // Subida directa con clave del cliente
-        const startUploadRes = await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${encodeURIComponent(clientApiKey)}`, {
-          method: "POST",
-          headers: {
-            "X-Goog-Upload-Protocol": "resumable",
-            "X-Goog-Upload-Command": "start",
-            "X-Goog-Upload-Header-Content-Length": currentFile.size.toString(),
-            "X-Goog-Upload-Header-Content-Type": mimeType,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            file: {
-              display_name: cleanFileName
-            }
-          })
-        });
+      const sessionRes = await fetch("/api/get-upload-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: cleanFileName,
+          mime_type: mimeType,
+          file_size: currentFile.size,
+          api_key: localRaw || null
+        })
+      });
 
-        if (!startUploadRes.ok) {
-          throw new Error(`Google upload handshake failed (${startUploadRes.status})`);
-        }
-
-        uploadUrl = startUploadRes.headers.get("x-goog-upload-url");
-      } else {
-        // Subida directa solicitando sesión al servidor (usa .env con rotación)
-        const sessionRes = await fetch("/api/get-upload-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: cleanFileName,
-            mime_type: mimeType,
-            file_size: currentFile.size,
-            api_key: apiKey || null
-          })
-        });
-
-        if (!sessionRes.ok) {
-          const errData = await sessionRes.json().catch(() => ({}));
-          throw new Error(errData.detail || "Error al solicitar sesión de subida al servidor.");
-        }
-
-        const sessionData = await sessionRes.json();
-        uploadUrl = sessionData.upload_url;
-        usedKeyIndex = sessionData.key_index || 0;
+      if (!sessionRes.ok) {
+        const errData = await sessionRes.json().catch(() => ({}));
+        throw new Error(errData.detail || `Error al solicitar sesión de subida (${sessionRes.status}).`);
       }
+
+      const sessionData = await sessionRes.json();
+      const uploadUrl = sessionData.upload_url;
+      const keyIndexUsed = sessionData.key_index || 0;
 
       if (!uploadUrl) {
         throw new Error("No se recibió la URL de subida de Google AI Studio.");
       }
 
-      // Subir el binario directamente desde el navegador a Google
+      // 2. Subir los binarios directamente a esa upload_url desde el navegador (Google permite CORS en upload_url)
+      progressSubtitle.textContent = `Subiendo audio directamente (${(currentFile.size / (1024 * 1024)).toFixed(1)} MB)...`;
+
       const uploadBinaryRes = await fetch(uploadUrl, {
         method: "POST",
         headers: {
@@ -596,48 +661,52 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (!uploadBinaryRes.ok) {
-        throw new Error(`Google binary upload failed (${uploadBinaryRes.status})`);
+        const errBody = await uploadBinaryRes.text().catch(() => "");
+        throw new Error(`Error al transferir audio a Google (${uploadBinaryRes.status}): ${errBody}`);
       }
 
-      const googleFileJson = await uploadBinaryRes.json();
-      const googleFileName = googleFileJson?.file?.name;
+      const fileInfo = await uploadBinaryRes.json();
+      const googleFileName = fileInfo?.file?.name;
 
       if (!googleFileName) {
         throw new Error("Google AI Studio no devolvió el identificador del archivo.");
       }
 
-      // Procesar en Render enviando únicamente el ID
+      // 3. Notificar a POST /api/transcribe-file-uri para que Gemini transcriba usando la clave del .env
       setProgressStep("gemini");
-      const uriRes = await fetch("/api/transcribe-file-uri", {
+      progressTitle.textContent = "Transcribiendo con Gemini Flash...";
+      progressSubtitle.textContent = "Generando transcripción literal de alta fidelidad...";
+
+      const transcribeRes = await fetch("/api/transcribe-file-uri", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           file_name: googleFileName,
-          api_key: clientApiKey || null,
-          key_index: usedKeyIndex,
+          api_key: localRaw || null,
+          key_index: keyIndexUsed,
           audio_type: currentAudioType || "clase",
-          keywords: inputKeywords ? inputKeywords.value.trim() : "",
-          model_name: (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash"
+          keywords: cleanKw,
+          model_name: selectedModel
         })
       });
 
-      if (!uriRes.ok) {
-        const errText = await uriRes.text();
+      if (!transcribeRes.ok) {
+        const errText = await transcribeRes.text();
         let errMsg = "Error al procesar la transcripción.";
-        try { errMsg = JSON.parse(errText).detail || errMsg; } catch (e) {}
+        try {
+          errMsg = JSON.parse(errText).detail || errMsg;
+        } catch (e) {}
         throw new Error(errMsg);
       }
 
-      data = await uriRes.json();
+      const data = await transcribeRes.json();
       rawTranscriptText = data.transcript || "";
 
       if (!rawTranscriptText.trim()) {
         throw new Error("La transcripción recibida está vacía.");
       }
 
-      // Finalizar visualización
+      // Finalización exitosa
       setProgressStep("done");
       progressCard.classList.add("hidden");
       resultSection.classList.remove("hidden");
@@ -645,7 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
       currentActiveFileName = (currentFile ? currentFile.name : "") || data.filename || "audio.mp3";
       resultFileName.textContent = currentActiveFileName;
-      resultModelBadge.textContent = `${data.model_used || "gemini-3.8-flash"} • completado`;
+      resultModelBadge.textContent = `${data.model_used || selectedModel} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
       setTimeout(() => {
@@ -662,6 +731,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (err) {
       showError("Error al transcribir", err.message);
+      if (streamingIndicator) streamingIndicator.classList.add("hidden");
     } finally {
       stopTimer();
       progressCard.classList.add("hidden");
