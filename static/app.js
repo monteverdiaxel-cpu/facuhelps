@@ -546,7 +546,7 @@ ${speakerHint}${kw}
 - PROHIBIDO incluir marcas de tiempo o timestamps.`;
   }
 
-  // 7. Iniciar Proceso de Transcripción
+  // 7. Iniciar Proceso de Transcripción (Opción B: Subida Directa Exclusiva a Google)
   btnStartTranscribe.addEventListener("click", async () => {
     if (!currentFile) return;
 
@@ -576,13 +576,11 @@ ${speakerHint}${kw}
       ".webm": "audio/webm",
     }[ext] || currentFile.type || "audio/mp3";
 
-    let transcribedSuccess = false;
-
-    // 1. INTENTO DE SUBIDA DIRECTA A GOOGLE (0 MB en Render)
     try {
-      progressTitle.textContent = "Iniciando subida directa...";
-      progressSubtitle.textContent = "Obteniendo enlace seguro de Google para no gastar ancho de banda de Render.";
+      progressTitle.textContent = "Iniciando subida segura a Google...";
+      progressSubtitle.textContent = "Obteniendo enlace directo para consumo cero de ancho de banda.";
 
+      // Paso 1: Obtener URL de subida directa desde Render (pesa menos de 1 KB)
       const sessionRes = await fetch("/api/get-upload-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -594,136 +592,105 @@ ${speakerHint}${kw}
         })
       });
 
-      if (sessionRes.ok) {
-        const sessionData = await sessionRes.json();
-        const uploadUrl = sessionData.upload_url;
-        const keyIndex = sessionData.key_index || 0;
-
-        setProgressStep("cloud");
-        progressTitle.textContent = "Subiendo audio directo a Google...";
-        progressSubtitle.textContent = `Transfiriendo ${formatBytes(currentFile.size)} directo a Google AI Studio (0 MB en Render).`;
-
-        // Subida binaria directa del navegador a Google
-        const uploadRes = await fetch(uploadUrl, {
-          method: "POST",
-          headers: {
-            "Content-Length": currentFile.size.toString(),
-            "X-Goog-Upload-Offset": "0",
-            "X-Goog-Upload-Command": "upload, finalize"
-          },
-          body: currentFile
-        });
-
-        if (uploadRes.ok) {
-          const fileData = await uploadRes.json();
-          const googleFileName = fileData.file ? fileData.file.name : null;
-
-          if (googleFileName) {
-            setProgressStep("gemini");
-            progressTitle.textContent = "Gemini Flash transcribiendo...";
-            progressSubtitle.textContent = "Google está procesando y redactando la clase completa.";
-
-            // Avisar a Render enviando SOLO el identificador liviano (50 bytes)
-            const uriRes = await fetch("/api/transcribe-file-uri", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                file_name: googleFileName,
-                api_key: apiKey || null,
-                key_index: keyIndex,
-                audio_type: currentAudioType || "clase",
-                keywords: cleanKeywords || null,
-                model_name: selectedModelName
-              })
-            });
-
-            if (uriRes.ok) {
-              const uriData = await uriRes.json();
-              rawTranscriptText = uriData.transcript || "";
-              transcribedSuccess = true;
-            } else {
-              console.warn("Falla en transcribe-file-uri, probando fallback...");
-            }
-          }
-        }
+      if (!sessionRes.ok) {
+        const errData = await sessionRes.json().catch(() => ({}));
+        throw new Error(errData.detail || "No se pudo iniciar la sesión de subida a Google.");
       }
-    } catch (directErr) {
-      console.warn("Subida directa no completada, activando fallback tradicional:", directErr);
-    }
 
-    // 2. FALLBACK AUTOMÁTICO (Por si la subida directa tuviera algún problema de red)
-    if (!transcribedSuccess) {
-      try {
-        setProgressStep("cloud");
-        progressTitle.textContent = "Procesando en servidor...";
-        progressSubtitle.textContent = "Subiendo audio a través de Render.";
+      const sessionData = await sessionRes.json();
+      const uploadUrl = sessionData.upload_url;
+      const keyIndex = sessionData.key_index || 0;
 
-        const formData = new FormData();
-        formData.append("file", currentFile);
-        if (apiKey) formData.append("api_key", apiKey);
-        formData.append("audio_type", currentAudioType || "clase");
-        formData.append("model_name", selectedModelName);
-        if (cleanKeywords) formData.append("keywords", cleanKeywords);
-
-        const response = await fetch("/api/transcribe", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errMsg = "Error en el servidor al procesar el audio.";
-          try {
-            errMsg = JSON.parse(errorText).detail || errMsg;
-          } catch (e) {}
-          throw new Error(errMsg);
-        }
-
-        const data = await response.json();
-        rawTranscriptText = data.transcript || "";
-      } catch (fallbackErr) {
-        showError("Error al transcribir", fallbackErr.message);
-        stopTimer();
-        progressCard.classList.add("hidden");
-        btnStartTranscribe.disabled = false;
-        return;
+      if (!uploadUrl) {
+        throw new Error("Google no proporcionó una URL de subida directa válida.");
       }
-    }
 
-    if (!rawTranscriptText.trim()) {
-      showError("Error al transcribir", "La transcripción recibida está vacía.");
+      // Paso 2: Subir el audio DIRECTAMENTE desde el navegador a Google Cloud (0 MB en Render)
+      setProgressStep("cloud");
+      progressTitle.textContent = "Subiendo audio directo a Google...";
+      progressSubtitle.textContent = `Transfiriendo ${formatBytes(currentFile.size)} directo a Google Cloud (0 MB en Render).`;
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: {
+          "Content-Length": currentFile.size.toString(),
+          "X-Goog-Upload-Offset": "0",
+          "X-Goog-Upload-Command": "upload, finalize"
+        },
+        body: currentFile
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Hubo una interrupción en la transferencia con Google Cloud. Por favor verificá tu conexión e intentá de nuevo.");
+      }
+
+      const fileData = await uploadRes.json();
+      const googleFileName = fileData.file ? fileData.file.name : null;
+
+      if (!googleFileName) {
+        throw new Error("Google no devolvió el identificador del archivo procesado.");
+      }
+
+      // Paso 3: Avisar a Render enviando ÚNICAMENTE el identificador de 50 bytes (Gemini transcribe)
+      setProgressStep("gemini");
+      progressTitle.textContent = "Gemini Flash transcribiendo...";
+      progressSubtitle.textContent = "Google está procesando la clase y generando el texto estructurado.";
+
+      const uriRes = await fetch("/api/transcribe-file-uri", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_name: googleFileName,
+          api_key: apiKey || null,
+          key_index: keyIndex,
+          audio_type: currentAudioType || "clase",
+          keywords: cleanKeywords || null,
+          model_name: selectedModelName
+        })
+      });
+
+      if (!uriRes.ok) {
+        const errData = await uriRes.json().catch(() => ({}));
+        throw new Error(errData.detail || "Error en el servidor al generar la transcripción.");
+      }
+
+      const uriData = await uriRes.json();
+      rawTranscriptText = uriData.transcript || "";
+
+      if (!rawTranscriptText.trim()) {
+        throw new Error("La transcripción devuelta por Gemini está vacía.");
+      }
+
+      // Finalización exitosa
+      setProgressStep("done");
+      progressCard.classList.add("hidden");
+      resultSection.classList.remove("hidden");
+      if (completedBadge) completedBadge.classList.remove("hidden");
+      if (streamingIndicator) streamingIndicator.classList.add("hidden");
+      currentActiveFileName = (currentFile ? currentFile.name : "") || "audio.mp3";
+      resultFileName.textContent = currentActiveFileName;
+      resultModelBadge.textContent = `${selectedModelName} • completado`;
+      transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+
+      saveToHistory({
+        filename: currentActiveFileName,
+        audioType: currentAudioType || "clase",
+        transcript: rawTranscriptText,
+        timestamp: Date.now()
+      });
+
+    } catch (err) {
+      showError("Error al transcribir", err.message || "Ocurrió un error durante la subida directa a Google. Por favor, verificá tu conexión y hacé clic en Reintentar.");
+    } finally {
       stopTimer();
       progressCard.classList.add("hidden");
       btnStartTranscribe.disabled = false;
-      return;
+      if (window.lucide) window.lucide.createIcons();
     }
-
-    // Finalizar con éxito y renderizar
-    setProgressStep("done");
-    progressCard.classList.add("hidden");
-    resultSection.classList.remove("hidden");
-    if (completedBadge) completedBadge.classList.remove("hidden");
-    if (streamingIndicator) streamingIndicator.classList.add("hidden");
-    currentActiveFileName = (currentFile ? currentFile.name : "") || "audio.mp3";
-    resultFileName.textContent = currentActiveFileName;
-    resultModelBadge.textContent = `${selectedModelName} • completado`;
-    transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
-
-    setTimeout(() => {
-      resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-
-    saveToHistory({
-      filename: currentActiveFileName,
-      audioType: currentAudioType || "clase",
-      transcript: rawTranscriptText,
-      timestamp: Date.now()
-    });
-
-    stopTimer();
-    progressCard.classList.add("hidden");
-    btnStartTranscribe.disabled = false;
-    if (window.lucide) window.lucide.createIcons();
   });
 
   // Modo de edición opcional y protegido (solo lectura por defecto)
