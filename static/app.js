@@ -771,8 +771,6 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("Error al descargar user_career_plan:", ePlan);
       }
 
-      }
-
       // Actualizar la base de datos IndexedDB local de forma aislada
       const storeNames = ["subjects", "notes", "careerPlan"];
       const existingStores = storeNames.filter(name => db.objectStoreNames.contains(name));
