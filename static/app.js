@@ -46,6 +46,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnLogout = document.getElementById("btnLogout");
   const btnManualSync = document.getElementById("btnManualSync");
 
+  // Elementos DOM Perfil y Recuperación de Contraseña
+  const modalUserProfile = document.getElementById("modalUserProfile");
+  const userProfileEmail = document.getElementById("userProfileEmail");
+  const btnLogoutAction = document.getElementById("btnLogoutAction");
+  const btnCloseProfileModal = document.getElementById("btnCloseProfileModal");
+  const btnForgotPassLink = document.getElementById("btnForgotPassLink");
+  const authRecoverySection = document.getElementById("authRecoverySection");
+  const recoveryEmail = document.getElementById("recoveryEmail");
+  const btnSendRecovery = document.getElementById("btnSendRecovery");
+  const btnBackToLogin = document.getElementById("btnBackToLogin");
+  const modalNewPassword = document.getElementById("modalNewPassword");
+  const formNewPassword = document.getElementById("formNewPassword");
+  const inputNewPassword = document.getElementById("inputNewPassword");
+
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("fileInput");
   const filePreview = document.getElementById("filePreview");
@@ -294,18 +308,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateAuthUI(user) {
     currentAuthUser = user || null;
+    const userAuthIcon = btnUserAuth ? btnUserAuth.querySelector('[data-lucide="user"], svg') : null;
     if (user) {
-      const emailShort = user.email ? (user.email.length > 20 ? user.email.slice(0, 18) + "…" : user.email) : "Mi Cuenta";
-      if (userAuthLabel) userAuthLabel.textContent = emailShort;
+      if (userAuthIcon) userAuthIcon.classList.add("hidden");
+      if (userAuthLabel) {
+        userAuthLabel.innerHTML = `👤 <span class="max-w-[130px] md:max-w-[200px] truncate inline-block align-bottom">${user.email}</span> <span class="text-emerald-500 font-bold ml-0.5">✓</span>`;
+      }
       if (btnUserAuth) {
-        btnUserAuth.title = `Sesión iniciada: ${user.email} (Sincronizado)`;
+        btnUserAuth.title = `👤 ${user.email} (Sincronizado ✓) - Clic para ver opciones o cerrar sesión`;
         btnUserAuth.classList.add("border-emerald-300", "dark:border-emerald-800");
       }
       if (authLoggedInEmail) authLoggedInEmail.textContent = user.email || "";
       if (authLoggedInView) authLoggedInView.classList.remove("hidden");
       if (authLoggedOutView) authLoggedOutView.classList.add("hidden");
     } else {
-      if (userAuthLabel) userAuthLabel.textContent = "Iniciar sesión";
+      if (userAuthIcon) userAuthIcon.classList.remove("hidden");
+      if (userAuthLabel) {
+        userAuthLabel.textContent = "👤 Iniciar sesión";
+      }
       if (btnUserAuth) {
         btnUserAuth.title = "Iniciar sesión para sincronizar automáticamente entre dispositivos";
         btnUserAuth.classList.remove("border-emerald-300", "dark:border-emerald-800");
@@ -320,6 +340,8 @@ document.addEventListener("DOMContentLoaded", () => {
     authMode = mode;
     if (authAlert) authAlert.classList.add("hidden");
     if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
+    if (authRecoverySection) authRecoverySection.classList.add("hidden");
+    if (formAuth) formAuth.classList.remove("hidden");
 
     if (mode === "login") {
       if (tabAuthLogin) {
@@ -349,10 +371,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnUserAuth) {
     btnUserAuth.addEventListener("click", () => {
-      if (modalAuth) {
-        modalAuth.classList.remove("hidden");
-        if (!currentAuthUser && inputAuthEmail) {
-          inputAuthEmail.focus();
+      if (currentAuthUser) {
+        if (userProfileEmail) {
+          userProfileEmail.textContent = currentAuthUser.email || "";
+        }
+        if (modalUserProfile) {
+          modalUserProfile.classList.remove("hidden");
+        }
+      } else {
+        if (modalAuth) {
+          modalAuth.classList.remove("hidden");
+          if (authRecoverySection) authRecoverySection.classList.add("hidden");
+          if (formAuth) formAuth.classList.remove("hidden");
+          if (inputAuthEmail) inputAuthEmail.focus();
         }
       }
     });
@@ -370,6 +401,159 @@ document.addEventListener("DOMContentLoaded", () => {
         modalAuth.classList.add("hidden");
       }
     });
+  }
+
+  // Controladores de Modal de Perfil (Cerrar sesión)
+  if (btnCloseProfileModal) {
+    btnCloseProfileModal.addEventListener("click", () => {
+      if (modalUserProfile) modalUserProfile.classList.add("hidden");
+    });
+  }
+
+  if (modalUserProfile) {
+    modalUserProfile.addEventListener("click", (e) => {
+      if (e.target === modalUserProfile) {
+        modalUserProfile.classList.add("hidden");
+      }
+    });
+  }
+
+  if (btnLogoutAction) {
+    btnLogoutAction.addEventListener("click", async () => {
+      if (!supabaseClient) return;
+      try {
+        await supabaseClient.auth.signOut();
+        await dbClearAllData();
+        try {
+          localStorage.removeItem(HISTORY_STORAGE_KEY);
+        } catch (e) {}
+        if (modalUserProfile) modalUserProfile.classList.add("hidden");
+        window.location.reload();
+      } catch (err) {
+        console.warn("Error al cerrar sesión:", err);
+        window.location.reload();
+      }
+    });
+  }
+
+  // Controladores de Recuperación de Contraseña
+  if (btnForgotPassLink) {
+    btnForgotPassLink.addEventListener("click", () => {
+      if (formAuth) formAuth.classList.add("hidden");
+      if (authRecoverySection) authRecoverySection.classList.remove("hidden");
+      if (recoveryEmail) {
+        recoveryEmail.value = inputAuthEmail ? inputAuthEmail.value.trim() : "";
+        recoveryEmail.focus();
+      }
+      if (authAlert) authAlert.classList.add("hidden");
+      if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
+    });
+  }
+
+  if (btnBackToLogin) {
+    btnBackToLogin.addEventListener("click", () => {
+      if (authRecoverySection) authRecoverySection.classList.add("hidden");
+      if (formAuth) formAuth.classList.remove("hidden");
+      if (authAlert) authAlert.classList.add("hidden");
+      if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
+    });
+  }
+
+  if (btnSendRecovery) {
+    btnSendRecovery.addEventListener("click", async () => {
+      if (!supabaseClient) return;
+      const email = recoveryEmail ? recoveryEmail.value.trim() : "";
+      if (!email) {
+        if (authAlert) {
+          authAlert.textContent = "Por favor ingresá tu correo electrónico.";
+          authAlert.classList.remove("hidden");
+        }
+        return;
+      }
+      const origText = btnSendRecovery.textContent;
+      btnSendRecovery.disabled = true;
+      btnSendRecovery.textContent = "Enviando...";
+      if (authAlert) authAlert.classList.add("hidden");
+      if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
+
+      try {
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+        if (error) throw error;
+        if (authSuccessAlert) {
+          authSuccessAlert.textContent = "¡Listo! Te enviamos un enlace a tu correo para restablecer tu contraseña.";
+          authSuccessAlert.classList.remove("hidden");
+        }
+      } catch (err) {
+        console.warn("Error en recuperación:", err);
+        if (authAlert) {
+          authAlert.textContent = formatAuthError(err.message || "");
+          authAlert.classList.remove("hidden");
+        }
+      } finally {
+        btnSendRecovery.disabled = false;
+        btnSendRecovery.textContent = origText;
+      }
+    });
+  }
+
+  // Vaciar IndexedDB local para aislamiento total al cerrar sesión
+  async function dbClearAllData() {
+    try {
+      const db = await openDatabase();
+      const storeNames = ["subjects", "folders", "files", "notes", "careerPlan"];
+      const existingStores = storeNames.filter(name => db.objectStoreNames.contains(name));
+      if (existingStores.length > 0) {
+        const tx = db.transaction(existingStores, "readwrite");
+        for (const name of existingStores) {
+          tx.objectStore(name).clear();
+        }
+        await new Promise((resolve) => {
+          tx.oncomplete = resolve;
+          tx.onerror = resolve;
+        });
+      }
+    } catch (e) {
+      console.warn("Error al vaciar base de datos local:", e);
+    }
+  }
+
+  // Manejo de cierre de sesión con pantalla en blanco
+  async function handleUserSignOut() {
+    currentAuthUser = null;
+    updateAuthUI(null);
+
+    // 1. Vaciar la base local IndexedDB
+    await dbClearAllData();
+
+    // 2. Vaciar historial local
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      updateHistoryBadge();
+    } catch (e) {
+      console.warn("Error al limpiar historial:", e);
+    }
+
+    // 3. Restablecer estado en memoria
+    currentSubject = null;
+    currentFolder = null;
+    careerPlanData = {
+      selectedOrientation: "periodismo",
+      grades: {}
+    };
+
+    // 4. Refrescar la pantalla en blanco
+    if (typeof renderOrganizerView === "function") {
+      await renderOrganizerView();
+    }
+    if (typeof renderCareerView === "function") {
+      await renderCareerView();
+    }
+    if (typeof renderHistoryList === "function") {
+      renderHistoryList();
+    }
+    if (window.lucide) window.lucide.createIcons();
   }
 
   if (formAuth) {
@@ -400,15 +584,14 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data && data.user) {
             updateAuthUI(data.user);
             if (authSuccessAlert) {
-              authSuccessAlert.textContent = "¡Sesión iniciada con éxito! Sincronizando datos...";
+              authSuccessAlert.textContent = "¡Sesión iniciada con éxito! Cargando tus datos...";
               authSuccessAlert.classList.remove("hidden");
             }
-            await syncDownFromSupabase(data.user);
-            await syncUpToSupabase();
+            await syncUserData(data.user.id);
             setTimeout(() => {
               if (modalAuth) modalAuth.classList.add("hidden");
               if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
-            }, 1000);
+            }, 800);
           }
         } else {
           const { data, error } = await supabaseClient.auth.signUp({ email, password });
@@ -416,14 +599,14 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data && data.session && data.user) {
             updateAuthUI(data.user);
             if (authSuccessAlert) {
-              authSuccessAlert.textContent = "¡Cuenta creada y sincronizada!";
+              authSuccessAlert.textContent = "¡Cuenta creada con éxito! Sincronizando datos...";
               authSuccessAlert.classList.remove("hidden");
             }
-            await syncUpToSupabase();
+            await syncUserData(data.user.id);
             setTimeout(() => {
               if (modalAuth) modalAuth.classList.add("hidden");
               if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
-            }, 1200);
+            }, 800);
           } else {
             if (authSuccessAlert) {
               authSuccessAlert.textContent = "¡Cuenta creada! Revisá tu casilla de correo para confirmar tu registro y luego iniciá sesión.";
@@ -449,7 +632,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!supabaseClient) return;
       try {
         await supabaseClient.auth.signOut();
-        updateAuthUI(null);
+        await handleUserSignOut();
         if (modalAuth) modalAuth.classList.add("hidden");
       } catch (err) {
         console.warn("Error al cerrar sesión:", err);
@@ -464,15 +647,14 @@ document.addEventListener("DOMContentLoaded", () => {
       btnManualSync.disabled = true;
       btnManualSync.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-slate-700 dark:border-slate-300 border-t-transparent rounded-full animate-spin"></div><span>Sincronizando...</span>`;
       try {
-        await syncDownFromSupabase(currentAuthUser);
-        await syncUpToSupabase();
+        await syncUserData(currentAuthUser.id);
         btnManualSync.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i><span>¡Sincronizado!</span>`;
         if (window.lucide) window.lucide.createIcons();
         setTimeout(() => {
           btnManualSync.disabled = false;
           btnManualSync.innerHTML = originalHTML;
           if (window.lucide) window.lucide.createIcons();
-        }, 1800);
+        }, 1500);
       } catch (err) {
         console.warn("Error en sincronización manual:", err);
         btnManualSync.disabled = false;
@@ -482,80 +664,147 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Inicializar estado de sesión en Supabase si está disponible
+  // 1. Aislamiento y detección de sesión (onAuthStateChange y getSession)
   if (supabaseClient) {
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
       const user = session ? session.user : null;
-      updateAuthUI(user);
       if (user) {
-        syncDownFromSupabase(user).catch(e => console.warn("Sync down inicial warning:", e));
+        updateAuthUI(user);
+        await syncUserData(user.id);
+      } else {
+        updateAuthUI(null);
       }
     }).catch(err => console.warn("Error al leer sesión Supabase:", err));
 
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        if (modalNewPassword) modalNewPassword.classList.remove("hidden");
+        if (modalAuth) modalAuth.classList.add("hidden");
+        if (modalUserProfile) modalUserProfile.classList.add("hidden");
+        if (inputNewPassword) inputNewPassword.focus();
+        return;
+      }
+
       const user = session ? session.user : null;
-      updateAuthUI(user);
-      if (event === "SIGNED_IN" && user) {
-        await syncDownFromSupabase(user).catch(e => console.warn("Sync on SIGNED_IN warning:", e));
+      if (user) {
+        updateAuthUI(user);
+        await syncUserData(user.id);
+      } else {
+        await handleUserSignOut();
       }
     });
   }
 
-  function triggerBackgroundSync() {
-    if (!supabaseClient || !currentAuthUser) return;
-    if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
-    syncDebounceTimer = setTimeout(() => {
-      syncUpToSupabase().catch(e => console.warn("Background sync warning:", e));
-    }, 1200);
+  // Controlador para guardar nueva contraseña tras recuperación
+  if (formNewPassword) {
+    formNewPassword.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!supabaseClient) return;
+      const newPass = inputNewPassword ? inputNewPassword.value : "";
+      if (!newPass || newPass.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres.");
+        return;
+      }
+      try {
+        const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+        if (error) throw error;
+        alert("¡Contraseña actualizada con éxito!");
+        if (modalNewPassword) modalNewPassword.classList.add("hidden");
+        window.location.reload();
+      } catch (err) {
+        alert("Error al actualizar la contraseña: " + (err.message || "Intentá de nuevo."));
+      }
+    });
   }
 
-  // Funciones de sincronización con Supabase
-  async function syncDownFromSupabase(user) {
-    if (!supabaseClient || !user) return;
+  if (modalNewPassword) {
+    modalNewPassword.addEventListener("click", (e) => {
+      if (e.target === modalNewPassword) {
+        modalNewPassword.classList.add("hidden");
+      }
+    });
+  }
+
+  // 2. Sincronización bidireccional y aislamiento exclusivo por usuario
+  async function syncUserData(userId) {
+    if (!supabaseClient || !userId) return;
     try {
       const db = await openDatabase();
 
-      // 1. Materias
+      // a. Descargar materias de ese usuario
+      let remoteSubjects = [];
       try {
-        const { data: remoteSubjects, error: errSub } = await supabaseClient
+        const { data, error } = await supabaseClient
           .from("user_subjects")
           .select("*")
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
+        if (!error && Array.isArray(data)) remoteSubjects = data;
+      } catch (eSub) {
+        console.warn("Error al descargar user_subjects:", eSub);
+      }
 
-        if (!errSub && Array.isArray(remoteSubjects) && remoteSubjects.length > 0) {
-          const tx = db.transaction("subjects", "readwrite");
-          const store = tx.objectStore("subjects");
+      // b. Descargar notas de ese usuario
+      let remoteNotes = [];
+      try {
+        const { data, error } = await supabaseClient
+          .from("user_notes")
+          .select("*")
+          .eq("user_id", userId);
+        if (!error && Array.isArray(data)) remoteNotes = data;
+      } catch (eNotes) {
+        console.warn("Error al descargar user_notes:", eNotes);
+      }
+
+      // c. Descargar carrera de ese usuario
+      let remotePlan = null;
+      try {
+        const { data, error } = await supabaseClient
+          .from("user_career_plan")
+          .select("data, updated_at")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (!error && data) remotePlan = data;
+      } catch (ePlan) {
+        console.warn("Error al descargar user_career_plan:", ePlan);
+      }
+
+      // d. Descargar transcripciones de ese usuario
+      let remoteTranscripts = [];
+      try {
+        const { data, error } = await supabaseClient
+          .from("user_transcripts")
+          .select("*")
+          .eq("user_id", userId)
+          .order("timestamp", { ascending: false })
+          .limit(20);
+        if (!error && Array.isArray(data)) remoteTranscripts = data;
+      } catch (eTr) {
+        console.warn("Error al descargar user_transcripts:", eTr);
+      }
+
+      // Actualizar la base de datos IndexedDB local de forma aislada
+      const storeNames = ["subjects", "notes", "careerPlan"];
+      const existingStores = storeNames.filter(name => db.objectStoreNames.contains(name));
+      if (existingStores.length > 0) {
+        const tx = db.transaction(existingStores, "readwrite");
+
+        if (db.objectStoreNames.contains("subjects")) {
+          const subStore = tx.objectStore("subjects");
+          subStore.clear();
           for (const s of remoteSubjects) {
-            store.put({
+            subStore.put({
               id: Number(s.id),
               name: s.name,
               createdAt: Number(s.created_at) || Date.now()
             });
           }
-          await new Promise((resolve) => {
-            tx.oncomplete = resolve;
-            tx.onerror = resolve;
-          });
-          if (typeof renderSubjectsList === "function") {
-            await renderSubjectsList();
-          }
         }
-      } catch (eSub) {
-        console.warn("SyncDown subjects warning:", eSub);
-      }
 
-      // 2. Notas de Materias
-      try {
-        const { data: remoteNotes, error: errNotes } = await supabaseClient
-          .from("user_notes")
-          .select("*")
-          .eq("user_id", user.id);
-
-        if (!errNotes && Array.isArray(remoteNotes) && remoteNotes.length > 0) {
-          const tx = db.transaction("notes", "readwrite");
-          const store = tx.objectStore("notes");
+        if (db.objectStoreNames.contains("notes")) {
+          const notesStore = tx.objectStore("notes");
+          notesStore.clear();
           for (const n of remoteNotes) {
-            store.put({
+            notesStore.put({
               id: Number(n.id),
               subjectId: Number(n.subject_id),
               title: n.title || "",
@@ -564,157 +813,61 @@ document.addEventListener("DOMContentLoaded", () => {
               updatedAt: Number(n.updated_at) || Date.now()
             });
           }
-          await new Promise((resolve) => {
-            tx.oncomplete = resolve;
-            tx.onerror = resolve;
-          });
-          if (typeof renderNotesList === "function" && typeof activeSubjectId !== "undefined" && activeSubjectId) {
-            await renderNotesList();
+        }
+
+        if (db.objectStoreNames.contains("careerPlan")) {
+          const planStore = tx.objectStore("careerPlan");
+          planStore.clear();
+          if (remotePlan && remotePlan.data) {
+            planStore.put({
+              key: "userPlan",
+              data: remotePlan.data,
+              updatedAt: Number(remotePlan.updated_at) || Date.now()
+            });
+            careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, remotePlan.data);
+          } else {
+            careerPlanData = { selectedOrientation: "periodismo", grades: {} };
           }
         }
-      } catch (eNotes) {
-        console.warn("SyncDown notes warning:", eNotes);
+
+        await new Promise((resolve) => {
+          tx.oncomplete = resolve;
+          tx.onerror = resolve;
+        });
       }
 
-      // 3. Plan de Carrera
-      try {
-        const { data: remotePlan, error: errPlan } = await supabaseClient
-          .from("user_career_plan")
-          .select("data, updated_at")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!errPlan && remotePlan && remotePlan.data) {
-          const localPlan = await dbGetCareerPlan();
-          if (!localPlan || (remotePlan.updated_at && Number(remotePlan.updated_at) > (localPlan.updatedAt || 0))) {
-            await dbSaveCareerPlan(remotePlan.data);
-            if (typeof renderCareerView === "function") {
-              await renderCareerView();
-            }
-          }
-        }
-      } catch (ePlan) {
-        console.warn("SyncDown career plan warning:", ePlan);
+      // Actualizar historial local de transcripciones
+      if (remoteTranscripts.length > 0) {
+        const historyList = remoteTranscripts.map(rt => ({
+          filename: rt.filename,
+          audioType: rt.audio_type || "clase",
+          transcript: rt.transcript || "",
+          summary: rt.summary || "",
+          timestamp: Number(rt.timestamp) || Date.now()
+        }));
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyList));
+      } else {
+        localStorage.removeItem(HISTORY_STORAGE_KEY);
       }
+      updateHistoryBadge();
 
-      // 4. Historial de Transcripciones
-      try {
-        const { data: remoteTranscripts, error: errTr } = await supabaseClient
-          .from("user_transcripts")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("timestamp", { ascending: false })
-          .limit(20);
+      // Refrescar en vivo las vistas en pantalla
+      currentSubject = null;
+      currentFolder = null;
 
-        if (!errTr && Array.isArray(remoteTranscripts) && remoteTranscripts.length > 0) {
-          let localHistory = getHistory();
-          const existingMap = new Set(localHistory.map(h => h.filename + "_" + (h.timestamp || "")));
-          let added = false;
-          for (const rt of remoteTranscripts) {
-            const key = rt.filename + "_" + (rt.timestamp || "");
-            if (!existingMap.has(key)) {
-              localHistory.push({
-                filename: rt.filename,
-                audioType: rt.audio_type || "clase",
-                transcript: rt.transcript || "",
-                summary: rt.summary || "",
-                timestamp: Number(rt.timestamp) || Date.now()
-              });
-              added = true;
-            }
-          }
-          if (added) {
-            localHistory.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-            if (localHistory.length > MAX_HISTORY_ITEMS) {
-              localHistory = localHistory.slice(0, MAX_HISTORY_ITEMS);
-            }
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(localHistory));
-            updateHistoryBadge();
-            if (typeof renderHistoryList === "function") {
-              renderHistoryList();
-            }
-          }
-        }
-      } catch (eTr) {
-        console.warn("SyncDown transcripts warning:", eTr);
+      if (typeof renderOrganizerView === "function") {
+        await renderOrganizerView();
       }
-    } catch (e) {
-      console.warn("SyncDown general warning:", e);
-    }
-  }
-
-  async function syncUpToSupabase() {
-    if (!supabaseClient || !currentAuthUser) return;
-    const userId = currentAuthUser.id;
-    try {
-      // 1. Materias
-      try {
-        const localSubjects = await dbGetSubjects();
-        if (localSubjects && localSubjects.length > 0) {
-          const rows = localSubjects.map(s => ({
-            user_id: userId,
-            id: s.id,
-            name: s.name,
-            created_at: s.createdAt || Date.now()
-          }));
-          await supabaseClient.from("user_subjects").upsert(rows);
-        }
-      } catch (eSub) {
-        console.warn("SyncUp subjects warning:", eSub);
+      if (typeof renderCareerView === "function") {
+        await renderCareerView();
       }
-
-      // 2. Notas
-      try {
-        const localNotes = await dbGetAllNotes();
-        if (localNotes && localNotes.length > 0) {
-          const rows = localNotes.map(n => ({
-            user_id: userId,
-            id: n.id,
-            subject_id: n.subjectId,
-            title: n.title || "",
-            content: n.content || "",
-            created_at: n.createdAt || Date.now(),
-            updated_at: n.updatedAt || Date.now()
-          }));
-          await supabaseClient.from("user_notes").upsert(rows);
-        }
-      } catch (eNotes) {
-        console.warn("SyncUp notes warning:", eNotes);
+      if (typeof renderHistoryList === "function") {
+        renderHistoryList();
       }
+      if (window.lucide) window.lucide.createIcons();
 
-      // 3. Plan de Carrera
-      try {
-        const localPlan = await dbGetCareerPlan();
-        if (localPlan) {
-          await supabaseClient.from("user_career_plan").upsert({
-            user_id: userId,
-            data: localPlan,
-            updated_at: Date.now()
-          });
-        }
-      } catch (ePlan) {
-        console.warn("SyncUp career plan warning:", ePlan);
-      }
-
-      // 4. Historial
-      try {
-        const localHistory = getHistory();
-        if (localHistory && localHistory.length > 0) {
-          const rows = localHistory.map(h => ({
-            user_id: userId,
-            filename: h.filename,
-            audio_type: h.audioType || "clase",
-            transcript: h.transcript || "",
-            summary: h.summary || "",
-            timestamp: h.timestamp || Date.now()
-          }));
-          await supabaseClient.from("user_transcripts").upsert(rows);
-        }
-      } catch (eHist) {
-        console.warn("SyncUp history warning:", eHist);
-      }
-    } catch (e) {
-      console.warn("SyncUp general warning:", e);
+    } catch (err) {
+      console.warn("Error en syncUserData:", err);
     }
   }
 
@@ -1831,7 +1984,22 @@ ${speakerHint}${kw}
       }
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
       updateHistoryBadge();
-      triggerBackgroundSync();
+
+      // Sincronizar en tiempo real en Supabase para usuarios autenticados
+      if (supabaseClient && currentAuthUser) {
+        try {
+          supabaseClient.from("user_transcripts").upsert({
+            user_id: currentAuthUser.id,
+            filename: item.filename,
+            audio_type: item.audioType || "clase",
+            transcript: item.transcript || "",
+            summary: item.summary || "",
+            timestamp: item.timestamp || Date.now()
+          }).then();
+        } catch (eTr) {
+          console.warn("Error al sincronizar transcripción en Supabase:", eTr);
+        }
+      }
     } catch (e) {
       console.warn("Error al guardar en historial:", e);
     }
@@ -2381,10 +2549,23 @@ ${speakerHint}${kw}
     return new Promise((resolve, reject) => {
       const tx = db.transaction("subjects", "readwrite");
       const store = tx.objectStore("subjects");
-      const req = store.add({ name, createdAt: Date.now() });
+      const now = Date.now();
+      const req = store.add({ name, createdAt: now });
       req.onsuccess = () => {
-        triggerBackgroundSync();
-        resolve(req.result);
+        const newId = req.result;
+        if (supabaseClient && currentAuthUser) {
+          try {
+            supabaseClient.from("user_subjects").upsert({
+              user_id: currentAuthUser.id,
+              id: newId,
+              name: name,
+              created_at: now
+            }).then();
+          } catch (e) {
+            console.warn("Error al guardar materia en Supabase:", e);
+          }
+        }
+        resolve(newId);
       };
       req.onerror = () => reject(req.error);
     });
@@ -2405,7 +2586,18 @@ ${speakerHint}${kw}
         item.name = newName;
         const putReq = store.put(item);
         putReq.onsuccess = () => {
-          triggerBackgroundSync();
+          if (supabaseClient && currentAuthUser) {
+            try {
+              supabaseClient.from("user_subjects").upsert({
+                user_id: currentAuthUser.id,
+                id: Number(subjectId),
+                name: newName,
+                created_at: item.createdAt || Date.now()
+              }).then();
+            } catch (e) {
+              console.warn("Error al actualizar materia en Supabase:", e);
+            }
+          }
           resolve(putReq.result);
         };
         putReq.onerror = () => reject(putReq.error);
@@ -2458,8 +2650,23 @@ ${speakerHint}${kw}
       };
       const req = store.add(noteItem);
       req.onsuccess = () => {
-        triggerBackgroundSync();
-        resolve(req.result);
+        const newNoteId = req.result;
+        if (supabaseClient && currentAuthUser) {
+          try {
+            supabaseClient.from("user_notes").upsert({
+              user_id: currentAuthUser.id,
+              id: newNoteId,
+              subject_id: Number(subjectId),
+              title: title.trim(),
+              content: content.trim(),
+              created_at: now,
+              updated_at: now
+            }).then();
+          } catch (e) {
+            console.warn("Error al guardar nota en Supabase:", e);
+          }
+        }
+        resolve(newNoteId);
       };
       req.onerror = () => reject(req.error);
     });
@@ -2482,7 +2689,21 @@ ${speakerHint}${kw}
         item.updatedAt = Date.now();
         const putReq = store.put(item);
         putReq.onsuccess = () => {
-          triggerBackgroundSync();
+          if (supabaseClient && currentAuthUser) {
+            try {
+              supabaseClient.from("user_notes").upsert({
+                user_id: currentAuthUser.id,
+                id: Number(noteId),
+                subject_id: Number(item.subjectId),
+                title: item.title,
+                content: item.content,
+                created_at: item.createdAt || item.updatedAt,
+                updated_at: item.updatedAt
+              }).then();
+            } catch (e) {
+              console.warn("Error al actualizar nota en Supabase:", e);
+            }
+          }
           resolve(putReq.result);
         };
         putReq.onerror = () => reject(putReq.error);
@@ -4378,9 +4599,21 @@ ${speakerHint}${kw}
       try {
         const tx = db.transaction("careerPlan", "readwrite");
         const store = tx.objectStore("careerPlan");
-        const req = store.put({ key: "userPlan", data, updatedAt: Date.now() });
+        const planToSave = data || careerPlanData;
+        const now = Date.now();
+        const req = store.put({ key: "userPlan", data: planToSave, updatedAt: now });
         req.onsuccess = () => {
-          triggerBackgroundSync();
+          if (supabaseClient && currentAuthUser) {
+            try {
+              supabaseClient.from("user_career_plan").upsert({
+                user_id: currentAuthUser.id,
+                data: planToSave,
+                updated_at: now
+              }).then();
+            } catch (e) {
+              console.warn("Error al guardar plan de carrera en Supabase:", e);
+            }
+          }
           resolve();
         };
         req.onerror = () => reject(req.error);
