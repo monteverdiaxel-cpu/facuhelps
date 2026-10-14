@@ -223,7 +223,7 @@ async def transcribe_audio(
         )
 
     mime_type = MIME_MAP[file_ext]
-    target_model_name = "gemini-3.8-flash"
+    target_model_name = "gemini-3.5-flash-lite"
     effective_audio_type = (audio_type or "clase").lower().strip()
     if effective_audio_type not in ["clase", "entrevista", "continuo", "radio"]:
         effective_audio_type = "clase"
