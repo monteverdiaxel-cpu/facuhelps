@@ -508,7 +508,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
             system_instruction=system_instruction,
             temperature=0.0,
             max_output_tokens=65536,
-            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
         )
 
         # 4. Ejecutar generate_content

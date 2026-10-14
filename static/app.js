@@ -1168,53 +1168,100 @@ ${speakerHint}${kw}
     startTimer();
     setProgressStep("local");
 
-    const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
-
     try {
-      const formData = new FormData();
-      formData.append("file", currentFile);
-      if (apiKey) {
-        formData.append("api_key", apiKey);
-      }
-      formData.append("audio_type", currentAudioType || "clase");
-      const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
-      formData.append("model_name", selectedModelName);
-      if (inputKeywords && inputKeywords.value.trim()) {
-        formData.append("keywords", inputKeywords.value.trim());
+      // Resolver API Key activa
+      const localKey = (localStorage.getItem("gemini_api_key") || "").trim();
+      let activeKey = localKey;
+      if (!activeKey) {
+        try {
+          const poolRes = await fetch("/api/key-pool");
+          if (poolRes.ok) {
+            const poolData = await poolRes.json();
+            if (poolData.keys && poolData.keys.length > 0) {
+              activeKey = poolData.keys[0];
+            }
+          }
+        } catch (e) {}
       }
 
-      const response = await fetch("/api/transcribe", {
+      if (!activeKey) {
+        showError("Falta la API Key", "Por favor ingresa tu API Key de Google AI Studio antes de continuar.");
+        if (apiKeyModal) apiKeyModal.classList.remove("hidden");
+        return;
+      }
+
+      // Paso 1: Subir audio directamente por Cloudflare (0 MB consumidos en Render)
+      setProgressStep("cloud");
+      const workerUrl = `https://facuhelps-upload.monteverdiaxel.workers.dev/?key=${encodeURIComponent(activeKey)}&mime=${encodeURIComponent(currentFile.type || "audio/mp3")}&name=${encodeURIComponent(currentFile.name)}&size=${currentFile.size}`;
+
+      const uploadResponse = await fetch(workerUrl, {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": currentFile.type || "application/octet-stream"
+        },
+        body: currentFile
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errMsg = "Error en el servidor al procesar el audio.";
+      if (!uploadResponse.ok) {
+        const errText = await uploadResponse.text();
+        throw new Error(`Error en Cloudflare al subir archivo: ${errText}`);
+      }
+
+      const uploadData = await uploadResponse.json();
+      const googleFileName = uploadData.file ? uploadData.file.name : (uploadData.name || "");
+      if (!googleFileName) {
+        throw new Error("No se recibió el identificador del archivo desde Google.");
+      }
+
+      // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador (1 KB)
+      setProgressStep("gemini");
+      const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
+      const transcribeResponse = await fetch("/api/transcribe-file-uri", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          file_name: googleFileName,
+          api_key: localKey || undefined,
+          audio_type: currentAudioType || "clase",
+          keywords: (inputKeywords && inputKeywords.value.trim()) || "",
+          model_name: selectedModelName
+        })
+      });
+
+      if (!transcribeResponse.ok) {
+        const errorText = await transcribeResponse.text();
+        let errMsg = "Error en el servidor al transcribir el archivo.";
         try {
           errMsg = JSON.parse(errorText).detail || errMsg;
         } catch (e) {}
         throw new Error(errMsg);
       }
 
-      const data = await response.json();
+      const data = await transcribeResponse.json();
       rawTranscriptText = data.transcript || "";
 
       if (!rawTranscriptText.trim()) {
-        throw new Error("La transcripción devuelta por Gemini está vacía.");
+        throw new Error("La transcripción recibida está vacía.");
       }
 
-      // Finalización exitosa
+      // Finalizar visualización limpia
       setProgressStep("done");
       progressCard.classList.add("hidden");
       resultSection.classList.remove("hidden");
       if (completedBadge) completedBadge.classList.remove("hidden");
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
-      currentActiveFileName = (currentFile ? currentFile.name : "") || "audio.mp3";
+      currentActiveFileName = currentFile ? currentFile.name : "audio.mp3";
       resultFileName.textContent = currentActiveFileName;
-      resultModelBadge.textContent = `${selectedModelName} • completado`;
+      resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+
+      // Guardar en historial local y sincronizar con Supabase
       saveToHistory({
         filename: currentActiveFileName,
         audioType: currentAudioType || "clase",
@@ -1222,12 +1269,8 @@ ${speakerHint}${kw}
         timestamp: Date.now()
       });
 
-      setTimeout(() => {
-        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-
     } catch (err) {
-      showError("Error al transcribir", err.message || "Ocurrió un error durante la subida directa a Google. Por favor, verificá tu conexión y hacé clic en Reintentar.");
+      showError("Error al transcribir", err.message);
     } finally {
       stopTimer();
       progressCard.classList.add("hidden");
