@@ -223,7 +223,7 @@ async def transcribe_audio(
         )
 
     mime_type = MIME_MAP[file_ext]
-    target_model_name = "gemini-3.5-flash-lite"
+    target_model_name = "gemini-3.8-flash"
     effective_audio_type = (audio_type or "clase").lower().strip()
     if effective_audio_type not in ["clase", "entrevista", "continuo", "radio"]:
         effective_audio_type = "clase"
@@ -251,7 +251,8 @@ async def transcribe_audio(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536
+            max_output_tokens=65536,
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
         )
 
         transcript_text = ""
