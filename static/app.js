@@ -1192,98 +1192,36 @@ ${speakerHint}${kw}
     setProgressStep("local");
 
     const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
-    const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
-    const cleanKeywords = inputKeywords ? inputKeywords.value.trim() : "";
-    const ext = "." + currentFile.name.split(".").pop().toLowerCase();
-    const mimeType = {
-      ".mp3": "audio/mp3",
-      ".m4a": "audio/mp4",
-      ".aac": "audio/aac",
-      ".ogg": "audio/ogg",
-      ".flac": "audio/flac",
-      ".webm": "audio/webm",
-    }[ext] || currentFile.type || "audio/mp3";
 
     try {
-      progressTitle.textContent = "Iniciando subida segura a Google...";
-      progressSubtitle.textContent = "Obteniendo enlace directo para consumo cero de ancho de banda.";
+      const formData = new FormData();
+      formData.append("file", currentFile);
+      if (apiKey) {
+        formData.append("api_key", apiKey);
+      }
+      formData.append("audio_type", currentAudioType || "clase");
+      const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
+      formData.append("model_name", selectedModelName);
+      if (inputKeywords && inputKeywords.value.trim()) {
+        formData.append("keywords", inputKeywords.value.trim());
+      }
 
-      // Paso 1: Obtener URL de subida directa desde Render (pesa menos de 1 KB)
-      const sessionRes = await fetch("/api/get-upload-session", {
+      const response = await fetch("/api/transcribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: currentFile.name,
-          mime_type: mimeType,
-          file_size: currentFile.size,
-          api_key: apiKey || null
-        })
+        body: formData,
       });
 
-      if (!sessionRes.ok) {
-        const errData = await sessionRes.json().catch(() => ({}));
-        throw new Error(errData.detail || "No se pudo iniciar la sesión de subida a Google.");
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errMsg = "Error en el servidor al procesar el audio.";
+        try {
+          errMsg = JSON.parse(errorText).detail || errMsg;
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
-      const sessionData = await sessionRes.json();
-      const uploadUrl = sessionData.upload_url;
-      const keyIndex = sessionData.key_index || 0;
-
-      if (!uploadUrl) {
-        throw new Error("Google no proporcionó una URL de subida directa válida.");
-      }
-
-      // Paso 2: Subir el audio DIRECTAMENTE desde el navegador a Google Cloud (0 MB en Render)
-      setProgressStep("cloud");
-      progressTitle.textContent = "Subiendo audio directo a Google...";
-      progressSubtitle.textContent = `Transfiriendo ${formatBytes(currentFile.size)} directo a Google Cloud (0 MB en Render).`;
-
-      const uploadRes = await fetch(uploadUrl, {
-        method: "POST",
-        headers: {
-          "Content-Length": currentFile.size.toString(),
-          "X-Goog-Upload-Offset": "0",
-          "X-Goog-Upload-Command": "upload, finalize"
-        },
-        body: currentFile
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error("Hubo una interrupción en la transferencia con Google Cloud. Por favor verificá tu conexión e intentá de nuevo.");
-      }
-
-      const fileData = await uploadRes.json();
-      const googleFileName = fileData.file ? fileData.file.name : null;
-
-      if (!googleFileName) {
-        throw new Error("Google no devolvió el identificador del archivo procesado.");
-      }
-
-      // Paso 3: Avisar a Render enviando ÚNICAMENTE el identificador de 50 bytes (Gemini transcribe)
-      setProgressStep("gemini");
-      progressTitle.textContent = "Gemini Flash transcribiendo...";
-      progressSubtitle.textContent = "Google está procesando la clase y generando el texto estructurado.";
-
-      const uriRes = await fetch("/api/transcribe-file-uri", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_name: googleFileName,
-          api_key: apiKey || null,
-          key_index: keyIndex,
-          audio_type: currentAudioType || "clase",
-          keywords: cleanKeywords || null,
-          model_name: selectedModelName
-        })
-      });
-
-      if (!uriRes.ok) {
-        const errData = await uriRes.json().catch(() => ({}));
-        throw new Error(errData.detail || "Error en el servidor al generar la transcripción.");
-      }
-
-      const uriData = await uriRes.json();
-      rawTranscriptText = uriData.transcript || "";
+      const data = await response.json();
+      rawTranscriptText = data.transcript || "";
 
       if (!rawTranscriptText.trim()) {
         throw new Error("La transcripción devuelta por Gemini está vacía.");
