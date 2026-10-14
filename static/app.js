@@ -291,6 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.supabase && typeof window.supabase.createClient === "function") {
     try {
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      window.supabaseClient = supabaseClient;
     } catch (e) {
       console.warn("No se pudo inicializar Supabase:", e);
     }
@@ -671,6 +672,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user) {
         updateAuthUI(user);
         await syncUserData(user.id);
+        await loadUserTranscriptsFromCloud();
       } else {
         updateAuthUI(null);
       }
@@ -689,6 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user) {
         updateAuthUI(user);
         await syncUserData(user.id);
+        await loadUserTranscriptsFromCloud();
       } else {
         await handleUserSignOut();
       }
@@ -768,18 +771,6 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("Error al descargar user_career_plan:", ePlan);
       }
 
-      // d. Descargar transcripciones de ese usuario
-      let remoteTranscripts = [];
-      try {
-        const { data, error } = await supabaseClient
-          .from("user_transcripts")
-          .select("*")
-          .eq("user_id", userId)
-          .order("timestamp", { ascending: false })
-          .limit(20);
-        if (!error && Array.isArray(data)) remoteTranscripts = data;
-      } catch (eTr) {
-        console.warn("Error al descargar user_transcripts:", eTr);
       }
 
       // Actualizar la base de datos IndexedDB local de forma aislada
@@ -836,20 +827,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      // Actualizar historial local de transcripciones
-      if (remoteTranscripts.length > 0) {
-        const historyList = remoteTranscripts.map(rt => ({
-          filename: rt.filename,
-          audioType: rt.audio_type || "clase",
-          transcript: rt.transcript || "",
-          summary: rt.summary || "",
-          timestamp: Number(rt.timestamp) || Date.now()
-        }));
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyList));
-      } else {
-        localStorage.removeItem(HISTORY_STORAGE_KEY);
-      }
-      updateHistoryBadge();
+      // Actualizar historial local de transcripciones desde la nube
+      await loadUserTranscriptsFromCloud();
 
       // Refrescar en vivo las vistas en pantalla
       currentSubject = null;
@@ -1238,16 +1217,16 @@ ${speakerHint}${kw}
       resultModelBadge.textContent = `${selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
-      setTimeout(() => {
-        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-
       saveToHistory({
         filename: currentActiveFileName,
         audioType: currentAudioType || "clase",
         transcript: rawTranscriptText,
         timestamp: Date.now()
       });
+
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
 
     } catch (err) {
       showError("Error al transcribir", err.message || "Ocurrió un error durante la subida directa a Google. Por favor, verificá tu conexión y hacé clic en Reintentar.");
@@ -1911,35 +1890,60 @@ ${speakerHint}${kw}
     }
   }
 
-  function saveToHistory(item) {
+  async function saveToHistory(item) {
     try {
       let list = getHistory();
-      // Agregar al inicio
       list.unshift(item);
-      // Mantener hasta 10 elementos
       if (list.length > MAX_HISTORY_ITEMS) {
         list = list.slice(0, MAX_HISTORY_ITEMS);
       }
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
       updateHistoryBadge();
 
-      // Sincronizar en tiempo real en Supabase para usuarios autenticados
-      if (supabaseClient && currentAuthUser) {
-        try {
-          supabaseClient.from("user_transcripts").upsert({
-            user_id: currentAuthUser.id,
+      // Sincronizar en Supabase si hay sesión iniciada
+      if (window.supabaseClient) {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (session && session.user) {
+          await window.supabaseClient.from('user_transcripts').insert([{
+            user_id: session.user.id,
             filename: item.filename,
-            audio_type: item.audioType || "clase",
-            transcript: item.transcript || "",
-            summary: item.summary || "",
-            timestamp: item.timestamp || Date.now()
-          }).then();
-        } catch (eTr) {
-          console.warn("Error al sincronizar transcripción en Supabase:", eTr);
+            audio_type: item.audioType,
+            transcript: item.transcript,
+            created_at: new Date(item.timestamp).toISOString()
+          }]);
         }
       }
     } catch (e) {
       console.warn("Error al guardar en historial:", e);
+    }
+  }
+
+  async function loadUserTranscriptsFromCloud() {
+    if (!window.supabaseClient) return;
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (!session || !session.user) return;
+
+      const { data, error } = await window.supabaseClient
+        .from('user_transcripts')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(MAX_HISTORY_ITEMS);
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        const cloudItems = data.map(row => ({
+          filename: row.filename || "audio.mp3",
+          audioType: row.audio_type || "clase",
+          transcript: row.transcript,
+          timestamp: new Date(row.created_at).getTime()
+        }));
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(cloudItems));
+        updateHistoryBadge();
+      }
+    } catch (err) {
+      console.warn("Error al cargar transcripciones desde Supabase:", err);
     }
   }
 
