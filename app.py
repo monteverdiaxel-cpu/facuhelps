@@ -251,8 +251,7 @@ async def transcribe_audio(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536,
-            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+            max_output_tokens=65536
         )
 
         transcript_text = ""
@@ -290,52 +289,22 @@ async def transcribe_audio(
                 if google_file.state.name != "ACTIVE":
                     raise Exception(f"Google no pudo procesar el archivo. Estado: {google_file.state.name}")
 
-                # 4. Ejecutar generate_content con fallback automático en cascada ante 503 / sobrecarga
-                model_cascade = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"]
-                requested_model = (model_name or "gemini-3.8-flash").strip()
-                if requested_model in model_cascade:
-                    start_idx = model_cascade.index(requested_model)
-                    models_to_try = model_cascade[start_idx:] + model_cascade[:start_idx]
-                    models_to_try = list(dict.fromkeys(models_to_try))
-                else:
-                    models_to_try = [requested_model] + model_cascade
-                    models_to_try = list(dict.fromkeys(models_to_try))
-
+                # 4. Ejecutar generate_content con reintentos en el mismo archivo ante 503
                 response = None
-                for current_model in models_to_try:
-                    if "1.5" in current_model:
-                        model_config = types.GenerateContentConfig(
-                            system_instruction=system_instruction,
-                            temperature=0.0,
-                            max_output_tokens=65536
-                        )
-                    else:
-                        model_config = types.GenerateContentConfig(
-                            system_instruction=system_instruction,
-                            temperature=0.0,
-                            max_output_tokens=65536,
-                            thinking_config=types.ThinkingConfig(thinking_level="LOW")
-                        )
-
+                for attempt in range(1, 4):
                     try:
                         response = client.models.generate_content(
-                            model=current_model,
+                            model=target_model_name,
                             contents=[
                                 google_file,
                                 user_prompt
                             ],
-                            config=model_config
+                            config=gen_config
                         )
-                        target_model_name = current_model
                         break
                     except Exception as gen_err:
-                        err_str = str(gen_err).lower()
-                        is_overloaded = any(kw in err_str for kw in [
-                            "503", "unavailable", "high demand", "overloaded"
-                        ])
-                        # Si devuelve 503 o sobrecarga temporal, probar inmediatamente con el siguiente modelo en cascada
-                        if is_overloaded and current_model != models_to_try[-1]:
-                            time.sleep(0.5)
+                        if is_retriable_error(gen_err) and attempt < 3:
+                            time.sleep(3)
                             continue
                         raise gen_err
 
