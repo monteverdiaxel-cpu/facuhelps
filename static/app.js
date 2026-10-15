@@ -370,6 +370,33 @@ document.addEventListener("DOMContentLoaded", () => {
     tabAuthRegister.addEventListener("click", () => setAuthTab("register"));
   }
 
+  // Alternar visibilidad de contraseña ("ojito")
+  document.querySelectorAll(".btn-toggle-password").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const container = btn.closest(".relative");
+      if (!container) return;
+      const input = container.querySelector('input[type="password"], input[type="text"]');
+      if (!input) return;
+
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+
+      const iconEye = btn.querySelector(".icon-eye");
+      const iconEyeOff = btn.querySelector(".icon-eye-off");
+
+      if (iconEye && iconEyeOff) {
+        if (isPassword) {
+          iconEye.classList.add("hidden");
+          iconEyeOff.classList.remove("hidden");
+        } else {
+          iconEye.classList.remove("hidden");
+          iconEyeOff.classList.add("hidden");
+        }
+      }
+      if (window.lucide) window.lucide.createIcons();
+    });
+  });
+
   if (btnUserAuth) {
     btnUserAuth.addEventListener("click", () => {
       if (currentAuthUser) {
@@ -649,6 +676,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnManualSync.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-slate-700 dark:border-slate-300 border-t-transparent rounded-full animate-spin"></div><span>Sincronizando...</span>`;
       try {
         await syncUserData(currentAuthUser.id);
+        await loadUserTranscriptsFromCloud();
         btnManualSync.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i><span>¡Sincronizado!</span>`;
         if (window.lucide) window.lucide.createIcons();
         setTimeout(() => {
@@ -1257,10 +1285,6 @@ ${speakerHint}${kw}
       resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
-      setTimeout(() => {
-        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-
       // Guardar en historial local y sincronizar con Supabase
       saveToHistory({
         filename: currentActiveFileName,
@@ -1268,6 +1292,10 @@ ${speakerHint}${kw}
         transcript: rawTranscriptText,
         timestamp: Date.now()
       });
+
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
 
     } catch (err) {
       showError("Error al transcribir", err.message);
@@ -1932,8 +1960,11 @@ ${speakerHint}${kw}
   }
 
   async function saveToHistory(item) {
+    if (!item) return;
     try {
       let list = getHistory();
+      // Evitar duplicados por timestamp o filename
+      list = list.filter(t => t.timestamp !== item.timestamp);
       list.unshift(item);
       if (list.length > MAX_HISTORY_ITEMS) {
         list = list.slice(0, MAX_HISTORY_ITEMS);
@@ -1941,18 +1972,57 @@ ${speakerHint}${kw}
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
       updateHistoryBadge();
 
-      // Sincronizar en Supabase si hay sesión iniciada
-      if (window.supabaseClient) {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session && session.user) {
-          await window.supabaseClient.from('user_transcripts').insert([{
-            user_id: session.user.id,
-            filename: item.filename,
-            audio_type: item.audioType,
-            transcript: item.transcript,
-            created_at: new Date(item.timestamp).toISOString()
-          }]);
+      // Guardar en la nube (Supabase) si hay sesión activa
+      const client = window.supabaseClient || supabaseClient;
+      if (client) {
+        let user = currentAuthUser;
+        if (!user) {
+          try {
+            const { data: sessionData } = await client.auth.getSession();
+            user = sessionData?.session?.user || null;
+          } catch (e) {}
         }
+        if (!user) {
+          try {
+            const { data: userData } = await client.auth.getUser();
+            user = userData?.user || null;
+          } catch (e) {}
+        }
+
+        if (user) {
+          const isoDate = item.timestamp ? new Date(item.timestamp).toISOString() : new Date().toISOString();
+          const basePayload = {
+            user_id: user.id,
+            filename: item.filename || "audio.mp3",
+            audio_type: item.audioType || "clase",
+            transcript: item.transcript || "",
+            summary: item.summary || "",
+            created_at: isoDate
+          };
+
+          const { error } = await client.from('user_transcripts').insert([basePayload]);
+          if (error) {
+            console.warn("[Supabase] Insert inicial con created_at falló, probando con timestamp:", error.message || error);
+            const altPayload = {
+              user_id: user.id,
+              filename: item.filename || "audio.mp3",
+              audio_type: item.audioType || "clase",
+              transcript: item.transcript || "",
+              summary: item.summary || "",
+              timestamp: item.timestamp || Date.now()
+            };
+            const altRes = await client.from('user_transcripts').insert([altPayload]);
+            if (altRes.error) {
+              console.warn("[Supabase] Reintento con timestamp también falló, intentando upsert:", altRes.error.message || altRes.error);
+              await client.from('user_transcripts').upsert([basePayload]);
+            }
+          }
+        }
+      }
+
+      // Si el modal de historial está abierto, refrescar la lista en vivo
+      if (historyModal && !historyModal.classList.contains("hidden")) {
+        renderHistoryList();
       }
     } catch (e) {
       console.warn("Error al guardar en historial:", e);
@@ -1960,28 +2030,72 @@ ${speakerHint}${kw}
   }
 
   async function loadUserTranscriptsFromCloud() {
-    if (!window.supabaseClient) return;
+    const client = window.supabaseClient || supabaseClient;
+    if (!client) return;
     try {
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      if (!session || !session.user) return;
+      let user = currentAuthUser;
+      if (!user) {
+        try {
+          const { data: sessionData } = await client.auth.getSession();
+          user = sessionData?.session?.user || null;
+        } catch (e) {}
+      }
+      if (!user) {
+        try {
+          const { data: userData } = await client.auth.getUser();
+          user = userData?.user || null;
+        } catch (e) {}
+      }
+      if (!user) return;
 
-      const { data, error } = await window.supabaseClient
+      let { data, error } = await client
         .from('user_transcripts')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(MAX_HISTORY_ITEMS);
 
-      if (error) throw error;
+      if (error) {
+        const resAlt = await client
+          .from('user_transcripts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false })
+          .limit(MAX_HISTORY_ITEMS);
+        if (!resAlt.error && resAlt.data) {
+          data = resAlt.data;
+          error = null;
+        } else {
+          const resNoOrder = await client
+            .from('user_transcripts')
+            .select('*')
+            .eq('user_id', user.id)
+            .limit(MAX_HISTORY_ITEMS);
+          if (!resNoOrder.error && resNoOrder.data) {
+            data = resNoOrder.data;
+            error = null;
+          }
+        }
+      }
+
+      if (error) {
+        console.warn("[Supabase] Error al cargar user_transcripts:", error);
+        return;
+      }
+
       if (data && data.length > 0) {
         const cloudItems = data.map(row => ({
           filename: row.filename || "audio.mp3",
-          audioType: row.audio_type || "clase",
-          transcript: row.transcript,
-          timestamp: new Date(row.created_at).getTime()
+          audioType: row.audio_type || row.audioType || "clase",
+          transcript: row.transcript || "",
+          summary: row.summary || "",
+          timestamp: row.created_at ? new Date(row.created_at).getTime() : (Number(row.timestamp) || Date.now())
         }));
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(cloudItems));
         updateHistoryBadge();
+        if (typeof renderHistoryList === "function") {
+          renderHistoryList();
+        }
       }
     } catch (err) {
       console.warn("Error al cargar transcripciones desde Supabase:", err);
@@ -2002,6 +2116,16 @@ ${speakerHint}${kw}
       }
       if (updated) {
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+      }
+
+      const client = window.supabaseClient || supabaseClient;
+      const user = currentAuthUser;
+      if (client && user) {
+        client.from("user_transcripts")
+          .update({ summary: summaryText })
+          .eq("user_id", user.id)
+          .eq("filename", targetFilename)
+          .then();
       }
     } catch (e) {
       console.warn("Error al actualizar resumen en historial:", e);
@@ -2221,7 +2345,12 @@ ${speakerHint}${kw}
   }
 
   if (btnHistoryToggle) {
-    btnHistoryToggle.addEventListener("click", () => {
+    btnHistoryToggle.addEventListener("click", async () => {
+      try {
+        await loadUserTranscriptsFromCloud();
+      } catch (e) {
+        console.warn("Error al cargar historial desde la nube:", e);
+      }
       renderHistoryList();
       historyModal.classList.remove("hidden");
     });

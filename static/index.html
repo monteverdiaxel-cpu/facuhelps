@@ -251,15 +251,25 @@
             <label for="inputAuthPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
               Contraseña
             </label>
-            <input 
-              type="password" 
-              id="inputAuthPassword" 
-              required 
-              placeholder="••••••••"
-              autocomplete="current-password"
-              minlength="6"
-              class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
-            >
+            <div class="relative">
+              <input 
+                type="password" 
+                id="inputAuthPassword" 
+                required 
+                placeholder="••••••••"
+                autocomplete="current-password"
+                minlength="6"
+                class="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+              >
+              <button 
+                type="button" 
+                class="btn-toggle-password absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
+                <i data-lucide="eye-off" class="w-4 h-4 icon-eye-off hidden"></i>
+              </button>
+            </div>
             <div class="text-right mt-1.5" id="forgotPassContainer">
               <button type="button" id="btnForgotPassLink" class="text-[11px] text-blue-900 dark:text-amber-400 hover:underline">¿Olvidaste tu contraseña?</button>
             </div>
@@ -329,7 +339,24 @@
       <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Crear nueva contraseña</h3>
       <p class="text-xs text-slate-500 mb-4">Ingresá tu nueva clave para acceder a tu cuenta.</p>
       <form id="formNewPassword" class="space-y-3">
-        <input type="password" id="inputNewPassword" required minlength="6" placeholder="Nueva contraseña (mínimo 6 caracteres)" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400">
+        <div class="relative">
+          <input 
+            type="password" 
+            id="inputNewPassword" 
+            required 
+            minlength="6" 
+            placeholder="Nueva contraseña (mínimo 6 caracteres)" 
+            class="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400"
+          >
+          <button 
+            type="button" 
+            class="btn-toggle-password absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+            aria-label="Mostrar u ocultar contraseña"
+          >
+            <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
+            <i data-lucide="eye-off" class="w-4 h-4 icon-eye-off hidden"></i>
+          </button>
+        </div>
         <button type="submit" class="w-full py-2.5 rounded-xl bg-[#001b44] text-[#ffc700] font-semibold text-xs transition">Guardar nueva contraseña</button>
       </form>
     </div>
