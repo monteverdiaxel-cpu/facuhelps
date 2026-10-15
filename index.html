@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FacuHelps — Transcripción Inteligente de Clases y Entrevistas</title>
+  <!-- Open Graph / WhatsApp Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://facuhelps-comuuba.onrender.com/">
+  <meta property="og:title" content="FacuHelps — Copiloto de Estudio Comu UBA">
+  <meta property="og:description" content="Transcriptor inteligente de clases, organizador de materias con PDFs y plan de estudios interactivo (Plan 504).">
+  <meta name="theme-color" content="#001b44">
+  <meta name="description" content="FacuHelps: Tu espacio integral de estudio universitario para Ciencias de la Comunicación (UBA Sociales).">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Crect width='48' height='48' rx='12' fill='%23001b44' stroke='%23ffc700' stroke-width='1.5' stroke-opacity='0.5'/%3E%3Cpath d='M8 24v0M11 20v8M14 17v14' stroke='%23ffc700' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M17 34c4-3 9-2 15-4 4-1 6-4 6-9V13c-2 4-5 5-9 6-5 1-9 0-12 3' stroke='%23ffc700' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 30v-9' stroke='%23ffc700' stroke-width='1.8' stroke-linecap='round' opacity='0.7'/%3E%3Cpath d='M17 13h13l-3 4H22v4h6l-3 4H22v9h-5V13z' fill='%23ffffff'/%3E%3Cpath d='M41 24v0M38 21v6' stroke='%23ffc700' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jsPDF para exportación vectorial de PDF y html2pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Plus Jakarta Sans, Inter, Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+            heading: ['"Plus Jakarta Sans"', 'sans-serif'],
+            editorial: ['"Playfair Display"', 'serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#1d4ed8',
+              600: '#1e3a8a',
+              700: '#172554',
+              gold: '#f59e0b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased selection:bg-amber-100 dark:selection:bg-blue-900 selection:text-blue-950 dark:selection:text-amber-200 transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 transition-colors">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+      <div id="btnHeaderLogoHome" class="flex items-center gap-2.5 sm:gap-3 min-w-0 shrink cursor-pointer group" title="Ir al Inicio">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#001b44] border border-[#ffc700]/40 flex items-center justify-center text-[#ffc700] shadow-sm shadow-blue-950/40 shrink-0 p-1.5">
+          <svg class="w-full h-full" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 24v0M11 20v8M14 17v14" stroke="#ffc700" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M17 34c4-3 9-2 15-4 4-1 6-4 6-9V13c-2 4-5 5-9 6-5 1-9 0-12 3" stroke="#ffc700" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M32 30v-9" stroke="#ffc700" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+            <path d="M17 13h13l-3 4H22v4h6l-3 4H22v9h-5V13z" fill="#ffffff"/>
+            <path d="M41 24v0M38 21v6" stroke="#ffc700" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-base font-bold leading-tight truncate">
+            <span class="text-[#001b44] dark:text-white font-black">Facu</span><span class="text-[#ffc700] font-black">Helps</span>
+          </h1>
+          <p class="hidden sm:block text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5 font-sans">
+            Copiloto de IA y gestión académica universitaria
+          </p>
+        </div>
+      </div>
+
+      <!-- Acciones en el Header: Mis Transcripciones + Modo Oscuro + API Key (compactos en móviles) -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <button id="btnHistoryToggle" type="button" aria-label="Mis Transcripciones" class="flex items-center gap-1 sm:gap-1.5 text-xs font-medium px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 hover:bg-slate-100/80 dark:bg-slate-800/80 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-200" title="Ver transcripciones guardadas en este navegador">
+          <i data-lucide="book-marked" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0"></i>
+          <span class="hidden md:inline">📚 Mis Transcripciones</span>
+          <span class="inline md:hidden">Historial</span>
+          <span id="historyBadgeCount" class="hidden text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+        <button id="btnThemeToggle" type="button" aria-label="Alternar modo oscuro" class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors shadow-2xs shrink-0" title="Cambiar tema (Claro / Oscuro)">
+          <i data-lucide="moon" id="themeIcon" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        </button>
+        <button id="btnApiKeyToggle" class="flex items-center gap-1.5 sm:gap-2 text-xs font-medium px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 hover:bg-slate-100/80 dark:bg-slate-800/80 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-200 shrink-0">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0"></i>
+          <span id="apiKeyStatusLabel" class="hidden sm:inline">Configurar API Key</span>
+          <span class="inline sm:hidden font-mono text-[11px]">API Key</span>
+        </button>
+        <!-- Botón Cuenta de Usuario / Sincronización Supabase -->
+        <button id="btnUserAuth" type="button" aria-label="Cuenta de usuario y sincronización" class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition shadow-2xs shrink-0 w-8 h-8 sm:w-auto" title="Iniciar sesión para sincronizar automáticamente entre dispositivos">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400 shrink-0"></i>
+          <span id="userAuthLabel" class="hidden sm:inline">Iniciar sesión</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Modal / Drawer para API Key -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-lg">
+          <i data-lucide="shield-check" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
+          Configuración de API Key (Key Pool)
+        </div>
+        <button id="btnCloseApiKeyModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="bg-blue-50/60 dark:bg-blue-950/30 p-3.5 rounded-xl border border-blue-100 dark:border-blue-900/40 mb-4 text-xs space-y-2">
+        <p class="font-semibold text-slate-800 dark:text-slate-200">¿Cómo conseguir tu clave gratuita en 1 minuto?</p>
+        <ol class="list-decimal ml-4 space-y-1 text-slate-600 dark:text-slate-300">
+          <li>Hacé clic en el enlace azul de abajo y entrá con tu cuenta de <strong>Google / Gmail</strong>.</li>
+          <li>Tocá el botón azul <strong>"Create API Key"</strong> y copiala.</li>
+          <li>Pegala en el recuadro de abajo y tocá <strong>Guardar</strong>.</li>
+        </ol>
+        <p class="text-[11px] text-amber-700 dark:text-amber-300 font-medium">✨ Es 100% oficial de Google, completamente gratuita y no te pide tarjeta de crédito.</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="inputApiKey" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Google AI Studio API Key
+            </label>
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Admite varias separadas por coma</span>
+          </div>
+          <div class="relative">
+            <textarea 
+              id="inputApiKey" 
+              rows="3"
+              placeholder="Pegá tu clave acá (ej: AIzaSy...)" 
+              class="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition resize-none"
+            ></textarea>
+            <button id="btnToggleShowKey" type="button" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Ver / Ocultar claves">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div id="envKeyNotice" class="hidden text-xs text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-1.5 font-medium">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            API Key detectada en el archivo .env del servidor
+          </div>
+        </div>
+
+        <div>
+          <label for="selectModel" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Modelo Gemini
+          </label>
+          <select id="selectModel" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition">
+            <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (Predeterminado - Recomendado por Google)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex justify-between items-center">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-900 dark:text-amber-400 hover:underline flex items-center gap-1">
+            Obtener clave gratis en Google AI Studio
+            <i data-lucide="external-link" class="w-3 h-3"></i>
+          </a>
+          <button id="btnSaveApiKey" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal / Drawer: Autenticación y Sincronización Supabase -->
+  <div id="modalAuth" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <!-- Encabezado del modal -->
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold text-lg font-heading">
+          <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="cloud" class="w-4 h-4"></i>
+          </div>
+          <h3>Accedé a tu cuenta FacuHelps</h3>
+        </div>
+        <button id="btnCloseAuthModal" type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Sincronizá tus materias, notas y carrera entre tu computadora y tu celular de forma 100% privada.
+      </p>
+
+      <!-- Vista cuando el usuario YA inició sesión -->
+      <div id="authLoggedInView" class="hidden space-y-4">
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Sesión iniciada</span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+              <i data-lucide="check" class="w-3 h-3"></i> Sincronizado ✓
+            </span>
+          </div>
+          <p id="authLoggedInEmail" class="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 truncate mb-1">
+            usuario@mail.com
+          </p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">
+            Tus materias, apuntes, PDFs y progreso del Plan 504 están respaldados y sincronizados.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2">
+          <button id="btnManualSync" type="button" class="flex-1 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
+            <span>Sincronizar ahora</span>
+          </button>
+          <button id="btnLogout" type="button" class="py-2 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-medium text-xs flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Vista cuando el usuario NO ha iniciado sesión (Tabs Login / Registro) -->
+      <div id="authLoggedOutView" class="space-y-4">
+        <!-- Pestañas Iniciar Sesión / Registrarse -->
+        <div class="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/80 dark:border-slate-700/80">
+          <button id="tabAuthLogin" type="button" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs transition">
+            Iniciar sesión
+          </button>
+          <button id="tabAuthRegister" type="button" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition">
+            Registrarse
+          </button>
+        </div>
+
+        <!-- Formulario -->
+        <form id="formAuth" class="space-y-3">
+          <div>
+            <label for="inputAuthEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              Correo electrónico
+            </label>
+            <input 
+              type="email" 
+              id="inputAuthEmail" 
+              required 
+              placeholder="tu.usuario@ejemplo.com"
+              autocomplete="email"
+              class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+            >
+          </div>
+
+          <div>
+            <label for="inputAuthPassword" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              Contraseña
+            </label>
+            <div class="relative">
+              <input 
+                type="password" 
+                id="inputAuthPassword" 
+                required 
+                placeholder="••••••••"
+                autocomplete="current-password"
+                minlength="6"
+                class="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+              >
+              <button 
+                type="button" 
+                class="btn-toggle-password absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
+                <i data-lucide="eye-off" class="w-4 h-4 icon-eye-off hidden"></i>
+              </button>
+            </div>
+            <div class="text-right mt-1.5" id="forgotPassContainer">
+              <button type="button" id="btnForgotPassLink" class="text-[11px] text-blue-900 dark:text-amber-400 hover:underline">¿Olvidaste tu contraseña?</button>
+            </div>
+          </div>
+
+          <!-- Alerta de error de autenticación -->
+          <div id="authAlert" class="hidden p-2.5 rounded-xl text-xs bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200 border border-rose-200 dark:border-rose-900/60"></div>
+
+          <!-- Mensaje de éxito o confirmación -->
+          <div id="authSuccessAlert" class="hidden p-2.5 rounded-xl text-xs bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-900/60"></div>
+
+          <button 
+            type="submit" 
+            id="btnAuthSubmit"
+            style="background-color: #001b44; color: #ffffff;"
+            class="w-full py-2.5 rounded-xl hover:bg-[#002d72] font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm"
+          >
+            <span id="btnAuthSubmitText">Iniciar sesión</span>
+            <div id="authSpinner" class="hidden w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          </button>
+        </form>
+
+        <!-- Vista alternativa para recuperar contraseña -->
+        <div id="authRecoverySection" class="hidden space-y-3.5">
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Ingresá tu correo y te enviaremos un enlace seguro para restablecer tu contraseña.</p>
+          <input type="email" id="recoveryEmail" placeholder="tuemail@gmail.com" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400">
+          <button type="button" id="btnSendRecovery" class="w-full py-2.5 rounded-xl bg-[#001b44] hover:bg-[#002d72] text-[#ffc700] font-semibold text-xs transition shadow-sm">
+            Enviar enlace de recuperación
+          </button>
+          <div class="text-center">
+            <button type="button" id="btnBackToLogin" class="text-xs text-slate-500 hover:underline">Volver a iniciar sesión</button>
+          </div>
+        </div>
+
+        <!-- Mensaje de privacidad y RLS -->
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 dark:text-slate-500 text-center flex items-center justify-center gap-1">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
+          <span>🔒 Cada usuario accede exclusivamente a sus propios datos mediante encriptación RLS.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Mi Cuenta / Perfil (Cerrar sesión en celulares y PC) -->
+  <div id="modalUserProfile" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 animate-scale-up text-center">
+      <div class="w-12 h-12 mx-auto rounded-full bg-[#001b44] border-2 border-[#ffc700] text-[#ffc700] flex items-center justify-center mb-3">
+        <i data-lucide="user" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100" id="userProfileEmail">usuario@gmail.com</h3>
+      <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">✓ Sincronizado en la nube (Supabase)</p>
+      <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        <button type="button" id="btnLogoutAction" class="w-full py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 font-semibold text-xs transition border border-rose-200 dark:border-rose-900 flex items-center justify-center gap-2">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>Cerrar sesión</span>
+        </button>
+        <button type="button" id="btnCloseProfileModal" class="w-full py-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 text-xs font-medium">
+          Volver
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para ingresar la Nueva Contraseña tras recuperación -->
+  <div id="modalNewPassword" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 text-center animate-scale-up">
+      <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Crear nueva contraseña</h3>
+      <p class="text-xs text-slate-500 mb-4">Ingresá tu nueva clave para acceder a tu cuenta.</p>
+      <form id="formNewPassword" class="space-y-3">
+        <div class="relative">
+          <input 
+            type="password" 
+            id="inputNewPassword" 
+            required 
+            minlength="6" 
+            placeholder="Nueva contraseña (mínimo 6 caracteres)" 
+            class="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400"
+          >
+          <button 
+            type="button" 
+            class="btn-toggle-password absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+            aria-label="Mostrar u ocultar contraseña"
+          >
+            <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
+            <i data-lucide="eye-off" class="w-4 h-4 icon-eye-off hidden"></i>
+          </button>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-[#001b44] text-[#ffc700] font-semibold text-xs transition">Guardar nueva contraseña</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Content Layout (Sidebar + Contenido) -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:gap-8 gap-6">
+
+      <!-- Columna Izquierda: Menú Lateral de Navegación -->
+      <aside class="w-full lg:w-64 shrink-0 lg:sticky lg:top-24">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-2.5 sm:p-3 transition-colors">
+          <p class="hidden lg:block text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 pt-1 pb-2">
+            Módulos FacuHelps
+          </p>
+          <nav class="flex overflow-x-auto no-scrollbar scroll-smooth gap-2 p-1 w-full max-w-full lg:flex-col lg:overflow-visible" aria-label="Navegación principal">
+            <!-- Botón 0: Inicio / Portada (Activo por defecto) -->
+            <button 
+              id="tabBtnHome" 
+              type="button" 
+              class="nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border-2 border-[#ffc700] bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] font-semibold text-xs transition-all shadow-xs text-left"
+            >
+              <div class="w-8 h-8 rounded-lg bg-[#001b44]/15 dark:bg-[#001b44]/60 text-[#ffc700] flex items-center justify-center shrink-0">
+                <i data-lucide="home" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="truncate text-xs font-semibold">Inicio</div>
+                <div class="hidden lg:block text-[11px] text-[#001b44]/80 dark:text-[#ffc700]/80 font-normal truncate">Portada y accesos</div>
+              </div>
+            </button>
+
+            <!-- Botón 1: Transcriptor -->
+            <button 
+              id="tabBtnTranscriptor" 
+              type="button" 
+              class="nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left"
+            >
+              <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
+                <i data-lucide="mic" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="truncate text-xs font-semibold">Transcriptor</div>
+                <div class="hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate">Audio a texto con IA</div>
+              </div>
+            </button>
+
+            <!-- Botón 2: Organizador de Materias -->
+            <button 
+              id="tabBtnOrganizer" 
+              type="button" 
+              class="nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left"
+            >
+              <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
+                <i data-lucide="folder" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="truncate text-xs font-semibold">
+                  <span class="inline sm:hidden">Organizador</span><span class="hidden sm:inline">Organizador de Materias</span>
+                </div>
+                <div class="hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate">Gestión de PDFs local</div>
+              </div>
+            </button>
+
+            <!-- Botón 3: Mi Carrera (Plan 504) -->
+            <button 
+              id="tabBtnCareer" 
+              type="button" 
+              class="nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left"
+            >
+              <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="truncate text-xs font-semibold">
+                  <span class="inline sm:hidden">Mi Carrera</span><span class="hidden sm:inline">Mi Carrera (Plan 504)</span>
+                </div>
+                <div class="hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate">Seguimiento y orientaciones</div>
+              </div>
+            </button>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Columna Derecha: Área de Contenido Principal -->
+      <div class="flex-1 min-w-0 w-full space-y-6">
+
+        <!-- Vista 0: Inicio / Portada (activa por defecto) -->
+        <div id="viewHome" class="space-y-8 animate-fade-in">
+          
+          <!-- Hero Section -->
+          <div class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-10 text-center shadow-sm">
+            <!-- Trama de puntos y cuadrícula de fondo -->
+            <div class="absolute inset-0 bg-grid-subtle pointer-events-none opacity-60"></div>
+            <!-- Suaves halos de luz radial azul y dorado de fondo -->
+            <div class="absolute -top-24 -left-24 w-72 h-72 bg-blue-600/10 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-[#ffc700]/15 dark:bg-[#ffc700]/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50/90 dark:bg-slate-800/90 text-blue-950 dark:text-amber-300 text-xs font-semibold mb-4 border border-amber-400/40 shadow-2xs backdrop-blur-xs">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span class="tracking-wide">Plataforma Académica Integral</span>
+              </div>
+              
+              <div class="w-24 h-24 sm:w-28 sm:h-28 mx-auto rounded-3xl bg-[#001b44] border-2 border-[#ffc700]/50 flex items-center justify-center shadow-xl shadow-blue-950/60 p-4 mb-4 hover:scale-105 transition-transform duration-300">
+                <svg class="w-full h-full" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 24v0M11 20v8M14 17v14" stroke="#ffc700" stroke-width="2.4" stroke-linecap="round"/>
+                  <path d="M17 34c4-3 9-2 15-4 4-1 6-4 6-9V13c-2 4-5 5-9 6-5 1-9 0-12 3" stroke="#ffc700" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M32 30v-9" stroke="#ffc700" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                  <path d="M17 13h13l-3 4H22v4h6l-3 4H22v9h-5V13z" fill="#ffffff"/>
+                  <path d="M41 24v0M38 21v6" stroke="#ffc700" stroke-width="2.4" stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <p class="font-editorial italic text-lg sm:text-xl text-slate-800 dark:text-slate-200 mt-2 font-semibold">
+                Tu espacio integral de estudio universitario
+              </p>
+              
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
+                Herramienta diseñada para estudiantes. Transcribí grabaciones de clases y conferencias palabra por palabra con IA, y organizá tus materias en un entorno 100% privado.
+              </p>
+
+              <div class="flex flex-wrap items-center justify-center gap-3 pt-6">
+                <button 
+                  id="btnHeroOpenTranscriptor" 
+                  type="button" 
+                  style="background-color: #001b44; color: #ffc700;"
+                  class="px-5 py-2.5 rounded-xl border border-[#ffc700]/30 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-sm hover:brightness-125 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <i data-lucide="mic" class="w-4 h-4" style="color: #ffc700;"></i>
+                  <span>Abrir Transcriptor</span>
+                </button>
+                <button 
+                  id="btnHeroOpenOrganizer" 
+                  type="button" 
+                  class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <i data-lucide="folder-open" class="w-4 h-4 text-amber-500"></i>
+                  <span>Abrir Organizador de Materias</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Módulos Principales (Cards) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            
+            <!-- Tarjeta 1: Transcriptor -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-blue-800 dark:hover:border-amber-400/50 hover:shadow-md transition-all group">
+              <div>
+                <!-- Micro-ilustración vectorial: Ondas de audio dinámicas con degradado azul y dorado -->
+                <div class="w-full h-16 rounded-xl bg-gradient-to-r from-blue-950/5 via-blue-900/10 to-amber-400/10 dark:from-blue-950/40 dark:via-blue-900/40 dark:to-amber-950/30 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center p-2 mb-4 group-hover:scale-[1.02] transition-transform">
+                  <svg class="w-full h-10" viewBox="0 0 200 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#001b44" />
+                        <stop offset="50%" stop-color="#002d72" />
+                        <stop offset="100%" stop-color="#ffc700" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Barras dinámicas de sonido -->
+                    <rect x="10" y="16" width="3.5" height="8" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="20" y="12" width="3.5" height="16" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="30" y="7" width="3.5" height="26" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="40" y="14" width="3.5" height="12" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="50" y="4" width="3.5" height="32" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="60" y="10" width="3.5" height="20" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="70" y="2" width="3.5" height="36" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="80" y="8" width="3.5" height="24" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="90" y="5" width="3.5" height="30" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="100" y="11" width="3.5" height="18" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="110" y="3" width="3.5" height="34" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="120" y="9" width="3.5" height="22" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="130" y="6" width="3.5" height="28" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="140" y="13" width="3.5" height="14" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="150" y="8" width="3.5" height="24" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="160" y="12" width="3.5" height="16" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="170" y="15" width="3.5" height="10" rx="1.75" fill="url(#waveGrad)" />
+                    <rect x="180" y="17" width="3.5" height="6" rx="1.75" fill="url(#waveGrad)" />
+                  </svg>
+                </div>
+
+                <div class="flex items-center gap-3 mb-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
+                    <i data-lucide="mic" class="w-5 h-5"></i>
+                  </div>
+                  <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">
+                    🎙️ Transcriptor de Audios
+                  </h3>
+                </div>
+
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                  Subí grabaciones de clases magistrales, entrevistas o conferencias de hasta 2 horas. Detecta automáticamente oradores (docente y estudiantes), limpia muletillas y genera transcripciones textuales completas.
+                </p>
+                
+                <ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Exportación directa a Word (.docx) con oradores</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Exportación a PDF A4 vectorial limpio</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Resumen con IA Gemini Flash a demanda</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  id="btnCardOpenTranscriptor" 
+                  type="button" 
+                  style="background-color: #001b44; color: #ffc700;"
+                  class="w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:brightness-125 transition"
+                >
+                  <span>Abrir Transcriptor</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4" style="color: #ffc700;"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tarjeta 2: Organizador -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-amber-400 dark:hover:border-amber-600/50 hover:shadow-md transition-all group">
+              <div>
+                <!-- Micro-ilustración vectorial: Carpetas apiladas con pestañas doradas y documento PDF en perspectiva -->
+                <div class="w-full h-16 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-400/10 to-blue-900/10 dark:from-amber-950/40 dark:via-amber-900/30 dark:to-blue-950/40 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center p-2 mb-4 group-hover:scale-[1.02] transition-transform">
+                  <svg class="w-auto h-11" viewBox="0 0 110 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Carpeta fondo -->
+                    <rect x="8" y="12" width="56" height="26" rx="4" fill="#001b44" fill-opacity="0.25" />
+                    <!-- Carpeta media con pestaña dorada -->
+                    <path d="M16 12L28 12L33 16L72 16C74.2 16 76 17.8 76 20V36C76 38.2 74.2 40 72 40H16C13.8 40 12 38.2 12 36V16C12 13.8 13.8 12 16 12Z" fill="#001b44" stroke="#ffc700" stroke-width="1.2" />
+                    <line x1="22" y1="24" x2="48" y2="24" stroke="#ffc700" stroke-width="1.5" stroke-linecap="round" />
+                    <line x1="22" y1="29" x2="40" y2="29" stroke="#ffc700" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7" />
+                    <!-- Documento PDF en perspectiva -->
+                    <g transform="translate(62, 4) rotate(6)">
+                      <rect x="0" y="0" width="28" height="34" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+                      <rect x="4" y="4" width="8" height="6" rx="1" fill="#001b44" />
+                      <line x1="14" y1="6" x2="24" y2="6" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+                      <line x1="14" y1="9" x2="22" y2="9" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" />
+                      <line x1="4" y1="14" x2="24" y2="14" stroke="#64748b" stroke-width="1.2" stroke-linecap="round" />
+                      <line x1="4" y1="18" x2="24" y2="18" stroke="#64748b" stroke-width="1.2" stroke-linecap="round" />
+                      <line x1="4" y1="22" x2="18" y2="22" stroke="#ffc700" stroke-width="1.2" stroke-linecap="round" />
+                    </g>
+                  </svg>
+                </div>
+
+                <div class="flex items-center gap-3 mb-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
+                    <i data-lucide="folder-tree" class="w-5 h-5"></i>
+                  </div>
+                  <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    📁 Organizador de Materias
+                  </h3>
+                </div>
+
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                  Creá tus materias académicas y guardá apuntes, guías y textos en PDF. Las subcarpetas son opcionales y tus archivos quedan guardados de forma permanente y privada en tu navegador.
+                </p>
+
+                <ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Subida de PDFs directos o con subcarpetas</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Visor de PDF integrado a pantalla completa</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Almacenamiento 100% privado con IndexedDB</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  id="btnCardOpenOrganizer" 
+                  type="button" 
+                  class="w-full py-2.5 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-2 transition"
+                >
+                  <span>Abrir Organizador</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Tarjeta 3: Mi Carrera (Plan 504) -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-[#001b44] dark:hover:border-[#ffc700] hover:shadow-md transition-all group">
+              <div>
+                <!-- Micro-ilustración vectorial: Birrete y emblema universitario con anillo de progreso y sigla UBA Comu -->
+                <div class="w-full h-16 rounded-xl bg-gradient-to-r from-blue-950/10 via-amber-400/10 to-blue-900/15 dark:from-blue-950/50 dark:via-amber-950/40 dark:to-blue-900/50 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center p-2 mb-4 group-hover:scale-[1.02] transition-transform">
+                  <svg class="w-auto h-12" viewBox="0 0 140 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Anillo circular de progreso -->
+                    <circle cx="28" cy="22" r="16" stroke="#001b44" stroke-width="2.5" stroke-opacity="0.2" />
+                    <circle cx="28" cy="22" r="16" stroke="#ffc700" stroke-width="2.5" stroke-dasharray="100" stroke-dashoffset="30" stroke-linecap="round" />
+                    <!-- Birrete universitario centrado -->
+                    <path d="M28 14L17 19.5L28 25L39 19.5L28 14Z" fill="#001b44" stroke="#ffc700" stroke-width="1.2" />
+                    <path d="M21 21.5V26C21 28.5 24 30 28 30C32 30 35 28.5 35 26V21.5" stroke="#001b44" stroke-width="1.5" stroke-linecap="round" />
+                    <circle cx="39" cy="22" r="1.5" fill="#ffc700" />
+                    <path d="M39 23.5V28" stroke="#ffc700" stroke-width="1" stroke-linecap="round" />
+                    <!-- Emblema tipográfico UBA Comu -->
+                    <text x="56" y="20" fill="#001b44" class="dark:fill-amber-300 font-bold" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" letter-spacing="0.05em">UBA COMU</text>
+                    <text x="56" y="30" fill="#64748b" class="dark:fill-slate-400 font-medium" font-family="'Inter', sans-serif" font-size="8.5">Plan de Estudios 504</text>
+                  </svg>
+                </div>
+
+                <div class="flex items-center gap-3 mb-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
+                    <i data-lucide="graduation-cap" class="w-5 h-5 text-[#ffc700]"></i>
+                  </div>
+                  <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">
+                    🎓 Lic. en Ciencias de la Comunicación (Plan 504 - UBA)
+                  </h3>
+                </div>
+
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                  Simulá tu camino de correlatividades, elegí tu orientación entre las 6 disponibles y hacé el seguimiento de parciales, finales y promedio.
+                </p>
+
+                <ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Cálculo automático de promedio y materias aprobadas</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Alertas automáticas de PPP I y pase al Ciclo Orientado</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                    <span>Explorador interactivo de las 6 orientaciones profesionales</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  id="btnCardOpenCareer" 
+                  type="button" 
+                  style="background-color: #001b44; color: #ffc700;"
+                  class="w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:brightness-125 transition shadow-xs"
+                >
+                  <span>Ver mi carrera</span>
+                  <i data-lucide="arrow-right" class="w-4 h-4" style="color: #ffc700;"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Insignias de Confianza al Pie -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div class="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">🔒 100% Privado</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">IndexedDB local en tu navegador</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+              <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <i data-lucide="zap" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">⚡ Audios Extensos</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Hasta 2 horas con Gemini Flash</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+              <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">📄 Exportaciones Limpias</h4>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 truncate">Formatos Word y PDF listos para imprimir</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- Fin viewHome -->
+
+        <!-- Vista 1: Transcriptor (oculta por defecto) -->
+        <div id="viewTranscriptor" class="space-y-6 hidden">
+
+      <!-- Hero / Intro Banner Estilizado -->
+      <div class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 text-center shadow-sm">
+        <div class="absolute inset-0 bg-grid-subtle pointer-events-none opacity-50"></div>
+        <div class="relative z-10 max-w-2xl mx-auto">
+          <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-950 dark:text-amber-300 font-semibold mb-3 border border-amber-400/40 text-[11px] shadow-2xs">
+            <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-500"></i>
+            <span>🎙️ Motor de Transcripción con IA</span>
+          </div>
+          <h2 class="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Transcripción de Alta Fidelidad
+          </h2>
+          <p class="font-editorial italic text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-2">
+            Transformá clases y conferencias de hasta 2 horas en texto estructurado
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl mx-auto font-sans">
+            Fidelidad textual palabra por palabra sin omitir contenido, diferenciación de oradores y exportación directa a Word (.docx) y PDF.
+          </p>
+        </div>
+      </div>
+
+    <!-- Dropzone Card -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 transition-colors">
+      <div 
+        id="dropZone" 
+        class="relative overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-blue-50/30 dark:hover:bg-slate-800/60 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+      >
+        <!-- Ondas de audio sutiles de fondo para dinamismo -->
+        <div class="absolute inset-x-0 bottom-0 h-16 opacity-20 dark:opacity-35 pointer-events-none flex items-end justify-center gap-1.5 px-4 overflow-hidden">
+          <span class="w-1.5 h-6 bg-[#001b44] dark:bg-blue-400 rounded-full animate-pulse"></span>
+          <span class="w-1.5 h-10 bg-[#ffc700] dark:bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 150ms;"></span>
+          <span class="w-1.5 h-14 bg-[#001b44] dark:bg-blue-400 rounded-full animate-pulse" style="animation-delay: 300ms;"></span>
+          <span class="w-1.5 h-8 bg-[#ffc700] dark:bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 75ms;"></span>
+          <span class="w-1.5 h-12 bg-[#001b44] dark:bg-blue-400 rounded-full animate-pulse" style="animation-delay: 220ms;"></span>
+          <span class="w-1.5 h-5 bg-[#ffc700] dark:bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 380ms;"></span>
+          <span class="w-1.5 h-9 bg-[#001b44] dark:bg-blue-400 rounded-full animate-pulse" style="animation-delay: 120ms;"></span>
+          <span class="w-1.5 h-13 bg-[#ffc700] dark:bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 290ms;"></span>
+          <span class="w-1.5 h-7 bg-[#001b44] dark:bg-blue-400 rounded-full animate-pulse" style="animation-delay: 180ms;"></span>
+          <span class="w-1.5 h-11 bg-[#ffc700] dark:bg-[#ffc700] rounded-full animate-pulse" style="animation-delay: 340ms;"></span>
+        </div>
+
+        <input type="file" id="fileInput" accept="audio/*, .mp3, .m4a, .aac, .ogg, audio/mp3, audio/mpeg, audio/mp4, audio/x-m4a, audio/aac, audio/ogg" class="hidden">
+        
+        <div class="relative z-10 w-14 h-14 rounded-2xl bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-inner border border-blue-900/10 dark:border-amber-400/20">
+          <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+        </div>
+
+        <p class="relative z-10 text-sm font-semibold text-slate-800 dark:text-slate-200 font-sans">
+          Arrastra tu archivo de audio aquí o <span class="text-blue-900 dark:text-amber-400 group-hover:underline">haz clic para examinar</span>
+        </p>
+        <p class="relative z-10 text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium font-sans">
+          Formatos compatibles: MP3, M4A, AAC, OGG (no se admite WAV por tamaño excesivo)
+        </p>
+      </div>
+
+      <!-- Selected File Preview -->
+      <div id="filePreview" class="hidden mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 flex items-center justify-between">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="file-audio" class="w-5 h-5"></i>
+          </div>
+          <div class="overflow-hidden">
+            <p id="fileName" class="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">audio_ejemplo.mp3</p>
+            <p id="fileDetails" class="text-xs text-slate-500 dark:text-slate-400">25.4 MB • Preparado para subir</p>
+          </div>
+        </div>
+        <button id="btnRemoveFile" class="text-slate-400 hover:text-rose-500 p-2 rounded-lg transition-colors">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Selector de Tipo de Audio -->
+      <div class="mt-6 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+          Tipo de Audio
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="audioTypeGroup">
+          <button 
+            type="button" 
+            id="btnTypeClase" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-blue-800 dark:border-amber-400/60 bg-blue-50/50 dark:bg-slate-800/80 text-blue-950 dark:text-amber-200 transition font-medium text-xs text-left shadow-xs"
+            data-type="clase"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base shrink-0">🎓</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">Clase / Teórico</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-blue-900 dark:text-amber-400">Docente</strong> y <strong class="text-blue-900 dark:text-amber-400">Estudiante</strong></p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0"></i>
+          </button>
+
+          <button 
+            type="button" 
+            id="btnTypeEntrevista" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 transition font-medium text-xs text-left"
+            data-type="entrevista"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base shrink-0">🎙️</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">Entrevista</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-blue-900 dark:text-amber-400">Entrevistador</strong> y <strong class="text-blue-900 dark:text-amber-400">Entrevistado</strong></p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0 hidden"></i>
+          </button>
+
+          <button 
+            type="button" 
+            id="btnTypeRadio" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 transition font-medium text-xs text-left"
+            data-type="radio"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base shrink-0">📻</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">Radio / Podcast / Debate</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Etiquetas: <strong class="text-blue-900 dark:text-amber-400">Persona 1</strong>, <strong class="text-blue-900 dark:text-amber-400">Persona 2...</strong></p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0 hidden"></i>
+          </button>
+
+          <button 
+            type="button" 
+            id="btnTypeContinuo" 
+            class="audio-type-btn flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-200 transition font-medium text-xs text-left"
+            data-type="continuo"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base shrink-0">📝</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">Sin diferenciar hablantes</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">Texto continuo en párrafos, sin etiquetas</p>
+              </div>
+            </div>
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500 check-icon shrink-0 hidden"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Campo opcional de Vocabulario o términos clave -->
+      <div class="mt-4 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+        <label for="inputKeywords" class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+          <i data-lucide="tag" class="w-3.5 h-3.5 text-amber-500"></i>
+          <span>Vocabulario o términos clave <span class="text-slate-400 font-normal lowercase">(opcional)</span></span>
+        </label>
+        <input 
+          type="text" 
+          id="inputKeywords" 
+          placeholder="Ej.: Autores académicos, conceptos teóricos, siglas, nombres propios (separados por comas)" 
+          class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+        >
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight">
+          Gemini priorizará la correcta ortografía de estos términos y nombres propios si se mencionan en el audio.
+        </p>
+      </div>
+
+      <!-- Action Button -->
+      <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <i data-lucide="info" class="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0"></i>
+          <span>Los audios se procesan en la Files API de Google y se eliminan automáticamente tras transcribir.</span>
+        </div>
+        <button 
+          id="btnStartTranscribe" 
+          disabled
+          style="background-color: #001b44; color: #ffc700;"
+          class="w-full sm:w-auto px-6 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed font-semibold border border-[#ffc700]/30 text-sm flex items-center justify-center gap-2 shadow-sm hover:brightness-125 transition-all"
+        >
+          <i data-lucide="sparkles" class="w-4 h-4" style="color: #ffc700;"></i>
+          <span>Transcribir Audio</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress Card -->
+    <div id="progressCard" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8 animate-fade-in">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="relative flex items-center justify-center">
+            <div class="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div>
+            <h3 id="progressTitle" class="text-sm font-semibold text-slate-900 dark:text-slate-100">Procesando audio...</h3>
+            <p id="progressSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Esto puede tomar entre 30 segundos y unos pocos minutos según la duración.</p>
+          </div>
+        </div>
+        <span id="elapsedTimer" class="text-xs font-mono text-slate-400 dark:text-slate-500 font-medium">00:00</span>
+      </div>
+
+      <!-- Progress Stages -->
+      <div class="space-y-3 mt-6">
+        <div class="step-item flex items-center gap-3 text-xs" id="step-local">
+          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          </div>
+          <span class="step-text font-medium text-slate-600 dark:text-slate-300">Enviando audio al servidor local</span>
+        </div>
+
+        <div class="step-item flex items-center gap-3 text-xs" id="step-cloud">
+          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0">
+            <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+          </div>
+          <span class="step-text font-medium text-slate-600 dark:text-slate-300">Subiendo a Google AI Studio (Files API)</span>
+        </div>
+
+        <div class="step-item flex items-center gap-3 text-xs" id="step-gemini">
+          <div class="step-icon w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center shrink-0">
+            <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+          </div>
+          <span class="step-text font-medium text-slate-600 dark:text-slate-300">Generando transcripción estructurada con Gemini Flash</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="errorAlert" class="hidden p-4 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 flex items-start gap-3 text-xs">
+      <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5"></i>
+      <div class="flex-1">
+        <p class="font-semibold text-rose-900 dark:text-rose-100" id="errorTitle">Ocurrió un error</p>
+        <p class="mt-0.5 text-rose-700 dark:text-rose-300 leading-relaxed" id="errorMessage">Detalle del error.</p>
+      </div>
+      <button id="btnCloseError" class="text-rose-400 hover:text-rose-600 dark:hover:text-rose-200 p-1">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultSection" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in">
+      <!-- Toolbar -->
+      <div class="border-b border-slate-200/80 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="completedBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+              Completado
+            </span>
+            <span id="streamingIndicator" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Escribiendo en vivo...
+            </span>
+            <span id="resultModelBadge" class="text-xs font-mono text-slate-500 dark:text-slate-400">gemini-3.8-flash</span>
+          </div>
+          <p id="resultFileName" class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">audio.mp3</p>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex items-center flex-wrap gap-2">
+          <button id="btnToggleEdit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
+            <span id="btnToggleEditLabel">✏️ Editar texto</span>
+          </button>
+          <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
+            <span>⚡ Generar resumen</span>
+          </button>
+          <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-slate-800/80 hover:bg-blue-100/80 dark:hover:bg-slate-700/80 text-blue-900 dark:text-amber-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
+            <span>👥 Renombrar oradores</span>
+          </button>
+          <button id="btnCopy" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span id="btnCopyLabel">Copiar texto</span>
+          </button>
+          <button id="btnDownloadDocx" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/40 hover:bg-blue-100/70 dark:hover:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="file-type" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+            <span>Descargar Word (.docx)</span>
+          </button>
+          <button id="btnDownloadPdf" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#ffc700]/30 bg-[#001b44]/10 dark:bg-[#001b44]/40 hover:bg-[#001b44]/20 text-[#001b44] dark:text-[#ffc700] text-xs font-medium transition shadow-xs">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-[#ffc700]"></i>
+            <span>📄 Descargar PDF</span>
+          </button>
+          <button id="btnDownloadTxt" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>Descargar .txt</span>
+          </button>
+          <button id="btnDownloadMd" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
+            <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+            <span>Descargar .md</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Recuadro Destacado y Colapsable de Resumen Ejecutivo -->
+      <div id="summarySection" class="hidden border-b border-amber-200 dark:border-amber-900/60 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/50 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 transition-all">
+        <div class="px-6 py-4 flex items-center justify-between cursor-pointer select-none" id="summaryHeader">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-semibold text-amber-950 dark:text-amber-200 flex items-center gap-2">
+                Resumen Ejecutivo
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/80 text-amber-800 dark:text-amber-300">IA Síntesis</span>
+              </h4>
+              <p class="text-[11px] text-amber-800/80 dark:text-amber-400">Tema central, conceptos clave y compromisos</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnCopySummary" class="text-xs px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-white/80 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 transition flex items-center gap-1" title="Copiar resumen">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copiar resumen</span>
+            </button>
+            <button id="btnDownloadSummaryDocx" class="text-xs px-2.5 py-1 rounded-lg border border-amber-400 dark:border-amber-700 bg-amber-100/80 dark:bg-amber-900/50 hover:bg-amber-200/90 dark:hover:bg-amber-800/60 text-amber-950 dark:text-amber-200 font-medium transition flex items-center gap-1 shadow-2xs" title="Descargar resumen en Word">
+              <i data-lucide="file-down" class="w-3 h-3 text-amber-700 dark:text-amber-400"></i>
+              <span>📥 Descargar resumen (.docx)</span>
+            </button>
+            <button id="btnToggleSummary" class="p-1 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 transition">
+              <i data-lucide="chevron-up" id="summaryChevron" class="w-4 h-4 transition-transform duration-200"></i>
+            </button>
+          </div>
+        </div>
+        <div id="summaryBody" class="px-6 pb-6 pt-1">
+          <div id="summaryContent" class="prose prose-sm prose-amber dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed bg-white/80 dark:bg-slate-900/90 p-5 rounded-xl border border-amber-200/70 dark:border-amber-900/50 shadow-xs">
+            <!-- Contenido del resumen en markdown/html -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Reproductor de Audio Integrado con Velocidad Variable -->
+      <div id="audioPlayerSection" class="hidden border-b border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-4 sm:p-5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="w-full sm:flex-1">
+            <audio id="audioPlayer" controls class="w-full h-10 rounded-lg focus:outline-none"></audio>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center" id="playbackSpeedControls">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center gap-1">
+              <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+              Velocidad:
+            </span>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-800 bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-300 transition shadow-2xs" data-speed="1">1x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="1.25">1.25x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="1.5">1.5x</button>
+            <button type="button" class="btn-speed px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 transition" data-speed="2">2x</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar inside transcript & Editor indicator -->
+      <div class="px-6 py-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-slate-900">
+        <div class="flex items-center gap-2 flex-1 w-full sm:w-auto">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 dark:text-slate-500"></i>
+          <input 
+            type="text" 
+            id="searchTranscript" 
+            placeholder="Buscar palabras o frases en la transcripción..." 
+            class="w-full text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 bg-transparent focus:outline-none"
+          >
+          <span id="searchCount" class="text-[11px] text-slate-400 dark:text-slate-500 font-mono hidden shrink-0">0 resultados</span>
+        </div>
+        <div class="flex items-center gap-2 text-[11px] select-none shrink-0" id="editorStatusContainer">
+          <span id="editModeIndicator" class="inline-flex items-center gap-1 text-slate-400 dark:text-slate-500 font-normal">
+            <i data-lucide="lock" class="w-3 h-3 text-slate-400"></i>
+            Modo solo lectura protegido
+          </span>
+        </div>
+      </div>
+
+      <!-- Transcript Reader & Editor Protegido (solo lectura por defecto) -->
+      <div id="transcriptContainer" class="p-6 sm:p-8 max-h-[650px] overflow-y-auto custom-scrollbar">
+        <div 
+          id="transcriptContent" 
+          contenteditable="false"
+          spellcheck="true"
+          aria-label="Transcripción de audio"
+          class="prose prose-slate dark:prose-invert prose-sm sm:prose-base max-w-none text-slate-700 dark:text-slate-200 leading-relaxed font-sans space-y-4 focus:outline-none transition-all"
+        >
+          <!-- Text will be rendered here -->
+        </div>
+      </div>
+    </div>
+    <!-- Fin resultSection -->
+  </div>
+  <!-- Fin viewTranscriptor -->
+
+    <!-- Vista 2: Organizador de Materias (IndexedDB local, oculta por defecto) -->
+    <div id="viewOrganizer" class="space-y-6 hidden">
+
+      <!-- Encabezado del Organizador y Migas de Pan (Breadcrumbs) -->
+      <div class="bg-gradient-to-b from-slate-50 via-amber-50/20 to-white dark:from-slate-900 dark:via-amber-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-5 sm:p-7 transition-colors relative overflow-hidden">
+        <div class="absolute inset-0 bg-grid-subtle pointer-events-none opacity-40"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="min-w-0">
+            <!-- Badge superior unificado -->
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/70 border border-amber-400/40 text-amber-900 dark:text-amber-300 text-[11px] font-semibold mb-2 shadow-2xs">
+              <i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>📁 Biblioteca de Cursada & Apuntes</span>
+            </div>
+            <!-- Migas de Pan dinámicas -->
+            <nav id="orgBreadcrumbs" aria-label="Migas de pan" class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium overflow-x-auto py-0.5">
+              <!-- Renderizado dinámico: Materias > Materia > Subcarpeta -->
+            </nav>
+            <h2 id="orgCurrentTitle" class="font-heading text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 truncate">
+              Materias
+            </h2>
+            <p id="orgCurrentSubtitle" class="font-editorial italic text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Organizador académico 100% privado en tu navegador (IndexedDB local)
+            </p>
+          </div>
+
+          <!-- Acciones en el encabezado del organizador -->
+          <div class="flex items-center gap-2 shrink-0" id="orgHeaderActions">
+            <button 
+              id="btnNewSubjectModal" 
+              type="button" 
+              style="background-color: #001b44; color: #ffffff;"
+              class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-semibold text-xs shadow-sm transition border border-[#ffc700]/30"
+            >
+              <i data-lucide="plus" class="w-4 h-4 text-[#ffc700]"></i>
+              <span>+ Nueva Materia</span>
+            </button>
+            <button 
+              id="btnNewFolderModal" 
+              type="button" 
+              style="background-color: #001b44; color: #ffffff;"
+              class="hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl hover:bg-[#002d72] font-semibold text-xs shadow-sm transition border border-[#ffc700]/30"
+            >
+              <i data-lucide="folder-plus" class="w-4 h-4 text-[#ffc700]"></i>
+              <span>+ Nueva Subcarpeta</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nivel 1: Grilla de Materias -->
+      <div id="orgSubjectsView" class="space-y-4">
+        <div id="orgSubjectsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Renderizado dinámico de tarjetas de materias -->
+        </div>
+        <div id="orgSubjectsEmpty" class="hidden py-14 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-xs">
+          <!-- Micro-ilustración vectorial: libreta académica y pluma en azul marino y oro -->
+          <div class="w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+            <svg class="w-full h-full" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="18" y="16" width="52" height="64" rx="6" fill="#001b44" stroke="#ffc700" stroke-width="2" />
+              <!-- Espiral del cuaderno -->
+              <circle cx="26" cy="24" r="3" fill="#ffffff" />
+              <circle cx="26" cy="36" r="3" fill="#ffffff" />
+              <circle cx="26" cy="48" r="3" fill="#ffffff" />
+              <circle cx="26" cy="60" r="3" fill="#ffffff" />
+              <circle cx="26" cy="72" r="3" fill="#ffffff" />
+              <!-- Líneas de notas -->
+              <line x1="36" y1="28" x2="60" y2="28" stroke="#ffc700" stroke-width="2" stroke-linecap="round" />
+              <line x1="36" y1="38" x2="56" y2="38" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+              <line x1="36" y1="48" x2="58" y2="48" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+              <line x1="36" y1="58" x2="52" y2="58" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.6" />
+              <!-- Pluma en perspectiva cruzada -->
+              <g transform="translate(48, 28) rotate(25)">
+                <path d="M12 0L20 8L10 38L2 38L0 30L12 0Z" fill="#ffc700" />
+                <path d="M10 38L0 44L2 38H10Z" fill="#001b44" />
+                <line x1="12" y1="0" x2="2" y2="38" stroke="#001b44" stroke-width="1.2" />
+              </g>
+            </svg>
+          </div>
+          <h3 class="font-heading text-base font-bold text-slate-900 dark:text-slate-100">No hay materias creadas todavía</h3>
+          <p class="font-editorial italic text-xs text-slate-400 dark:text-slate-500 mt-1.5 max-w-sm mx-auto">
+            Crea tu primera materia para comenzar a organizar apuntes, clases y lecturas en PDF.
+          </p>
+          <button id="btnNewSubjectEmpty" style="background-color: #001b44; color: #ffffff;" class="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl hover:bg-[#002d72] font-semibold text-xs shadow-sm transition border border-[#ffc700]/40">
+            <i data-lucide="plus" class="w-4 h-4 text-[#ffc700]"></i>
+            <span>Crear primera materia</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Nivel 2: Vista interior de una Materia (Subcarpetas Opcionales + PDFs Directos) -->
+      <div id="orgSubjectDetailView" class="hidden space-y-6">
+        
+        <!-- Bloque 0: Notas de la Materia (Múltiples Notas Independientes) -->
+        <div id="orgSubjectNotesCard" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-5 sm:p-6 transition-colors">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>📝 Notas de la Materia</span>
+                  <span id="orgNotesCountLabel" class="text-xs text-slate-400 font-mono font-normal">0 notas</span>
+                </h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Apuntes, fechas de examen, dudas y recordatorios de esta cursada</p>
+              </div>
+            </div>
+            <button 
+              id="btnNewNoteModal" 
+              type="button" 
+              style="background-color: #001b44; color: #ffffff;"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#002d72] font-medium text-xs shadow-sm transition"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-[#ffc700]"></i>
+              <span>+ Nueva Nota</span>
+            </button>
+          </div>
+
+          <!-- Grilla de Notas -->
+          <div id="orgNotesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- Render dinámico de tarjetas de notas -->
+          </div>
+
+          <!-- Estado Vacío de Notas con Micro-ilustración -->
+          <div id="orgNotesEmpty" class="py-8 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/20">
+            <div class="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+              <svg class="w-full h-full" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="14" y="10" width="36" height="44" rx="4" fill="#ffffff" class="dark:fill-slate-800" stroke="#001b44" stroke-width="1.8" />
+                <path d="M22 20H42" stroke="#ffc700" stroke-width="2" stroke-linecap="round" />
+                <path d="M22 28H38" stroke="#cbd5e1" class="dark:stroke-slate-600" stroke-width="1.6" stroke-linecap="round" />
+                <path d="M22 36H40" stroke="#cbd5e1" class="dark:stroke-slate-600" stroke-width="1.6" stroke-linecap="round" />
+                <circle cx="44" cy="44" r="7" fill="#001b44" stroke="#ffc700" stroke-width="1.4" />
+                <path d="M42 44L43.5 45.5L46.5 42.5" stroke="#ffc700" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400">
+              No hay notas en esta materia. Creá tu primera nota para registrar fechas de parciales, dudas o conceptos.
+            </p>
+          </div>
+        </div>
+
+        <!-- Bloque 1: Subcarpetas (100% Opcional) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-5 sm:p-6 transition-colors">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <i data-lucide="folder-tree" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="font-heading text-sm font-semibold text-slate-900 dark:text-slate-100">Subcarpetas temáticas</h3>
+                <p class="font-editorial italic text-[11px] text-slate-500 dark:text-slate-400">Opcional: Organiza por Teóricos, Prácticos o Bibliografía si lo deseas</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="orgFoldersGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <!-- Renderizado dinámico de tarjetas de subcarpetas -->
+          </div>
+          <div id="orgFoldersEmpty" class="py-6 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+            <p class="font-editorial italic text-xs text-slate-400 dark:text-slate-500">Sin subcarpetas creadas (puedes subir tus PDFs directamente abajo)</p>
+          </div>
+        </div>
+
+        <!-- Bloque 2: Archivos PDF de la materia (Directos o de la subcarpeta) -->
+        <div class="space-y-4">
+          <!-- Zona Drag & Drop de PDFs -->
+          <div 
+            id="orgPdfDropZone" 
+            class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-white dark:bg-slate-900 hover:bg-blue-50/20 dark:hover:bg-slate-800/40 rounded-2xl p-6 sm:p-8 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
+          >
+            <input type="file" id="orgPdfFileInput" accept="application/pdf, .pdf" multiple class="hidden">
+            <div class="w-12 h-12 rounded-xl bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <i data-lucide="file-up" class="w-6 h-6 text-[#ffc700]"></i>
+            </div>
+            <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <span id="orgPdfDropZoneLabel">Arrastra tus archivos PDF aquí a la materia</span> o <span class="text-[#002d72] dark:text-[#ffc700] group-hover:underline">haz clic para examinar</span>
+            </p>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-sans">
+              Solo archivos .pdf • Almacenamiento local persistente con IndexedDB
+            </p>
+          </div>
+
+          <!-- Lista de PDFs -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 font-heading">
+                <i data-lucide="files" class="w-4 h-4 text-[#ffc700]"></i>
+                <span id="orgPdfSectionTitle">Documentos PDF de la materia</span>
+              </span>
+              <span id="orgPdfCountLabel" class="text-xs text-slate-400 font-mono">0 archivos</span>
+            </div>
+
+            <div id="orgPdfList" class="divide-y divide-slate-100 dark:divide-slate-800/80">
+              <!-- Renderizado dinámico de filas de PDFs -->
+            </div>
+
+            <!-- Estado Vacío de PDFs con Micro-ilustración -->
+            <div id="orgPdfEmpty" class="hidden py-10 text-center p-6">
+              <div class="w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Carpeta en perspectiva -->
+                  <path d="M10 22C10 19.8 11.8 18 14 18H26L31 23H50C52.2 23 54 24.8 54 27V48C54 50.2 52.2 52 50 52H14C11.8 52 10 50.2 10 48V22Z" fill="#001b44" stroke="#ffc700" stroke-width="1.6" />
+                  <!-- Hoja PDF asomando -->
+                  <g transform="translate(24, 12)">
+                    <rect x="0" y="0" width="22" height="28" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2" />
+                    <rect x="3" y="3" width="7" height="4" rx="1" fill="#001b44" />
+                    <line x1="3" y1="11" x2="19" y2="11" stroke="#ffc700" stroke-width="1.5" stroke-linecap="round" />
+                    <line x1="3" y1="16" x2="19" y2="16" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round" />
+                    <line x1="3" y1="20" x2="15" y2="20" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round" />
+                  </g>
+                </svg>
+              </div>
+              <p class="font-heading text-xs font-semibold text-slate-700 dark:text-slate-300">Aún no hay archivos PDF guardados aquí</p>
+              <p class="font-editorial italic text-[11px] text-slate-400 mt-0.5">Arrastra uno en la zona superior para guardarlo localmente.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- Fin orgSubjectDetailView -->
+
+    </div>
+    <!-- Fin viewOrganizer -->
+
+    <!-- Vista 3: Mi Carrera (Plan 504 - Comu UBA, oculta por defecto) -->
+    <div id="viewCareer" class="space-y-5 animate-fade-in hidden">
+
+      <!-- Header del Módulo de Carrera -->
+      <div class="bg-gradient-to-br from-blue-900/10 via-amber-400/5 to-slate-100/50 dark:from-blue-950/40 dark:via-amber-950/20 dark:to-slate-900/80 rounded-2xl border border-blue-900/15 dark:border-amber-400/20 p-4 sm:p-5 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-slate-800/80 text-blue-900 dark:text-amber-300 text-xs font-semibold mb-1.5 border border-amber-400/30">
+              <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Plan de Estudios 504 • FSOC UBA</span>
+            </div>
+            <h2 class="font-heading text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+              Lic. en Ciencias de la Comunicación
+            </h2>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Seguimiento académico de materias, cálculo automático de notas y explorador de orientaciones.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 font-medium shadow-2xs">
+              <i data-lucide="database" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Guardado en navegador</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. Tablero de Métricas de Carrera -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- Métrica 1: Progreso de Materias -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Materias Aprobadas</span>
+            <div class="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-amber-300 flex items-center justify-center">
+              <i data-lucide="book-check" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2.5">
+            <div class="flex items-baseline justify-between gap-1">
+              <span id="careerMetricPassedCount" class="font-heading text-2xl font-extrabold text-slate-900 dark:text-slate-100">0 de 34</span>
+              <span id="careerMetricPercent" class="font-heading text-xs font-bold text-[#001b44] dark:text-[#ffc700]">0%</span>
+            </div>
+            <!-- Barra de progreso -->
+            <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mt-1.5 overflow-hidden border border-slate-200/50 dark:border-slate-700/50">
+              <div 
+                id="careerProgressBar" 
+                class="h-full rounded-full transition-all duration-500" 
+                style="width: 0%; background: linear-gradient(90deg, #001b44 0%, #ffc700 100%);"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Métrica 2: Promedio General Académico -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Promedio General</span>
+            <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-300 flex items-center justify-center">
+              <i data-lucide="award" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2.5">
+            <div class="flex items-baseline gap-2">
+              <span id="careerMetricAverage" class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100">-</span>
+              <span class="font-editorial italic text-xs text-slate-400">en vivo</span>
+            </div>
+            <p class="font-editorial italic text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Basado en promociones y exámenes finales
+            </p>
+          </div>
+        </div>
+
+        <!-- Métrica 3: Alerta de PPP I -->
+        <div id="careerCardAlertPpp1" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Habilitación PPP I</span>
+            <div id="careerIconPpp1" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2.5">
+            <div id="careerStatusPpp1Text" class="font-heading text-sm font-bold text-slate-700 dark:text-slate-300">
+              Pendiente (0/2 talleres)
+            </div>
+            <p class="font-editorial italic text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Requiere 2 de los 4 talleres del Área Práctica
+            </p>
+          </div>
+        </div>
+
+        <!-- Métrica 4: Alerta de Pase a Ciclo Orientado -->
+        <div id="careerCardAlertOriented" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-3.5 sm:p-4 shadow-sm flex flex-col justify-between transition-colors">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-heading text-xs font-semibold text-slate-500 dark:text-slate-400">Pase a Ciclo Orientado</span>
+            <div id="careerIconOriented" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center transition-colors">
+              <i data-lucide="compass" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2.5">
+            <div id="careerStatusOrientedText" class="font-heading text-sm font-bold text-slate-700 dark:text-slate-300">
+              0 de 18 del Inicial
+            </div>
+            <p class="font-editorial italic text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Requiere completar las 18 materias del Ciclo Inicial
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ETAPA 1: Ciclo Inicial (18 materias + Tarjeta de acreditación PPP I) -->
+      <div class="space-y-3.5">
+        <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>📘 Etapa 1: Ciclo Inicial</span>
+              <span class="text-xs bg-[#001b44] text-[#ffc700] font-bold px-2.5 py-0.5 rounded-full">18 Asignaturas</span>
+            </h3>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Tronco común universitario: Área Comunicacional, Talleres Prácticos, Ciencias Sociales y Problemas del Campo.
+            </p>
+          </div>
+          <span id="careerStage1Count" class="text-xs font-mono text-slate-400 font-semibold">0 / 18 aprobadas</span>
+        </div>
+
+        <!-- Áreas del Ciclo Inicial -->
+        <div class="space-y-4" id="careerStage1Container">
+          <!-- 1.1 Área Comunicacional (9 obligatorias) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>🗣️ Área Comunicacional</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(9 materias obligatorias)</span>
+              </h4>
+              <span id="careerCountComArea" class="text-xs font-mono text-slate-400">0/9</span>
+            </div>
+            <div id="careerListComArea" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3"></div>
+          </div>
+
+          <!-- 1.2 Área Práctica (4 talleres obligatorios) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>✍️ Área Práctica</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(4 talleres obligatorios • 2 habilitan PPP I)</span>
+              </h4>
+              <span id="careerCountPractArea" class="text-xs font-mono text-slate-400">0/4</span>
+            </div>
+            <div id="careerListPractArea" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3"></div>
+          </div>
+
+          <!-- Tarjeta Interactiva de Acreditación de PPP I -->
+          <div id="careerPpp1AccreditationCard" class="rounded-2xl border p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div class="flex items-start gap-3">
+              <div id="careerPpp1AccreditationIcon" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center shrink-0 transition-colors">
+                <i data-lucide="award" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100">Prácticas Preprofesionales I (PPP I)</h4>
+                  <span id="careerPpp1Badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                    Pendiente (0/2 talleres)
+                  </span>
+                </div>
+                <p id="careerPpp1Desc" class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Se acredita automáticamente al aprobar al menos 2 de los 4 talleres del Área Práctica (Escritura, Redacción, Radial o Audiovisual).
+                </p>
+              </div>
+            </div>
+            <div id="careerPpp1StatusBox" class="shrink-0 flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 transition-colors">
+              <i data-lucide="clock" class="w-4 h-4"></i>
+              <span>Requiere 2 talleres</span>
+            </div>
+          </div>
+
+          <!-- 1.3 Área Ciencias Sociales (Se eligen 3 de 5) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>📚 Área Ciencias Sociales</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(Elegí 3 de las 5 disponibles • Con perfilado)</span>
+              </h4>
+              <span id="careerCountSocArea" class="text-xs font-mono text-slate-400">0/3</span>
+            </div>
+            <div id="careerListSocArea" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3"></div>
+          </div>
+
+          <!-- 1.4 Área Problemas del Campo (Se eligen 2 de 3) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>🧭 Área Problemas del Campo</span>
+                <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(Elegí 2 de las 3 disponibles • Requiere 7 materias + 1 taller)</span>
+              </h4>
+              <span id="careerCountProbArea" class="text-xs font-mono text-slate-400">0/2</span>
+            </div>
+            <div id="careerListProbArea" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. NUEVO BLOQUE INTERMEDIO: REQUISITOS TRANSVERSALES -->
+      <div class="space-y-3.5">
+        <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🌐 Requisitos Transversales</span>
+              <span class="text-xs bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-300/40">
+                Habilitados desde el tramo inicial
+              </span>
+            </h3>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Idiomas extranjeros y Seminarios optativos: podés rendirlos o cursarlos en paralelo sin esperar a terminar el Ciclo Inicial.
+            </p>
+          </div>
+          <span id="careerTransversalCount" class="text-xs font-mono text-slate-400 font-semibold">0 / 5 aprobados</span>
+        </div>
+
+        <div class="space-y-4">
+          <!-- 3.1 Idiomas Extranjeros (Niveles I, II y III) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>🌍 Idiomas Extranjeros</span>
+                </h4>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-900 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
+                  Requisito de Graduación (Niveles I, II y III)
+                </span>
+              </div>
+              <span id="careerCountIdiomas" class="text-xs font-mono text-slate-400">0/3</span>
+            </div>
+            <div id="careerListIdiomas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3"></div>
+          </div>
+
+          <!-- 3.2 Seminarios Optativos (Seminario I y II) -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-3.5 sm:p-4 space-y-2.5">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span>📑 Seminarios Optativos</span>
+                  <span class="font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">(2 seminarios de grado a elección)</span>
+                </h4>
+                <span class="font-editorial italic text-[10px] text-slate-400 dark:text-slate-500">
+                  Podés personalizar el nombre de cada seminario cursado
+                </span>
+              </div>
+              <span id="careerCountSeminarios" class="text-xs font-mono text-slate-400">0/2</span>
+            </div>
+            <div id="careerListSeminarios" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. CONMUTADOR DE LAS 6 ORIENTACIONES PROFESIONALES -->
+      <div class="space-y-3 p-3.5 sm:p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-slate-200/60 dark:border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="font-heading text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <i data-lucide="compass" class="w-4 h-4 text-[#001b44] dark:text-[#ffc700]"></i>
+              <span>Orientaciones Profesionales</span>
+            </h3>
+            <span class="font-editorial italic text-[11px] text-slate-500 dark:text-slate-400">Conmutador rápido (actualiza el Ciclo Orientado debajo)</span>
+          </div>
+          <div id="careerCurrentOrientationBadge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-[#ffc700]/40 text-blue-900 dark:text-[#ffc700] text-[11px] font-semibold">
+            <i data-lucide="check" class="w-3 h-3 text-[#ffc700]"></i>
+            <span id="careerCurrentOrientationLabel">Orientación: Periodismo</span>
+          </div>
+        </div>
+
+        <div id="careerOrientationsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-2.5">
+          <!-- Renderizado dinámico compacto 3x2 -->
+        </div>
+      </div>
+
+      <!-- 5. ETAPA 2: Ciclo Orientado (Solo las 9 materias de la orientación elegida) -->
+      <div class="space-y-3.5">
+        <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🎓 Etapa 2: Ciclo Orientado</span>
+              <span id="careerStage2OrientationBadge" class="text-xs bg-[#ffc700] text-[#001b44] font-bold px-2.5 py-0.5 rounded-full">Orientación Seleccionada</span>
+            </h3>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              9 asignaturas específicas de la orientación (3 Introductorias, 4 Aplicadas y 2 Talleres).
+            </p>
+          </div>
+          <span id="careerStage2Count" class="text-xs font-mono text-slate-400 font-semibold">0 / 9 aprobadas</span>
+        </div>
+
+        <div id="careerStage2Container" class="space-y-4">
+          <!-- Renderizado dinámico según la orientación seleccionada -->
+        </div>
+      </div>
+
+      <!-- 6. INSTANCIA DE GRADUACIÓN / CIERRE -->
+      <div class="space-y-3.5">
+        <div class="border-b border-slate-200 dark:border-slate-800 pb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span>🎯 Instancia de Graduación / Cierre</span>
+              <span class="text-xs bg-emerald-100 text-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300/40">
+                Título de Grado
+              </span>
+            </h3>
+            <p class="font-editorial italic text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Prácticas Preprofesionales II (60 hs de trabajo asistido) y Taller de Trabajo Integrador Final (TIF).
+            </p>
+          </div>
+          <span id="careerGraduationCount" class="text-xs font-mono text-slate-400 font-semibold">0 / 2 cumplidos</span>
+        </div>
+
+        <div id="careerGraduationContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <!-- Renderizado de PPP II y Taller de TIF -->
+        </div>
+      </div>
+
+    </div>
+    <!-- Fin viewCareer -->
+
+    </div>
+    <!-- Fin Columna Derecha de Contenido -->
+  </div>
+  <!-- Fin Layout de dos columnas -->
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200/80 dark:border-slate-800 py-4 text-center text-xs text-slate-400 dark:text-slate-500">
+    <span class="font-editorial italic text-slate-500 dark:text-slate-400">FacuHelps</span> • Registro académico y transcripción inteligente con Google AI Studio
+  </footer>
+
+  <!-- Modal para Renombrar Oradores -->
+  <div id="renameModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-base sm:text-lg">
+          <i data-lucide="users" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
+          Renombrar Oradores
+        </div>
+        <button id="btnCloseRenameModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
+        Personaliza los nombres de los interlocutores identificados. Se actualizarán automáticamente en la pantalla y en las descargas (.docx, .txt, .md).
+      </p>
+
+      <div id="renameListContainer" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+        <!-- Generado dinámicamente -->
+      </div>
+
+      <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center gap-2">
+        <button id="btnCancelRename" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+          Cancelar
+        </button>
+        <button id="btnSaveRename" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
+          Aplicar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal / Drawer: Mis Transcripciones -->
+  <div id="historyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 animate-scale-up flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2.5 text-slate-900 dark:text-slate-100 font-semibold text-base sm:text-lg">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="book-marked" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3>Mis Transcripciones</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 font-normal">Historial local de tus últimas 10 transcripciones en este navegador</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnClearHistory" class="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline px-2 py-1 rounded transition hidden" title="Borrar todo el historial">
+            Vaciar historial
+          </button>
+          <button id="btnCloseHistoryModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="historyListContainer" class="mt-4 space-y-3 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+        <!-- Generado dinámicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nueva Materia -->
+  <div id="modalSubject" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="folder-plus" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
+          Nueva Materia
+        </h3>
+        <button id="btnCloseSubjectModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Ingresa el nombre de la cátedra o materia que deseas crear.
+      </p>
+      <form id="formNewSubject" class="space-y-4">
+        <div>
+          <label for="inputSubjectName" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Nombre de la materia
+          </label>
+          <input 
+            type="text" 
+            id="inputSubjectName" 
+            required
+            placeholder="Ej.: Antropología y Comunicación"
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+          >
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelSubjectModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Crear materia
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Crear Nueva Subcarpeta -->
+  <div id="modalFolder" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="folder-plus" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
+          Nueva Subcarpeta
+        </h3>
+        <button id="btnCloseFolderModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Ingresa el nombre de la subcarpeta para organizar el material.
+      </p>
+      <form id="formNewFolder" class="space-y-4">
+        <div>
+          <label for="inputFolderName" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Nombre de la subcarpeta
+          </label>
+          <input 
+            type="text" 
+            id="inputFolderName" 
+            required
+            placeholder="Ej.: Teórico, Práctico o Bibliografía"
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+          >
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelFolderModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Crear subcarpeta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Editar / Renombrar Materia -->
+  <div id="modalEditSubject" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-blue-900 dark:text-amber-400"></i>
+          Renombrar Materia
+        </h3>
+        <button id="btnCloseEditSubjectModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Modifica el nombre de la materia seleccionada.
+      </p>
+      <form id="formEditSubject" class="space-y-4">
+        <input type="hidden" id="editSubjectId">
+        <div>
+          <label for="inputEditSubjectName" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Nombre de la materia
+          </label>
+          <input 
+            type="text" 
+            id="inputEditSubjectName" 
+            required
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+          >
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelEditSubjectModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Guardar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Editar / Renombrar Subcarpeta -->
+  <div id="modalEditFolder" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+          Renombrar Subcarpeta
+        </h3>
+        <button id="btnCloseEditFolderModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Modifica el nombre de la subcarpeta seleccionada.
+      </p>
+      <form id="formEditFolder" class="space-y-4">
+        <input type="hidden" id="editFolderId">
+        <div>
+          <label for="inputEditFolderName" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Nombre de la subcarpeta
+          </label>
+          <input 
+            type="text" 
+            id="inputEditFolderName" 
+            required
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-800 transition"
+          >
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelEditFolderModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-medium text-xs rounded-xl shadow-sm transition">
+            Guardar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Crear / Editar Nota de la Materia -->
+  <div id="modalNote" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 animate-scale-up">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="modalNoteTitle" class="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <i data-lucide="file-text" class="w-5 h-5 text-amber-500"></i>
+          Nueva Nota
+        </h3>
+        <button id="btnCloseNoteModal" type="button" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+        Anotá información importante de la cursada, fechas de entregas o enlaces de interés.
+      </p>
+      <form id="formNote" class="space-y-4">
+        <input type="hidden" id="noteEditId">
+        <div>
+          <label for="inputNoteTitle" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Título de la nota
+          </label>
+          <input 
+            type="text" 
+            id="inputNoteTitle" 
+            required
+            placeholder="Ej: Fechas de parciales, Contacto docente, Bibliografía extra..."
+            class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#ffc700]/30 focus:border-[#ffc700] transition"
+          >
+        </div>
+        <div>
+          <label for="inputNoteContent" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+            Contenido de la nota
+          </label>
+          <textarea 
+            id="inputNoteContent" 
+            rows="6" 
+            placeholder="Escribí acá el contenido detallado de tu apunte o recordatorio..."
+            class="w-full text-xs sm:text-sm p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#ffc700]/30 focus:border-[#ffc700] transition resize-y leading-relaxed"
+          ></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancelNoteModal" class="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs rounded-xl transition">
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            style="background-color: #001b44; color: #ffffff;"
+            class="flex items-center gap-1.5 px-4 py-2 hover:bg-[#002d72] font-medium text-xs rounded-xl shadow-sm transition"
+          >
+            <i data-lucide="check" class="w-4 h-4 text-[#ffc700]"></i>
+            <span>Guardar Nota</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal / Visor de PDF Integrado (Pantalla Completa) -->
+  <div id="modalPdfViewer" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col p-2 sm:p-4 animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col flex-1 overflow-hidden w-full max-w-7xl mx-auto">
+      
+      <!-- Barra superior del visor -->
+      <div class="px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/90 shrink-0">
+        <!-- Grupo Izquierdo: Ícono de PDF, nombre del archivo y metadata -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
+            <i data-lucide="file-text" class="w-4 h-4 text-[#ffc700]"></i>
+          </div>
+          <div class="min-w-0 mr-1 sm:mr-3">
+            <h3 id="pdfViewerTitle" class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+              Documento.pdf
+            </h3>
+            <p id="pdfViewerSubtitle" class="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+              Visor integrado FacuHelps
+            </p>
+          </div>
+        </div>
+
+        <!-- Grupo Derecho: 1. '⚡ Resumen con IA', 2. '📄 Descargar Word (.docx)', 3. '📑 Descargar PDF', 4. '✕ Cerrar' -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button 
+            id="btnPdfViewerSummarize" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs shrink-0"
+            title="Generar o ver Resumen Académico con IA"
+          >
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+            <span id="btnPdfViewerSummarizeText">⚡ Resumen con IA</span>
+          </button>
+          <button 
+            id="btnDownloadPdfSummaryDocx" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Descargar resumen académico en Word (.docx)"
+          >
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+            <span class="hidden sm:inline">📄 Descargar Word (.docx)</span>
+            <span class="sm:hidden">Word</span>
+          </button>
+          <button 
+            id="btnDownloadPdfSummaryPdf" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Descargar resumen académico en PDF"
+          >
+            <i data-lucide="file-down" class="w-3.5 h-3.5 text-slate-600 dark:text-slate-300"></i>
+            <span class="hidden sm:inline">📑 Descargar PDF</span>
+            <span class="sm:hidden">PDF</span>
+          </button>
+          <button 
+            id="btnPdfViewerClose" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Cerrar visor"
+          >
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <span>✕ Cerrar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor Principal: PDF iframe + Panel lateral de Resumen Académico -->
+      <div class="flex-1 w-full bg-slate-100 dark:bg-slate-950 relative overflow-hidden flex flex-col lg:flex-row">
+        <!-- Frame PDF -->
+        <div id="pdfViewerFrameContainer" class="flex-1 h-full min-h-[300px] border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 relative">
+          <iframe id="pdfViewerFrame" class="w-full h-full border-0" title="Visor de PDF"></iframe>
+        </div>
+
+        <!-- Panel de Resumen Académico (Lateral en desktop, inferior en móvil) -->
+        <div id="pdfSummaryPanel" class="hidden w-full lg:w-[480px] shrink-0 bg-white dark:bg-slate-900 flex flex-col h-full border-l-0 lg:border-l border-slate-200 dark:border-slate-800 animate-fade-in font-sans">
+          <!-- Cabecera del Panel de Resumen -->
+          <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 flex items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
+                <span>📖 Resumen Académico</span>
+                <span class="bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full text-[11px]">Comu UBA</span>
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button 
+                id="btnCopyPdfSummary" 
+                type="button" 
+                class="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5 transition shadow-2xs"
+                title="Copiar texto del resumen"
+              >
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>📋 Copiar</span>
+              </button>
+              <button 
+                id="btnClosePdfSummaryPanel" 
+                type="button" 
+                class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition"
+                title="Ocultar panel de resumen"
+              >
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Estado de carga del resumen -->
+          <div id="pdfSummaryLoading" class="hidden p-8 flex flex-col items-center justify-center text-center my-auto">
+            <div class="w-9 h-9 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <h4 class="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">Generando análisis académico...</h4>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-xs">
+              Extrayendo tesis central, categorías teóricas, citas textuales y preguntas de examen con Gemini Flash.
+            </p>
+          </div>
+
+          <!-- Contenido del Resumen Académico con scroll independiente -->
+          <div id="pdfSummaryContent" class="flex-1 overflow-y-auto p-4 sm:p-5 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed space-y-4">
+            <!-- Renderizado dinámico de Markdown -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Dedicado de Resumen Académico a Ancho Completo (Lectura Cómoda y Estudio) -->
+  <div id="modalSummaryViewer" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col p-2 sm:p-4 animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col flex-1 overflow-hidden w-full max-w-5xl mx-auto">
+      
+      <!-- Cabecera del Modal de Resumen -->
+      <div class="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/90 shrink-0">
+        <!-- Izquierda: '📖 Resumen Académico' con la insignia 'Comu UBA' y nombre de la lectura -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
+            <i data-lucide="book-open" class="w-4 h-4 text-[#ffc700]"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
+                <span>📖 Resumen Académico</span>
+                <span class="bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full text-[11px]">Comu UBA</span>
+              </h3>
+            </div>
+            <p id="summaryViewerDocTitle" class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+              Lectura académica
+            </p>
+          </div>
+        </div>
+
+        <!-- Derecha: Botonera unificada en blanco/neutro: 1. Copiar, 2. Word, 3. PDF, 4. Cerrar -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button 
+            id="btnSummaryModalCopy" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Copiar texto del resumen"
+          >
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">📋 Copiar</span>
+            <span class="sm:hidden">Copiar</span>
+          </button>
+          <button 
+            id="btnSummaryModalDownloadDocx" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Descargar resumen académico en Word (.docx)"
+          >
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+            <span class="hidden sm:inline">📄 Descargar Word (.docx)</span>
+            <span class="sm:hidden">Word</span>
+          </button>
+          <button 
+            id="btnSummaryModalDownloadPdf" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Descargar resumen académico en PDF"
+          >
+            <i data-lucide="file-down" class="w-3.5 h-3.5 text-slate-600 dark:text-slate-300"></i>
+            <span class="hidden sm:inline">📑 Descargar PDF</span>
+            <span class="sm:hidden">PDF</span>
+          </button>
+          <button 
+            id="btnSummaryModalClose" 
+            type="button" 
+            class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs flex items-center gap-1.5 transition shadow-2xs"
+            title="Cerrar resumen"
+          >
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <span>✕ Cerrar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Estado de carga en caso de generar a demanda -->
+      <div id="summaryModalLoading" class="hidden p-12 flex flex-col items-center justify-center text-center my-auto">
+        <div class="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Generando análisis académico...</h4>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+          Extrayendo tesis central, categorías teóricas, citas textuales y preguntas de examen tipo parcial con Gemini Flash.
+        </p>
+      </div>
+
+      <!-- Cuerpo del Resumen Académico a Ancho Completo (Tipografía cómoda para estudiar) -->
+      <div id="summaryModalContent" class="flex-1 overflow-y-auto p-6 sm:p-10 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed space-y-4 font-sans max-w-4xl mx-auto w-full custom-scrollbar">
+        <!-- Renderizado dinámico de Markdown -->
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
