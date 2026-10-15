@@ -1258,10 +1258,6 @@ ${speakerHint}${kw}
       resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
-      setTimeout(() => {
-        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-
       // Guardar en historial local y sincronizar con Supabase
       saveToHistory({
         filename: currentActiveFileName,
@@ -1269,6 +1265,10 @@ ${speakerHint}${kw}
         transcript: rawTranscriptText,
         timestamp: Date.now()
       });
+
+      setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
 
     } catch (err) {
       showError("Error al transcribir", err.message);
