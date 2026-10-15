@@ -1933,6 +1933,7 @@ ${speakerHint}${kw}
   }
 
   async function saveToHistory(item) {
+    if (!item) return;
     try {
       let list = getHistory();
       // Evitar duplicados por timestamp o filename
@@ -1945,16 +1946,50 @@ ${speakerHint}${kw}
       updateHistoryBadge();
 
       // Guardar en la nube (Supabase) si hay sesión activa
-      if (window.supabaseClient) {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session && session.user) {
-          await window.supabaseClient.from('user_transcripts').insert([{
-            user_id: session.user.id,
-            filename: item.filename,
-            audio_type: item.audioType,
-            transcript: item.transcript,
-            created_at: new Date(item.timestamp).toISOString()
-          }]);
+      const client = window.supabaseClient || supabaseClient;
+      if (client) {
+        let user = currentAuthUser;
+        if (!user) {
+          try {
+            const { data: sessionData } = await client.auth.getSession();
+            user = sessionData?.session?.user || null;
+          } catch (e) {}
+        }
+        if (!user) {
+          try {
+            const { data: userData } = await client.auth.getUser();
+            user = userData?.user || null;
+          } catch (e) {}
+        }
+
+        if (user) {
+          const isoDate = item.timestamp ? new Date(item.timestamp).toISOString() : new Date().toISOString();
+          const basePayload = {
+            user_id: user.id,
+            filename: item.filename || "audio.mp3",
+            audio_type: item.audioType || "clase",
+            transcript: item.transcript || "",
+            summary: item.summary || "",
+            created_at: isoDate
+          };
+
+          const { error } = await client.from('user_transcripts').insert([basePayload]);
+          if (error) {
+            console.warn("[Supabase] Insert inicial con created_at falló, probando con timestamp:", error.message || error);
+            const altPayload = {
+              user_id: user.id,
+              filename: item.filename || "audio.mp3",
+              audio_type: item.audioType || "clase",
+              transcript: item.transcript || "",
+              summary: item.summary || "",
+              timestamp: item.timestamp || Date.now()
+            };
+            const altRes = await client.from('user_transcripts').insert([altPayload]);
+            if (altRes.error) {
+              console.warn("[Supabase] Reintento con timestamp también falló, intentando upsert:", altRes.error.message || altRes.error);
+              await client.from('user_transcripts').upsert([basePayload]);
+            }
+          }
         }
       }
 
@@ -1968,29 +2003,70 @@ ${speakerHint}${kw}
   }
 
   async function loadUserTranscriptsFromCloud() {
-    if (!window.supabaseClient) return;
+    const client = window.supabaseClient || supabaseClient;
+    if (!client) return;
     try {
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      if (!session || !session.user) return;
+      let user = currentAuthUser;
+      if (!user) {
+        try {
+          const { data: sessionData } = await client.auth.getSession();
+          user = sessionData?.session?.user || null;
+        } catch (e) {}
+      }
+      if (!user) {
+        try {
+          const { data: userData } = await client.auth.getUser();
+          user = userData?.user || null;
+        } catch (e) {}
+      }
+      if (!user) return;
 
-      const { data, error } = await window.supabaseClient
+      let { data, error } = await client
         .from('user_transcripts')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(MAX_HISTORY_ITEMS);
 
-      if (error) throw error;
+      if (error) {
+        const resAlt = await client
+          .from('user_transcripts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false })
+          .limit(MAX_HISTORY_ITEMS);
+        if (!resAlt.error && resAlt.data) {
+          data = resAlt.data;
+          error = null;
+        } else {
+          const resNoOrder = await client
+            .from('user_transcripts')
+            .select('*')
+            .eq('user_id', user.id)
+            .limit(MAX_HISTORY_ITEMS);
+          if (!resNoOrder.error && resNoOrder.data) {
+            data = resNoOrder.data;
+            error = null;
+          }
+        }
+      }
+
+      if (error) {
+        console.warn("[Supabase] Error al cargar user_transcripts:", error);
+        return;
+      }
+
       if (data && data.length > 0) {
         const cloudItems = data.map(row => ({
           filename: row.filename || "audio.mp3",
-          audioType: row.audio_type || "clase",
-          transcript: row.transcript,
-          timestamp: new Date(row.created_at).getTime()
+          audioType: row.audio_type || row.audioType || "clase",
+          transcript: row.transcript || "",
+          summary: row.summary || "",
+          timestamp: row.created_at ? new Date(row.created_at).getTime() : (Number(row.timestamp) || Date.now())
         }));
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(cloudItems));
         updateHistoryBadge();
-        if (historyModal && !historyModal.classList.contains("hidden")) {
+        if (typeof renderHistoryList === "function") {
           renderHistoryList();
         }
       }
@@ -2013,6 +2089,16 @@ ${speakerHint}${kw}
       }
       if (updated) {
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+      }
+
+      const client = window.supabaseClient || supabaseClient;
+      const user = currentAuthUser;
+      if (client && user) {
+        client.from("user_transcripts")
+          .update({ summary: summaryText })
+          .eq("user_id", user.id)
+          .eq("filename", targetFilename)
+          .then();
       }
     } catch (e) {
       console.warn("Error al actualizar resumen en historial:", e);
