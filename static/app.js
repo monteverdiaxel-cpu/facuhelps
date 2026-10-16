@@ -1234,7 +1234,7 @@ ${speakerHint}${kw}
       // Paso 1: Subir audio directamente por Cloudflare (0 MB consumidos en Render)
       setProgressStep("cloud");
       let googleFileName = "";
-      const CHUNK_SIZE = 10 * 1024 * 1024; // Bloques de 10 MB (seguros para el límite de 100 MB de Cloudflare)
+      const CHUNK_SIZE = 8 * 1024 * 1024; // 8388608 bytes exactos
 
       if (currentFile.size <= 85 * 1024 * 1024) {
         // --- CAMINO TRADICIONAL (Archivos normales <= 85 MB) ---
