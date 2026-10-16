@@ -1233,23 +1233,90 @@ ${speakerHint}${kw}
 
       // Paso 1: Subir audio directamente por Cloudflare (0 MB consumidos en Render)
       setProgressStep("cloud");
-      const workerUrl = `https://facuhelps-upload.monteverdiaxel.workers.dev/?key=${encodeURIComponent(activeKey)}&mime=${encodeURIComponent(currentFile.type || "audio/mp3")}&name=${encodeURIComponent(currentFile.name)}&size=${currentFile.size}`;
+      let googleFileName = "";
+      const CHUNK_SIZE = 10 * 1024 * 1024; // Bloques de 10 MB (seguros para el límite de 100 MB de Cloudflare)
 
-      const uploadResponse = await fetch(workerUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": currentFile.type || "application/octet-stream"
-        },
-        body: currentFile
-      });
+      if (currentFile.size <= 85 * 1024 * 1024) {
+        // --- CAMINO TRADICIONAL (Archivos normales <= 85 MB) ---
+        // Conserva EXACTAMENTE el flujo existente de subida directa en un solo viaje
+        const workerUrl = `https://facuhelps-upload.monteverdiaxel.workers.dev/?key=${encodeURIComponent(activeKey)}&mime=${encodeURIComponent(currentFile.type || "audio/mp3")}&name=${encodeURIComponent(currentFile.name)}&size=${currentFile.size}`;
 
-      if (!uploadResponse.ok) {
-        const errText = await uploadResponse.text();
-        throw new Error(`Error en Cloudflare al subir archivo: ${errText}`);
+        const uploadResponse = await fetch(workerUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": currentFile.type || "application/octet-stream"
+          },
+          body: currentFile
+        });
+
+        if (!uploadResponse.ok) {
+          const errText = await uploadResponse.text();
+          throw new Error(`Error en Cloudflare al subir archivo: ${errText}`);
+        }
+
+        const uploadData = await uploadResponse.json();
+        googleFileName = uploadData.file ? uploadData.file.name : (uploadData.name || "");
+
+      } else {
+        // --- CAMINO DE FRAGMENTACIÓN (Archivos pesados > 85 MB, ej. 114 MB) ---
+        // 1. Iniciar sesión resumible en Google vía Cloudflare
+        const startWorkerUrl = `https://facuhelps-upload.monteverdiaxel.workers.dev/?action=start&key=${encodeURIComponent(activeKey)}&mime=${encodeURIComponent(currentFile.type || "audio/mp3")}&name=${encodeURIComponent(currentFile.name)}&size=${currentFile.size}`;
+
+        const startRes = await fetch(startWorkerUrl, { method: "POST" });
+        if (!startRes.ok) {
+          const errText = await startRes.text();
+          throw new Error(`Error al iniciar subida por bloques: ${errText}`);
+        }
+
+        const startData = await startRes.json();
+        const googleUploadUrl = startData.upload_url;
+        if (!googleUploadUrl) {
+          throw new Error("No se obtuvo la URL de subida por bloques de Google.");
+        }
+
+        // 2. Subir el archivo en fragmentos secuenciales de 10 MB
+        const totalBytes = currentFile.size;
+        let offset = 0;
+        const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
+        let chunkIndex = 0;
+
+        while (offset < totalBytes) {
+          chunkIndex++;
+          const nextOffset = Math.min(offset + CHUNK_SIZE, totalBytes);
+          const chunkBlob = currentFile.slice(offset, nextOffset);
+          const isLastChunk = nextOffset >= totalBytes;
+          const command = isLastChunk ? "upload, finalize" : "upload";
+
+          // Actualizar texto informativo de progreso en pantalla
+          const percent = Math.round((offset / totalBytes) * 100);
+          if (progressSubtitle) {
+            progressSubtitle.textContent = `Subiendo parte ${chunkIndex} de ${totalChunks} (${percent}%)... 0 MB en Render.`;
+          }
+
+          const chunkWorkerUrl = `https://facuhelps-upload.monteverdiaxel.workers.dev/?action=chunk&upload_url=${encodeURIComponent(googleUploadUrl)}&offset=${offset}&command=${encodeURIComponent(command)}`;
+
+          const chunkRes = await fetch(chunkWorkerUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/octet-stream"
+            },
+            body: chunkBlob
+          });
+
+          if (!chunkRes.ok) {
+            const errText = await chunkRes.text();
+            throw new Error(`Error al subir fragmento ${chunkIndex}: ${errText}`);
+          }
+
+          if (isLastChunk) {
+            const finalData = await chunkRes.json();
+            googleFileName = finalData.file ? finalData.file.name : (finalData.name || "");
+          }
+
+          offset = nextOffset;
+        }
       }
 
-      const uploadData = await uploadResponse.json();
-      const googleFileName = uploadData.file ? uploadData.file.name : (uploadData.name || "");
       if (!googleFileName) {
         throw new Error("No se recibió el identificador del archivo desde Google.");
       }
