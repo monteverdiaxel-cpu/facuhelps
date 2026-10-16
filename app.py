@@ -513,7 +513,8 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
 
         # 4. Ejecutar generate_content
         response = None
-        max_attempts = 3
+        max_attempts = 4
+        delays = [4, 8, 12]  # Esperas progresivas: 4s, 8s, 12s ante 503 / High Demand
         for attempt in range(1, max_attempts + 1):
             try:
                 response = client.models.generate_content(
@@ -527,7 +528,12 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
                 break
             except Exception as gen_err:
                 if is_retriable_error(gen_err) and attempt < max_attempts:
-                    time.sleep(2)
+                    sleep_time = delays[attempt - 1] if attempt - 1 < len(delays) else 12
+                    logger.warning(
+                        f"Google AI Studio temporalmente ocupado / High Demand (intento {attempt}/{max_attempts}). "
+                        f"Reintentando en {sleep_time}s... Detalle: {gen_err}"
+                    )
+                    time.sleep(sleep_time)
                 else:
                     raise gen_err
 

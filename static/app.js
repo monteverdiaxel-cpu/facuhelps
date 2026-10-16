@@ -1068,7 +1068,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function hideError() {
-    errorAlert.classList.add("hidden");
+    if (errorAlert) errorAlert.classList.add("hidden");
+    const banner = document.getElementById("errorBanner");
+    if (banner) banner.classList.add("hidden");
+    if (errorTitle) errorTitle.textContent = "";
+    if (errorMessage) errorMessage.textContent = "";
   }
 
   btnCloseError.addEventListener("click", hideError);
@@ -1223,9 +1227,12 @@ ${speakerHint}${kw}
 
   // 7. Iniciar Proceso de Transcripción (Opción B: Subida Directa Exclusiva a Google)
   btnStartTranscribe.addEventListener("click", async () => {
+    hideError();
+    const errorBannerEl = document.getElementById("errorBanner");
+    if (errorBannerEl) errorBannerEl.classList.add("hidden");
+
     if (!currentFile) return;
 
-    hideError();
     setEditMode(false);
     resultSection.classList.add("hidden");
     if (summarySection) summarySection.classList.add("hidden");
@@ -1431,7 +1438,7 @@ ${speakerHint}${kw}
 
       if (btnToggleEdit) {
         btnToggleEdit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs";
-        btnToggleEdit.innerHTML = '<i data-lucide="lock" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i> <span id="btnToggleEditLabel">🔒 Bloquear edición</span>';
+        btnToggleEdit.innerHTML = '<i data-lucide="lock" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i> <span id="btnToggleEditLabel">Bloquear edición</span>';
       }
 
       if (editModeIndicator) {
@@ -1444,7 +1451,7 @@ ${speakerHint}${kw}
 
       if (btnToggleEdit) {
         btnToggleEdit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs";
-        btnToggleEdit.innerHTML = '<i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i> <span id="btnToggleEditLabel">✏️ Editar texto</span>';
+        btnToggleEdit.innerHTML = '<i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i> <span id="btnToggleEditLabel">Editar texto</span>';
       }
 
       if (editModeIndicator) {

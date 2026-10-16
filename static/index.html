@@ -981,7 +981,7 @@
     <div id="resultSection" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in">
       <!-- Toolbar -->
       <div class="border-b border-slate-200/80 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-900/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
+        <div class="min-w-0">
           <div class="flex items-center gap-2">
             <span id="completedBadge" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
               Completado
@@ -991,8 +991,8 @@
             </span>
             <span id="resultModelBadge" class="text-xs font-mono text-slate-500 dark:text-slate-400">gemini-3.8-flash</span>
           </div>
-          <p id="resultFileName" class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">audio.mp3</p>
-          <div id="transcriptReadingStats" class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
+          <p id="resultFileName" class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium truncate">audio.mp3</p>
+          <div id="transcriptReadingStats" class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium whitespace-nowrap">
             <span id="readingTimeEstimate">📖 ~0 min de lectura</span>
             <span>•</span>
             <span id="wordCountEstimate">✍️ 0 palabras</span>
@@ -1003,15 +1003,15 @@
         <div class="flex items-center flex-wrap gap-2">
           <button id="btnToggleEdit" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
-            <span id="btnToggleEditLabel">✏️ Editar texto</span>
+            <span id="btnToggleEditLabel">Editar texto</span>
           </button>
           <button id="btnSummarize" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-semibold transition shadow-xs">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
-            <span>⚡ Generar resumen</span>
+            <span>Generar resumen</span>
           </button>
           <button id="btnRenameSpeakers" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-slate-800/80 hover:bg-blue-100/80 dark:hover:bg-slate-700/80 text-blue-900 dark:text-amber-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="users" class="w-3.5 h-3.5 text-blue-900 dark:text-amber-400"></i>
-            <span>👥 Renombrar oradores</span>
+            <span>Renombrar oradores</span>
           </button>
           <button id="btnCopy" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
@@ -1023,7 +1023,7 @@
           </button>
           <button id="btnDownloadPdf" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#ffc700]/30 bg-[#001b44]/10 dark:bg-[#001b44]/40 hover:bg-[#001b44]/20 text-[#001b44] dark:text-[#ffc700] text-xs font-medium transition shadow-xs">
             <i data-lucide="file-text" class="w-3.5 h-3.5 text-[#ffc700]"></i>
-            <span>📄 Descargar PDF</span>
+            <span>Descargar PDF</span>
           </button>
           <button id="btnDownloadTxt" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition shadow-xs">
             <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
