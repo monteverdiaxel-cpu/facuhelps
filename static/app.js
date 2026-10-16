@@ -154,6 +154,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 0. Modo Oscuro (Dark Mode)
+  function updateThemeIcon(isDark) {
+    const iconName = isDark ? "sun" : "moon";
+    if (btnThemeToggle) {
+      btnThemeToggle.innerHTML = `<i data-lucide="${iconName}" id="themeIcon" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>`;
+    } else if (themeIcon) {
+      themeIcon.setAttribute("data-lucide", iconName);
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
   function initTheme() {
     const savedTheme = localStorage.getItem("theme");
     const systemPrefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -166,13 +176,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isDark) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
-      if (themeIcon) themeIcon.setAttribute("data-lucide", "sun");
     } else {
       document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", "light");
-      if (themeIcon) themeIcon.setAttribute("data-lucide", "moon");
     }
-    if (window.lucide) window.lucide.createIcons();
+    updateThemeIcon(isDark);
   }
 
   if (btnThemeToggle) {
@@ -310,22 +318,22 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateAuthUI(user) {
     currentAuthUser = user || null;
     const userAuthIcon = btnUserAuth ? btnUserAuth.querySelector('[data-lucide="user"], svg') : null;
+    if (userAuthIcon) userAuthIcon.classList.remove("hidden");
+
     if (user) {
-      if (userAuthIcon) userAuthIcon.classList.add("hidden");
       if (userAuthLabel) {
-        userAuthLabel.innerHTML = `👤 <span class="max-w-[130px] md:max-w-[200px] truncate inline-block align-bottom">${user.email}</span> <span class="text-emerald-500 font-bold ml-0.5">✓</span>`;
+        userAuthLabel.innerHTML = `<span class="max-w-[130px] md:max-w-[200px] truncate inline-block align-bottom">${user.email}</span> <span class="text-emerald-500 font-bold ml-0.5">✓</span>`;
       }
       if (btnUserAuth) {
-        btnUserAuth.title = `👤 ${user.email} (Sincronizado ✓) - Clic para ver opciones o cerrar sesión`;
+        btnUserAuth.title = `${user.email} (Sincronizado ✓) - Clic para ver opciones o cerrar sesión`;
         btnUserAuth.classList.add("border-emerald-300", "dark:border-emerald-800");
       }
       if (authLoggedInEmail) authLoggedInEmail.textContent = user.email || "";
       if (authLoggedInView) authLoggedInView.classList.remove("hidden");
       if (authLoggedOutView) authLoggedOutView.classList.add("hidden");
     } else {
-      if (userAuthIcon) userAuthIcon.classList.remove("hidden");
       if (userAuthLabel) {
-        userAuthLabel.textContent = "👤 Iniciar sesión";
+        userAuthLabel.textContent = "Iniciar sesión";
       }
       if (btnUserAuth) {
         btnUserAuth.title = "Iniciar sesión para sincronizar automáticamente entre dispositivos";
