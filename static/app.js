@@ -97,6 +97,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultSection = document.getElementById("resultSection");
   const resultFileName = document.getElementById("resultFileName");
   const resultModelBadge = document.getElementById("resultModelBadge");
+  const transcriptReadingStats = document.getElementById("transcriptReadingStats");
+  const readingTimeEstimate = document.getElementById("readingTimeEstimate");
+  const wordCountEstimate = document.getElementById("wordCountEstimate");
   const completedBadge = document.getElementById("completedBadge");
   const streamingIndicator = document.getElementById("streamingIndicator");
   const transcriptContainer = document.getElementById("transcriptContainer");
@@ -1154,6 +1157,24 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
   }
 
+  // Estimador de tiempo de lectura y contador de palabras
+  function updateReadingStats(text) {
+    if (!readingTimeEstimate || !wordCountEstimate) return;
+    const cleanText = (text || "").trim();
+    if (!cleanText) {
+      readingTimeEstimate.textContent = "📖 ~0 min de lectura";
+      wordCountEstimate.textContent = "✍️ 0 palabras";
+      return;
+    }
+
+    const words = cleanText.split(/\s+/).filter(Boolean);
+    const count = words.length;
+    const minutes = count === 0 ? 0 : Math.max(1, Math.ceil(count / 200));
+
+    readingTimeEstimate.textContent = `📖 ~${minutes} min de lectura`;
+    wordCountEstimate.textContent = `✍️ ${count.toLocaleString("es-AR")} ${count === 1 ? 'palabra' : 'palabras'}`;
+  }
+
   function getSystemInstructionJS(audioType = "clase") {
     let speakerRules = "";
     if (audioType === "continuo") {
@@ -1372,6 +1393,7 @@ ${speakerHint}${kw}
       resultFileName.textContent = currentActiveFileName;
       resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+      updateReadingStats(rawTranscriptText);
 
       // Guardar en historial local y sincronizar con Supabase
       saveToHistory({
@@ -1437,6 +1459,12 @@ ${speakerHint}${kw}
   if (btnToggleEdit) {
     btnToggleEdit.addEventListener("click", () => {
       setEditMode(!isEditingTranscript);
+    });
+  }
+
+  if (transcriptContent) {
+    transcriptContent.addEventListener("input", () => {
+      updateReadingStats(transcriptContent.innerText);
     });
   }
 
@@ -1829,6 +1857,7 @@ ${speakerHint}${kw}
       if (changesCount > 0) {
         rawTranscriptText = updatedText;
         transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+        updateReadingStats(rawTranscriptText);
         // Feedback visual en el botón de renombrar
         const originalLabel = btnRenameSpeakers.innerHTML;
         btnRenameSpeakers.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> <span class="text-emerald-700">¡Nombres actualizados!</span>';
@@ -2293,6 +2322,9 @@ ${speakerHint}${kw}
 
       const previewText = (item.transcript || "").slice(0, 150).replace(/\*\*/g, "") + "...";
 
+      const wordCount = (item.transcript || "").trim().split(/\s+/).filter(Boolean).length;
+      const readMins = wordCount === 0 ? 0 : Math.max(1, Math.ceil(wordCount / 200));
+
       const card = document.createElement("div");
       card.className = "p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:border-blue-800 dark:hover:border-amber-400/50 transition space-y-2.5";
       card.innerHTML = `
@@ -2307,6 +2339,8 @@ ${speakerHint}${kw}
               <span>${dateStr}</span>
               <span>•</span>
               <span class="font-medium text-blue-900 dark:text-amber-400">${getAudioTypeLabel(item.audioType)}</span>
+              <span>•</span>
+              <span>📖 ~${readMins} min (${wordCount.toLocaleString("es-AR")} palabras)</span>
             </div>
           </div>
 
@@ -2342,6 +2376,7 @@ ${speakerHint}${kw}
         resultFileName.textContent = currentActiveFileName;
         resultModelBadge.textContent = "Historial local";
         transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
+        updateReadingStats(rawTranscriptText);
         resultSection.classList.remove("hidden");
         if (completedBadge) completedBadge.classList.remove("hidden");
         if (streamingIndicator) streamingIndicator.classList.add("hidden");
