@@ -789,11 +789,22 @@ document.addEventListener("DOMContentLoaded", () => {
       // c. Descargar carrera de ese usuario
       let remotePlan = null;
       try {
-        const { data, error } = await supabaseClient
+        let { data, error } = await supabaseClient
           .from("user_career_plan")
           .select("data, updated_at")
           .eq("user_id", userId)
           .maybeSingle();
+        if (error) {
+          const altPlan = await supabaseClient
+            .from("user_career_plan")
+            .select("data, updated_at")
+            .eq("user_id", userId)
+            .limit(1);
+          if (!altPlan.error && Array.isArray(altPlan.data) && altPlan.data.length > 0) {
+            data = altPlan.data[0];
+            error = null;
+          }
+        }
         if (!error && data) remotePlan = data;
       } catch (ePlan) {
         console.warn("Error al descargar user_career_plan:", ePlan);
@@ -836,12 +847,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const planStore = tx.objectStore("careerPlan");
           planStore.clear();
           if (remotePlan && remotePlan.data) {
+            const parsedPlan = typeof remotePlan.data === "string" ? JSON.parse(remotePlan.data) : remotePlan.data;
+            const ts = remotePlan.updated_at ? new Date(remotePlan.updated_at).getTime() : Date.now();
             planStore.put({
               key: "userPlan",
-              data: remotePlan.data,
-              updatedAt: Number(remotePlan.updated_at) || Date.now()
+              data: parsedPlan,
+              updatedAt: isNaN(ts) ? Date.now() : ts
             });
-            careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, remotePlan.data);
+            careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, parsedPlan);
           } else {
             careerPlanData = { selectedOrientation: "periodismo", grades: {} };
           }
@@ -4706,33 +4719,107 @@ ${speakerHint}${kw}
   }
 
   async function dbSaveCareerPlan(data) {
-    const db = await openDatabase();
-    return new Promise((resolve, reject) => {
+    const planData = data || careerPlanData;
+    const now = Date.now();
+    try {
+      const db = await openDatabase();
+      await new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction("careerPlan", "readwrite");
+          const store = tx.objectStore("careerPlan");
+          const req = store.put({ key: "userPlan", data: planData, updatedAt: now });
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    } catch (eDb) {
+      console.warn("Error al guardar Plan 504 en IndexedDB:", eDb);
+    }
+
+    // Sincronizar Plan 504 con Supabase
+    if (window.supabaseClient) {
       try {
-        const tx = db.transaction("careerPlan", "readwrite");
-        const store = tx.objectStore("careerPlan");
-        const planToSave = data || careerPlanData;
-        const now = Date.now();
-        const req = store.put({ key: "userPlan", data: planToSave, updatedAt: now });
-        req.onsuccess = () => {
-          if (supabaseClient && currentAuthUser) {
-            try {
-              supabaseClient.from("user_career_plan").upsert({
-                user_id: currentAuthUser.id,
-                data: planToSave,
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        const user = (session && session.user) ? session.user : currentAuthUser;
+        if (user) {
+          const { error } = await window.supabaseClient
+            .from('user_career_plan')
+            .upsert({
+              user_id: user.id,
+              data: planData, // El objeto completo con notas, estados y orientación
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' });
+
+          if (error) {
+            console.error("Error al guardar Plan 504 en Supabase:", error);
+            // Fallback por si updated_at es numérico en la tabla
+            await window.supabaseClient
+              .from('user_career_plan')
+              .upsert({
+                user_id: user.id,
+                data: planData,
                 updated_at: now
-              }).then();
-            } catch (e) {
-              console.warn("Error al guardar plan de carrera en Supabase:", e);
-            }
+              }, { onConflict: 'user_id' });
           }
-          resolve();
-        };
-        req.onerror = () => reject(req.error);
-      } catch (e) {
-        reject(e);
+        }
+      } catch (err) {
+        console.warn("Error en sincronización de Plan 504:", err);
       }
-    });
+    }
+  }
+
+  async function loadUserCareerPlanFromCloud() {
+    if (!window.supabaseClient) return null;
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      const user = (session && session.user) ? session.user : currentAuthUser;
+      if (!user) return null;
+
+      let { data, error } = await window.supabaseClient
+        .from('user_career_plan')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        const altRes = await window.supabaseClient
+          .from('user_career_plan')
+          .select('*')
+          .eq('user_id', user.id)
+          .limit(1);
+        if (!altRes.error && Array.isArray(altRes.data) && altRes.data.length > 0) {
+          data = altRes.data[0];
+          error = null;
+        }
+      }
+
+      if (!error && data && data.data) {
+        const parsedPlan = typeof data.data === "string" ? JSON.parse(data.data) : data.data;
+        careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, parsedPlan);
+        try {
+          const db = await openDatabase();
+          if (db.objectStoreNames.contains("careerPlan")) {
+            await new Promise((resolve) => {
+              const tx = db.transaction("careerPlan", "readwrite");
+              const store = tx.objectStore("careerPlan");
+              store.put({
+                key: "userPlan",
+                data: careerPlanData,
+                updatedAt: Date.now()
+              });
+              tx.oncomplete = resolve;
+              tx.onerror = resolve;
+            });
+          }
+        } catch (eDb) {}
+        return careerPlanData;
+      }
+    } catch (err) {
+      console.warn("Error al cargar Plan 504 desde Supabase:", err);
+    }
+    return null;
   }
 
   // Lógica de Estado UBA para Notas
@@ -4789,10 +4876,14 @@ ${speakerHint}${kw}
 
   // Renderizar la vista de Mi Carrera
   async function renderCareerView() {
-    // 1. Cargar persistencia
+    // 1. Cargar persistencia local y desde Supabase si hay sesión activa
     const saved = await dbGetCareerPlan();
     if (saved) {
       careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, saved);
+    }
+    const cloudPlan = await loadUserCareerPlanFromCloud();
+    if (cloudPlan) {
+      careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, cloudPlan);
     }
 
     // 2. Renderizar Malla Curricular Etapa 1
