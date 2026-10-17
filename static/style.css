@@ -10,7 +10,8 @@ h1, h2, h3 {
   letter-spacing: -0.02em;
 }
 
-.font-editorial {
+.font-editorial,
+.font-serif {
   font-family: 'Playfair Display', Georgia, serif;
 }
 
