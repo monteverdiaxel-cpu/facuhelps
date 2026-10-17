@@ -51,14 +51,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const userProfileEmail = document.getElementById("userProfileEmail");
   const btnLogoutAction = document.getElementById("btnLogoutAction");
   const btnCloseProfileModal = document.getElementById("btnCloseProfileModal");
-  const btnForgotPassLink = document.getElementById("btnForgotPassLink");
-  const authRecoverySection = document.getElementById("authRecoverySection");
-  const recoveryEmail = document.getElementById("recoveryEmail");
-  const btnSendRecovery = document.getElementById("btnSendRecovery");
-  const btnBackToLogin = document.getElementById("btnBackToLogin");
-  const modalNewPassword = document.getElementById("modalNewPassword");
-  const formNewPassword = document.getElementById("formNewPassword");
+  const btnToggleChangePass = document.getElementById("btnToggleChangePass");
+  const changePasswordSection = document.getElementById("changePasswordSection");
+  const iconChevronChangePass = document.getElementById("iconChevronChangePass");
+  const recoveryNoticeBanner = document.getElementById("recoveryNoticeBanner");
   const inputNewPassword = document.getElementById("inputNewPassword");
+  const btnSubmitNewPassword = document.getElementById("btnSubmitNewPassword");
+
+  const linkForgotPassword = document.getElementById("linkForgotPassword");
+  const authRecoverySection = document.getElementById("authRecoverySection");
+  const inputResetEmail = document.getElementById("inputResetEmail");
+  const btnSendResetLink = document.getElementById("btnSendResetLink");
+  const btnBackToLogin = document.getElementById("btnBackToLogin");
 
   const dropZone = document.getElementById("dropZone");
   const fileInput = document.getElementById("fileInput");
@@ -472,14 +476,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Controladores de Recuperación de Contraseña
-  if (btnForgotPassLink) {
-    btnForgotPassLink.addEventListener("click", () => {
+  // Controladores de Recuperación y Cambio de Contraseña
+  if (linkForgotPassword) {
+    linkForgotPassword.addEventListener("click", (e) => {
+      e.preventDefault();
       if (formAuth) formAuth.classList.add("hidden");
       if (authRecoverySection) authRecoverySection.classList.remove("hidden");
-      if (recoveryEmail) {
-        recoveryEmail.value = inputAuthEmail ? inputAuthEmail.value.trim() : "";
-        recoveryEmail.focus();
+      if (inputResetEmail) {
+        inputResetEmail.value = inputAuthEmail ? inputAuthEmail.value.trim() : "";
+        inputResetEmail.focus();
       }
       if (authAlert) authAlert.classList.add("hidden");
       if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
@@ -495,41 +500,66 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (btnSendRecovery) {
-    btnSendRecovery.addEventListener("click", async () => {
+  if (btnSendResetLink) {
+    btnSendResetLink.addEventListener("click", async () => {
       if (!supabaseClient) return;
-      const email = recoveryEmail ? recoveryEmail.value.trim() : "";
+      const email = document.getElementById("inputResetEmail").value.trim();
       if (!email) {
-        if (authAlert) {
-          authAlert.textContent = "Por favor ingresá tu correo electrónico.";
-          authAlert.classList.remove("hidden");
-        }
+        alert("Por favor ingresá tu correo electrónico.");
         return;
       }
-      const origText = btnSendRecovery.textContent;
-      btnSendRecovery.disabled = true;
-      btnSendRecovery.textContent = "Enviando...";
-      if (authAlert) authAlert.classList.add("hidden");
-      if (authSuccessAlert) authSuccessAlert.classList.add("hidden");
+      const origText = btnSendResetLink.textContent;
+      btnSendResetLink.disabled = true;
+      btnSendResetLink.textContent = "Enviando...";
+      const { data, error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+      });
+      btnSendResetLink.disabled = false;
+      btnSendResetLink.textContent = origText;
+      if (error) {
+        alert("Error al enviar el correo: " + error.message);
+      } else {
+        alert("¡Listo! Te enviamos un correo con el enlace para restablecer tu contraseña.");
+      }
+    });
+  }
 
-      try {
-        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin
-        });
-        if (error) throw error;
-        if (authSuccessAlert) {
-          authSuccessAlert.textContent = "¡Listo! Te enviamos un enlace a tu correo para restablecer tu contraseña.";
-          authSuccessAlert.classList.remove("hidden");
-        }
-      } catch (err) {
-        console.warn("Error en recuperación:", err);
-        if (authAlert) {
-          authAlert.textContent = formatAuthError(err.message || "");
-          authAlert.classList.remove("hidden");
-        }
-      } finally {
-        btnSendRecovery.disabled = false;
-        btnSendRecovery.textContent = origText;
+  if (btnToggleChangePass && changePasswordSection) {
+    btnToggleChangePass.addEventListener("click", () => {
+      const isHidden = changePasswordSection.classList.toggle("hidden");
+      if (iconChevronChangePass) {
+        iconChevronChangePass.classList.toggle("rotate-180", !isHidden);
+      }
+      if (!isHidden && inputNewPassword) {
+        inputNewPassword.focus();
+      }
+    });
+  }
+
+  if (btnSubmitNewPassword) {
+    btnSubmitNewPassword.addEventListener("click", async () => {
+      if (!supabaseClient) return;
+      const newPass = document.getElementById("inputNewPassword").value.trim();
+      if (newPass.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres.");
+        return;
+      }
+      const origText = btnSubmitNewPassword.textContent;
+      btnSubmitNewPassword.disabled = true;
+      btnSubmitNewPassword.textContent = "Actualizando...";
+      const { data, error } = await supabaseClient.auth.updateUser({
+        password: newPass
+      });
+      btnSubmitNewPassword.disabled = false;
+      btnSubmitNewPassword.textContent = origText;
+      if (error) {
+        alert("Error al actualizar la contraseña: " + error.message);
+      } else {
+        alert("¡Contraseña actualizada con éxito!");
+        if (inputNewPassword) inputNewPassword.value = "";
+        if (changePasswordSection) changePasswordSection.classList.add("hidden");
+        if (recoveryNoticeBanner) recoveryNoticeBanner.classList.add("hidden");
+        if (iconChevronChangePass) iconChevronChangePass.classList.remove("rotate-180");
       }
     });
   }
@@ -716,9 +746,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (event === "PASSWORD_RECOVERY") {
-        if (modalNewPassword) modalNewPassword.classList.remove("hidden");
         if (modalAuth) modalAuth.classList.add("hidden");
-        if (modalUserProfile) modalUserProfile.classList.add("hidden");
+        if (session && session.user) {
+          updateAuthUI(session.user);
+          if (userProfileEmail) {
+            userProfileEmail.textContent = session.user.email || "";
+          }
+        }
+        if (modalUserProfile) modalUserProfile.classList.remove("hidden");
+        if (changePasswordSection) changePasswordSection.classList.remove("hidden");
+        if (recoveryNoticeBanner) recoveryNoticeBanner.classList.remove("hidden");
+        if (iconChevronChangePass) iconChevronChangePass.classList.add("rotate-180");
         if (inputNewPassword) inputNewPassword.focus();
         return;
       }
@@ -730,36 +768,6 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadUserTranscriptsFromCloud();
       } else {
         await handleUserSignOut();
-      }
-    });
-  }
-
-  // Controlador para guardar nueva contraseña tras recuperación
-  if (formNewPassword) {
-    formNewPassword.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!supabaseClient) return;
-      const newPass = inputNewPassword ? inputNewPassword.value : "";
-      if (!newPass || newPass.length < 6) {
-        alert("La contraseña debe tener al menos 6 caracteres.");
-        return;
-      }
-      try {
-        const { error } = await supabaseClient.auth.updateUser({ password: newPass });
-        if (error) throw error;
-        alert("¡Contraseña actualizada con éxito!");
-        if (modalNewPassword) modalNewPassword.classList.add("hidden");
-        window.location.reload();
-      } catch (err) {
-        alert("Error al actualizar la contraseña: " + (err.message || "Intentá de nuevo."));
-      }
-    });
-  }
-
-  if (modalNewPassword) {
-    modalNewPassword.addEventListener("click", (e) => {
-      if (e.target === modalNewPassword) {
-        modalNewPassword.classList.add("hidden");
       }
     });
   }

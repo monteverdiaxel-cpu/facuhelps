@@ -342,7 +342,7 @@
               </button>
             </div>
             <div class="text-right mt-1.5" id="forgotPassContainer">
-              <button type="button" id="btnForgotPassLink" class="text-[11px] text-blue-900 dark:text-amber-400 hover:underline">¿Olvidaste tu contraseña?</button>
+              <a id="linkForgotPassword" href="#" class="text-xs font-semibold text-amber-500 hover:text-amber-400 transition">¿Olvidaste tu contraseña?</a>
             </div>
           </div>
 
@@ -356,7 +356,7 @@
             type="submit" 
             id="btnAuthSubmit"
             style="background-color: #001b44; color: #ffffff;"
-            class="w-full py-2.5 rounded-xl hover:bg-[#002d72] font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm"
+            class="w-full py-2.5 rounded-xl hover:bg-[#002d72] font-semibold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
           >
             <span id="btnAuthSubmitText">Iniciar sesión</span>
             <div id="authSpinner" class="hidden w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -364,14 +364,32 @@
         </form>
 
         <!-- Vista alternativa para recuperar contraseña -->
-        <div id="authRecoverySection" class="hidden space-y-3.5">
-          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Ingresá tu correo y te enviaremos un enlace seguro para restablecer tu contraseña.</p>
-          <input type="email" id="recoveryEmail" placeholder="tuemail@gmail.com" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400">
-          <button type="button" id="btnSendRecovery" class="w-full py-2.5 rounded-xl bg-[#001b44] hover:bg-[#002d72] text-[#ffc700] font-semibold text-xs transition shadow-sm">
+        <div id="authRecoverySection" class="hidden space-y-3.5 pt-1">
+          <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Ingresá tu correo y te enviaremos un enlace seguro para restablecer tu contraseña.
+          </p>
+          <div>
+            <label for="inputResetEmail" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              Correo electrónico
+            </label>
+            <input 
+              type="email" 
+              id="inputResetEmail" 
+              placeholder="tu.usuario@ejemplo.com" 
+              class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition"
+            >
+          </div>
+          <button 
+            type="button" 
+            id="btnSendResetLink" 
+            class="w-full py-2.5 rounded-xl bg-[#001b44] hover:bg-[#002d72] text-[#ffc700] font-semibold text-xs transition shadow-sm cursor-pointer"
+          >
             Enviar enlace de recuperación
           </button>
-          <div class="text-center">
-            <button type="button" id="btnBackToLogin" class="text-xs text-slate-500 hover:underline">Volver a iniciar sesión</button>
+          <div class="text-center pt-1">
+            <button type="button" id="btnBackToLogin" class="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:underline transition cursor-pointer">
+              &larr; Volver a iniciar sesión
+            </button>
           </div>
         </div>
 
@@ -384,52 +402,74 @@
     </div>
   </div>
 
-  <!-- Modal de Mi Cuenta / Perfil (Cerrar sesión en celulares y PC) -->
+  <!-- Modal de Mi Cuenta / Perfil (Cerrar sesión y Cambiar contraseña) -->
   <div id="modalUserProfile" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 animate-scale-up text-center">
       <div class="w-12 h-12 mx-auto rounded-full bg-[#001b44] border-2 border-[#ffc700] text-[#ffc700] flex items-center justify-center mb-3">
         <i data-lucide="user" class="w-6 h-6"></i>
       </div>
-      <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100" id="userProfileEmail">usuario@gmail.com</h3>
+      <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" id="userProfileEmail">usuario@gmail.com</h3>
       <p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">✓ Sincronizado en la nube (Supabase)</p>
-      <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-        <button type="button" id="btnLogoutAction" class="w-full py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 font-semibold text-xs transition border border-rose-200 dark:border-rose-900 flex items-center justify-center gap-2">
+
+      <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5 text-left">
+        <!-- Botón colapsable Cambiar contraseña -->
+        <button 
+          type="button" 
+          id="btnToggleChangePass" 
+          class="w-full py-2.5 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs transition border border-slate-200 dark:border-slate-700 flex items-center justify-between cursor-pointer"
+        >
+          <span class="flex items-center gap-2">
+            <i data-lucide="key-round" class="w-4 h-4 text-amber-500"></i>
+            <span>Cambiar contraseña</span>
+          </span>
+          <i data-lucide="chevron-down" id="iconChevronChangePass" class="w-4 h-4 text-slate-400 transition-transform"></i>
+        </button>
+
+        <!-- Sección colapsable de nueva contraseña -->
+        <div id="changePasswordSection" class="hidden p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+          <p id="recoveryNoticeBanner" class="hidden text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 rounded-lg px-2.5 py-1.5 font-medium">
+            Ingresá tu nueva contraseña para restablecer el acceso a tu cuenta.
+          </p>
+          <div>
+            <label for="inputNewPassword" class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+              Nueva contraseña
+            </label>
+            <div class="relative">
+              <input 
+                type="password" 
+                id="inputNewPassword" 
+                minlength="6" 
+                placeholder="Nueva contraseña (mín. 6 caracteres)" 
+                class="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400 transition"
+              >
+              <button 
+                type="button" 
+                class="btn-toggle-password absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
+                <i data-lucide="eye-off" class="w-4 h-4 icon-eye-off hidden"></i>
+              </button>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            id="btnSubmitNewPassword" 
+            class="w-full py-2.5 rounded-xl bg-[#001b44] hover:bg-[#002d72] text-[#ffc700] font-semibold text-xs transition shadow-sm cursor-pointer"
+          >
+            Actualizar contraseña
+          </button>
+        </div>
+
+        <button type="button" id="btnLogoutAction" class="w-full py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 font-semibold text-xs transition border border-rose-200 dark:border-rose-900 flex items-center justify-center gap-2 cursor-pointer">
           <i data-lucide="log-out" class="w-4 h-4"></i>
           <span>Cerrar sesión</span>
         </button>
-        <button type="button" id="btnCloseProfileModal" class="w-full py-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 text-xs font-medium">
+
+        <button type="button" id="btnCloseProfileModal" class="w-full py-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 text-xs font-medium text-center block cursor-pointer">
           Volver
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- Modal para ingresar la Nueva Contraseña tras recuperación -->
-  <div id="modalNewPassword" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 text-center animate-scale-up">
-      <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Crear nueva contraseña</h3>
-      <p class="text-xs text-slate-500 mb-4">Ingresá tu nueva clave para acceder a tu cuenta.</p>
-      <form id="formNewPassword" class="space-y-3">
-        <div class="relative">
-          <input 
-            type="password" 
-            id="inputNewPassword" 
-            required 
-            minlength="6" 
-            placeholder="Nueva contraseña (mínimo 6 caracteres)" 
-            class="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-amber-400"
-          >
-          <button 
-            type="button" 
-            class="btn-toggle-password absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
-            aria-label="Mostrar u ocultar contraseña"
-          >
-            <i data-lucide="eye" class="w-4 h-4 icon-eye"></i>
-            <i data-lucide="eye-off" class="w-4 h-4 icon-eye-off hidden"></i>
-          </button>
-        </div>
-        <button type="submit" class="w-full py-2.5 rounded-xl bg-[#001b44] text-[#ffc700] font-semibold text-xs transition">Guardar nueva contraseña</button>
-      </form>
     </div>
   </div>
 
