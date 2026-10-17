@@ -608,7 +608,8 @@ async def summarize_transcript(req: SummarizeRequest):
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.1,
-            max_output_tokens=8192
+            max_output_tokens=4096,
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
         )
 
         response = None
