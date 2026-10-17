@@ -2546,21 +2546,21 @@ ${speakerHint}${kw}
 
   function setTabButtonState(btn, isActive) {
     if (!btn) return;
-    const activeClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-amber-400/40 bg-slate-900/90 text-amber-300 font-semibold text-xs transition-all shadow-xs text-left";
-    const inactiveClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-800 hover:bg-slate-900/60 text-slate-400 font-medium text-xs transition-all text-left";
+    const activeClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-amber-500/40 dark:border-amber-400/40 bg-amber-500/10 dark:bg-slate-900/90 text-amber-950 dark:text-amber-300 font-semibold text-xs transition-all shadow-xs text-left";
+    const inactiveClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
 
     btn.className = isActive ? activeClasses : inactiveClasses;
     const iconContainer = btn.querySelector("div");
     if (iconContainer) {
       iconContainer.className = isActive
-        ? "w-8 h-8 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0"
-        : "w-8 h-8 rounded-lg bg-slate-800/80 text-slate-400 flex items-center justify-center shrink-0";
+        ? "w-8 h-8 rounded-lg bg-amber-500/20 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0"
+        : "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
     }
     const subText = btn.querySelector(".truncate:last-child") || btn.querySelector("div.text-\\[10px\\]");
     if (subText) {
       subText.className = isActive
-        ? "text-[10px] text-amber-300/70 font-normal truncate"
-        : "text-[10px] text-slate-500 font-normal truncate";
+        ? "text-[10px] text-amber-800/80 dark:text-amber-300/70 font-normal truncate"
+        : "text-[10px] text-slate-400 dark:text-slate-500 font-normal truncate";
     }
   }
 
@@ -6149,6 +6149,12 @@ ${speakerHint}${kw}
 
     const elProgressBar = document.getElementById("careerProgressBar");
     if (elProgressBar) elProgressBar.style.width = `${progressPercent}%`;
+
+    // Sincronizar anillo y porcentaje de la tarjeta de inicio
+    const elHomePercent = document.getElementById("homeCareerPercent");
+    if (elHomePercent) elHomePercent.textContent = `${progressPercent}%`;
+    const elHomeRing = document.getElementById("homeCareerRing");
+    if (elHomeRing) elHomeRing.setAttribute("stroke-dasharray", `${progressPercent}, 100`);
 
     // 6. Promedio General Académico
     let scoresSum = 0;
