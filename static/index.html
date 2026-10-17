@@ -480,41 +480,23 @@
 
           <!-- Las 3 Tarjetas con LOGOS GRANDES (100% Clickeables) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-            <!-- Tarjeta 1: Transcriptor IA (Micrófono Limpio + Onda Ancha) -->
+            <!-- Tarjeta 1: Transcriptor IA -->
             <div 
               id="btnCardOpenTranscriptor"
               onclick="document.getElementById('tabBtnTranscriptor').click()"
               class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <!-- Fila Superior de Iconos -->
-                <div class="flex items-center justify-between gap-4 h-14">
-                  <!-- Micrófono Limpio y Abierto (Sin línea diagonal) -->
-                  <svg class="w-12 h-12 text-[#ffc700] shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="22"/>
-                    <line x1="8" y1="22" x2="16" y2="22"/>
-                  </svg>
-                  
-                  <!-- Onda Ancha -->
-                  <svg class="h-9 w-32 sm:w-36 text-[#ffc700]" viewBox="0 0 140 32" fill="currentColor">
-                    <rect x="4" y="11" width="3.5" height="10" rx="1.75"/>
-                    <rect x="13" y="7" width="3.5" height="18" rx="1.75"/>
-                    <rect x="22" y="3" width="3.5" height="26" rx="1.75"/>
-                    <rect x="31" y="9" width="3.5" height="14" rx="1.75"/>
-                    <rect x="40" y="1" width="3.5" height="30" rx="1.75"/>
-                    <rect x="49" y="5" width="3.5" height="22" rx="1.75"/>
-                    <rect x="58" y="0" width="3.5" height="32" rx="1.75"/>
-                    <rect x="67" y="4" width="3.5" height="24" rx="1.75"/>
-                    <rect x="76" y="8" width="3.5" height="16" rx="1.75"/>
-                    <rect x="85" y="1" width="3.5" height="30" rx="1.75"/>
-                    <rect x="94" y="6" width="3.5" height="20" rx="1.75"/>
-                    <rect x="103" y="10" width="3.5" height="12" rx="1.75"/>
-                    <rect x="112" y="3" width="3.5" height="26" rx="1.75"/>
-                    <rect x="121" y="8" width="3.5" height="16" rx="1.75"/>
-                    <rect x="130" y="11" width="3.5" height="10" rx="1.75"/>
-                  </svg>
+                <!-- Fila Superior: Solo el Micrófono Grande (Sin onda) -->
+                <div class="flex items-center justify-start h-14">
+                  <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
+                    <svg class="w-14 h-14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      <line x1="12" y1="19" x2="12" y2="22"/>
+                      <line x1="8" y1="22" x2="16" y2="22"/>
+                    </svg>
+                  </div>
                 </div>
 
                 <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Transcriptor IA</h3>
@@ -529,7 +511,7 @@
               </div>
             </div>
 
-            <!-- Tarjeta 2: Organizador de Materias (Alineación Simétrica) -->
+            <!-- Tarjeta 2: Organizador de Materias -->
             <div 
               id="btnCardOpenOrganizer"
               onclick="document.getElementById('tabBtnOrganizer').click()"
@@ -546,10 +528,7 @@
                   </div>
                 </div>
 
-                <!-- Título alineado al mismo nivel que las tarjetas 1 y 3 -->
                 <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Organizador de Materias</h3>
-                
-                <!-- Texto descriptivo alineado directamente debajo del título -->
                 <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
                   Biblioteca privada en tu navegador (IndexedDB) para guardar PDFs, apuntes y fechas de examen sin consumir servidores.
                 </p>
@@ -561,14 +540,14 @@
               </div>
             </div>
 
-            <!-- Tarjeta 3: Mi Carrera Plan 504 (Birrete UBA Arriba + Anillo 3% a la Derecha) -->
+            <!-- Tarjeta 3: Mi Carrera -->
             <div 
               id="btnCardOpenCareer"
               onclick="document.getElementById('tabBtnCareer').click()"
               class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <!-- Fila Superior de Iconos: Birrete UBA alineado con la Carpeta y Micrófono -->
+                <!-- Fila Superior: Birrete UBA a la izquierda + Anillo Circular 3% a la derecha -->
                 <div class="flex items-center justify-between gap-3 h-14">
                   <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
                     <svg class="w-14 h-11" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -579,7 +558,6 @@
                     </svg>
                   </div>
 
-                  <!-- Anillo Circular 3% Grande -->
                   <div class="relative w-16 h-16 flex items-center justify-center shrink-0">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                       <path class="text-slate-200 dark:text-slate-800" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
@@ -592,14 +570,11 @@
                   </div>
                 </div>
 
-                <!-- Título alineado con las tarjetas 1 y 2 -->
-                <div class="mt-5">
-                  <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block leading-tight">Mi Carrera</span>
-                  <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-[#ffc700] transition-colors">Plan 504</h3>
-                  <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                    Seguimiento de materias aprobadas, cálculo de promedio y habilitación de PPP.
-                  </p>
-                </div>
+                <!-- Título "Mi Carrera" alineado con los otros dos títulos -->
+                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Mi Carrera</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                  Plan 504 (UBA): seguimiento de materias aprobadas, cálculo de promedio y habilitación de PPP.
+                </p>
               </div>
 
               <div class="flex items-center justify-between mt-6 pt-3 border-t border-slate-100 dark:border-slate-800/60">
