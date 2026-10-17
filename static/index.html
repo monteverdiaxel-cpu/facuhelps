@@ -529,14 +529,14 @@
               </div>
             </div>
 
-            <!-- Tarjeta 2: Organizador de Materias (Carpeta Grande Arriba) -->
+            <!-- Tarjeta 2: Organizador de Materias (Alineación Simétrica) -->
             <div 
               id="btnCardOpenOrganizer"
               onclick="document.getElementById('tabBtnOrganizer').click()"
               class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <!-- Fila Superior de Iconos -->
+                <!-- Fila Superior: Carpeta Grande -->
                 <div class="flex items-center justify-start h-14">
                   <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
                     <svg class="w-14 h-14" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -546,16 +546,12 @@
                   </div>
                 </div>
 
+                <!-- Título alineado al mismo nivel que las tarjetas 1 y 3 -->
                 <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Organizador de Materias</h3>
                 
-                <div class="flex items-center gap-1.5 mt-2.5">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">PDFs</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">Apuntes</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">Fechas</span>
-                </div>
-
-                <p class="text-xs text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
-                  Biblioteca privada en tu navegador (IndexedDB) para guardar textos sin consumir servidores.
+                <!-- Texto descriptivo alineado directamente debajo del título -->
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                  Biblioteca privada en tu navegador (IndexedDB) para guardar PDFs, apuntes y fechas de examen sin consumir servidores.
                 </p>
               </div>
 
