@@ -62,24 +62,28 @@
 
   <!-- Barra Lateral Izquierda Fija -->
   <aside class="w-64 min-h-screen bg-white dark:bg-[#070d19] border-r border-slate-200 dark:border-slate-800/80 flex flex-col justify-between shrink-0 fixed inset-y-0 left-0 z-30 transition-colors">
-    <!-- Bloque Superior: Logo + Menú de Navegación -->
-    <div class="p-5 flex flex-col gap-6">
-      <!-- Logo FacuHelps -->
+    <!-- Encabezado Superior: Logo FacuHelps -->
+    <div class="h-16 flex items-center px-6 border-b border-slate-200/80 dark:border-slate-800/80 shrink-0">
       <div id="btnHeaderLogoHome" class="flex items-center gap-3 cursor-pointer group" title="Ir al Inicio">
-        <div class="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 dark:border-amber-400/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-sm shrink-0">
-          <i data-lucide="graduation-cap" class="w-6 h-6 text-amber-500 dark:text-amber-400"></i>
+        <!-- Isotipo: Birrete dorado sobre libro abierto -->
+        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+          <svg class="w-6 h-6 text-amber-400" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 4L3 10L16 16L29 10L16 4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M7 12V18C7 20.5 11 23 16 23C21 23 25 20.5 25 18V12" stroke="currentColor" stroke-width="2"/>
+            <path d="M29 10V18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M4 25C9 23 14 24 16 26C18 24 23 23 28 25" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M4 28C9 26 14 27 16 29C18 27 23 26 28 28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
         </div>
         <div class="min-w-0">
-          <h1 class="text-base font-bold leading-tight">
-            <span class="text-slate-900 dark:text-white font-black">Facu</span><span class="text-amber-500 dark:text-amber-400 font-black">Helps</span>
-          </h1>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
-            Plataforma Universitaria
-          </p>
+          <span class="font-bold text-lg text-slate-900 dark:text-slate-100 block leading-tight">FacuHelps</span>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium block">Plataforma Universitaria</span>
         </div>
       </div>
+    </div>
 
-      <!-- Navegación vertical (únicamente 4 botones, SIN Configuración) -->
+    <!-- Menú de Navegación Vertical -->
+    <div class="p-4 flex-1">
       <nav class="flex flex-col gap-1.5" aria-label="Navegación principal">
         <!-- Botón 0: Inicio -->
         <button 
