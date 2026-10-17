@@ -444,44 +444,144 @@
       <div class="flex-1 min-w-0 w-full space-y-6">
 
         <!-- Vista 0: Inicio / Portada (activa por defecto) -->
-        <div id="viewHome" class="space-y-10 animate-fade-in pb-12">
-          <!-- Hero Section Limpio (Sin caja azul ni logo gigante) -->
-          <div class="text-center max-w-3xl mx-auto pt-6 pb-4 flex flex-col items-center">
-            <!-- Badge Superior -->
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-amber-500/30 bg-amber-500/10 text-amber-300 mb-5 shadow-xs">
+        <div id="viewHome" class="space-y-4 animate-fade-in pb-6 max-w-6xl mx-auto">
+          <!-- Hero Compacto -->
+          <div class="text-center max-w-2xl mx-auto pt-1 pb-1 flex flex-col items-center">
+            <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-medium border border-amber-500/30 bg-amber-500/10 text-amber-300 mb-2">
               <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
               Plataforma Académica Integral
             </div>
 
-            <!-- Título Principal Grande y Sobrio -->
-            <h1 class="text-3xl sm:text-5xl font-serif font-extrabold text-slate-100 tracking-tight leading-tight">
+            <h1 class="text-2xl sm:text-4xl font-serif font-bold text-slate-100 tracking-tight leading-snug">
               Tu espacio integral de estudio universitario
             </h1>
 
-            <!-- Subtítulo -->
-            <p class="text-sm sm:text-base text-slate-400 max-w-xl mx-auto mt-4 font-normal">
+            <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto mt-1.5">
               Para estudiantes de la carrera de Comunicación de la UBA
             </p>
 
-            <!-- Botones Principales de Acción -->
-            <div class="flex flex-wrap items-center justify-center gap-4 mt-8">
+            <div class="flex flex-wrap items-center justify-center gap-3 mt-4">
               <button 
                 id="btnHeroOpenTranscriptor" 
                 type="button" 
-                class="px-7 py-3 rounded-full bg-[#ffc700] hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                class="px-5 py-2.5 rounded-full bg-[#ffc700] hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer"
               >
-                <i data-lucide="mic" class="w-4 h-4"></i>
+                <i data-lucide="mic" class="w-3.5 h-3.5"></i>
                 <span>Abrir Transcriptor</span>
               </button>
 
               <button 
                 id="btnHeroOpenOrganizer" 
                 type="button" 
-                class="px-7 py-3 rounded-full border border-amber-400/40 bg-slate-900/80 hover:bg-slate-800 text-amber-200 hover:text-amber-100 font-semibold text-sm transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+                class="px-5 py-2.5 rounded-full border border-amber-400/40 bg-slate-900/80 hover:bg-slate-800 text-amber-200 font-semibold text-xs transition flex items-center gap-1.5 cursor-pointer"
               >
-                <i data-lucide="folder" class="w-4 h-4"></i>
+                <i data-lucide="folder" class="w-3.5 h-3.5"></i>
                 <span>Abrir Organizador de Materias</span>
               </button>
+            </div>
+          </div>
+
+          <!-- Las 3 Tarjetas Visibles en Pantalla -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <!-- Tarjeta 1: Transcriptor IA -->
+            <div class="bg-[#0b1220] border border-slate-800 hover:border-amber-500/40 rounded-xl p-4 transition shadow-lg flex flex-col justify-between group">
+              <div>
+                <div class="flex items-center justify-between">
+                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <i data-lucide="mic" class="w-4 h-4"></i>
+                  </div>
+                  <svg class="h-5 w-20 text-amber-400/70" viewBox="0 0 100 24" fill="currentColor">
+                    <rect x="5" y="8" width="3" height="8" rx="1.5"/>
+                    <rect x="15" y="4" width="3" height="16" rx="1.5"/>
+                    <rect x="25" y="1" width="3" height="22" rx="1.5"/>
+                    <rect x="35" y="6" width="3" height="12" rx="1.5"/>
+                    <rect x="45" y="0" width="3" height="24" rx="1.5"/>
+                    <rect x="55" y="4" width="3" height="16" rx="1.5"/>
+                    <rect x="65" y="8" width="3" height="8" rx="1.5"/>
+                    <rect x="75" y="2" width="3" height="20" rx="1.5"/>
+                    <rect x="85" y="6" width="3" height="12" rx="1.5"/>
+                  </svg>
+                </div>
+                <h3 class="text-sm font-bold text-slate-100 mt-3">Transcriptor IA</h3>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  Audio a texto con IA para clases y entrevistas de hasta 2 horas con oradores.
+                </p>
+              </div>
+              <button 
+                id="btnCardOpenTranscriptor"
+                type="button" 
+                onclick="document.getElementById('tabBtnTranscriptor').click()" 
+                class="text-amber-400 group-hover:text-amber-300 font-semibold text-xs flex items-center gap-1 mt-4 transition cursor-pointer"
+              >
+                <span>Ir a transcribir</span>
+                <span>&rarr;</span>
+              </button>
+            </div>
+
+            <!-- Tarjeta 2: Organizador de Materias -->
+            <div class="bg-[#0b1220] border border-slate-800 hover:border-amber-500/40 rounded-xl p-4 transition shadow-lg flex flex-col justify-between group">
+              <div>
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <i data-lucide="folder" class="w-4 h-4"></i>
+                </div>
+                <h3 class="text-sm font-bold text-slate-100 mt-3">Organizador de Materias</h3>
+                <div class="flex items-center gap-1 mt-1.5">
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-900 text-amber-300 border border-slate-700/60">PDFs</span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-900 text-amber-300 border border-slate-700/60">Apuntes</span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-900 text-amber-300 border border-slate-700/60">Fechas</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  Biblioteca privada en tu navegador (IndexedDB) para guardar textos sin consumir servidores.
+                </p>
+              </div>
+              <button 
+                id="btnCardOpenOrganizer"
+                type="button" 
+                onclick="document.getElementById('tabBtnOrganizer').click()" 
+                class="text-amber-400 group-hover:text-amber-300 font-semibold text-xs flex items-center gap-1 mt-4 transition cursor-pointer"
+              >
+                <span>Abrir Organizador</span>
+                <span>&rarr;</span>
+              </button>
+            </div>
+
+            <!-- Tarjeta 3: Mi Carrera (Plan 504) -->
+            <div class="bg-[#0b1220] border border-slate-800 hover:border-amber-500/40 rounded-xl p-4 transition shadow-lg flex flex-col justify-between group">
+              <div>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-[10px] font-medium text-slate-400 block">Mi Carrera</span>
+                    <h3 class="text-sm font-bold text-slate-100">Plan 504</h3>
+                  </div>
+                  <div class="relative w-11 h-11 flex items-center justify-center shrink-0">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path class="text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                      <path class="text-amber-400" stroke-dasharray="63, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    </svg>
+                    <span class="absolute text-[10px] font-extrabold text-slate-100">63%</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 mt-2 text-amber-400">
+                  <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                  <span class="text-[11px] font-semibold text-slate-200">UBA Sociales</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  Seguimiento de correlatividades, cálculo de promedio y habilitación de PPP.
+                </p>
+              </div>
+
+              <div class="flex items-center justify-between mt-4 pt-1.5 border-t border-slate-800/60">
+                <span class="px-2 py-0.5 rounded text-[9px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20">Plan 504 - UBA</span>
+                <button 
+                  id="btnCardOpenCareer"
+                  type="button" 
+                  onclick="document.getElementById('tabBtnCareer').click()" 
+                  class="text-amber-400 group-hover:text-amber-300 font-semibold text-xs flex items-center gap-1 transition cursor-pointer"
+                >
+                  <span>Ver carrera</span>
+                  <span>&rarr;</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
