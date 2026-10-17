@@ -2153,8 +2153,11 @@ ${speakerHint}${kw}
             created_at: isoDate
           };
 
-          const { error } = await client.from('user_transcripts').insert([basePayload]);
-          if (error) {
+          const { data: insertedRows, error } = await client.from('user_transcripts').insert([basePayload]).select();
+          if (!error && insertedRows && insertedRows[0]?.id) {
+            item.id = insertedRows[0].id;
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+          } else if (error) {
             console.warn("[Supabase] Insert inicial con created_at falló, probando con timestamp:", error.message || error);
             const altPayload = {
               user_id: user.id,
@@ -2164,8 +2167,11 @@ ${speakerHint}${kw}
               summary: item.summary || "",
               timestamp: item.timestamp || Date.now()
             };
-            const altRes = await client.from('user_transcripts').insert([altPayload]);
-            if (altRes.error) {
+            const altRes = await client.from('user_transcripts').insert([altPayload]).select();
+            if (!altRes.error && altRes.data && altRes.data[0]?.id) {
+              item.id = altRes.data[0].id;
+              localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
+            } else if (altRes.error) {
               console.warn("[Supabase] Reintento con timestamp también falló, intentando upsert:", altRes.error.message || altRes.error);
               await client.from('user_transcripts').upsert([basePayload]);
             }
@@ -2236,8 +2242,9 @@ ${speakerHint}${kw}
         return;
       }
 
-      if (data && data.length > 0) {
+      if (Array.isArray(data)) {
         const cloudItems = data.map(row => ({
+          id: row.id,
           filename: row.filename || "audio.mp3",
           audioType: row.audio_type || row.audioType || "clase",
           transcript: row.transcript || "",
@@ -2285,10 +2292,23 @@ ${speakerHint}${kw}
     }
   }
 
-  function deleteFromHistory(index) {
+  async function deleteFromHistory(index) {
     try {
       let list = getHistory();
       if (index >= 0 && index < list.length) {
+        const item = list[index];
+        
+        // 1. Si tiene ID y hay sesión activa, borrar de Supabase en la nube
+        const user = supabaseClient?.auth?.getUser ? (await supabaseClient.auth.getUser())?.data?.user : null;
+        if (item && item.id && user) {
+          const { error } = await supabaseClient
+            .from("user_transcripts")
+            .delete()
+            .eq("id", item.id);
+          if (error) console.warn("Error al borrar en Supabase:", error);
+        }
+
+        // 2. Borrar de la memoria local
         list.splice(index, 1);
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(list));
         updateHistoryBadge();
@@ -2524,8 +2544,19 @@ ${speakerHint}${kw}
   }
 
   if (btnClearHistory) {
-    btnClearHistory.addEventListener("click", () => {
+    btnClearHistory.addEventListener("click", async () => {
       if (confirm("¿Estás seguro de vaciar el historial de transcripciones guardadas?")) {
+        try {
+          const user = supabaseClient?.auth?.getUser ? (await supabaseClient.auth.getUser())?.data?.user : null;
+          if (user) {
+            await supabaseClient
+              .from("user_transcripts")
+              .delete()
+              .eq("user_id", user.id);
+          }
+        } catch (err) {
+          console.warn("Error al vaciar en Supabase:", err);
+        }
         localStorage.removeItem(HISTORY_STORAGE_KEY);
         updateHistoryBadge();
         renderHistoryList();
