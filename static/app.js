@@ -2544,23 +2544,23 @@ ${speakerHint}${kw}
   const viewOrganizer = document.getElementById("viewOrganizer");
   const viewCareer = document.getElementById("viewCareer");
 
-  function setTabButtonState(btn, isActive, activeTitle, inactiveSub, activeSub) {
+  function setTabButtonState(btn, isActive) {
     if (!btn) return;
-    const activeClasses = "nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border-2 border-[#ffc700] bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] font-semibold text-xs transition-all shadow-xs text-left";
-    const inactiveClasses = "nav-tab-btn shrink-0 flex-1 lg:flex-initial flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
+    const activeClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-amber-400/40 bg-slate-900/90 text-amber-300 font-semibold text-xs transition-all shadow-xs text-left";
+    const inactiveClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-800 hover:bg-slate-900/60 text-slate-400 font-medium text-xs transition-all text-left";
 
     btn.className = isActive ? activeClasses : inactiveClasses;
     const iconContainer = btn.querySelector("div");
     if (iconContainer) {
       iconContainer.className = isActive
-        ? "w-8 h-8 rounded-lg bg-[#001b44]/15 dark:bg-[#001b44]/60 text-[#ffc700] flex items-center justify-center shrink-0"
-        : "w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0";
+        ? "w-8 h-8 rounded-lg bg-amber-400/10 text-amber-400 flex items-center justify-center shrink-0"
+        : "w-8 h-8 rounded-lg bg-slate-800/80 text-slate-400 flex items-center justify-center shrink-0";
     }
-    const subText = btn.querySelector("div.text-\\[11px\\]");
+    const subText = btn.querySelector(".truncate:last-child") || btn.querySelector("div.text-\\[10px\\]");
     if (subText) {
       subText.className = isActive
-        ? "hidden lg:block text-[11px] text-[#001b44]/80 dark:text-[#ffc700]/80 font-normal truncate"
-        : "hidden lg:block text-[11px] text-slate-400 dark:text-slate-500 font-normal truncate";
+        ? "text-[10px] text-amber-300/70 font-normal truncate"
+        : "text-[10px] text-slate-500 font-normal truncate";
     }
   }
 
