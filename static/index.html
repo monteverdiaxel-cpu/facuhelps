@@ -475,24 +475,24 @@
               </p>
               
               <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
-                Herramienta diseñada para estudiantes. Transcribí grabaciones de clases y conferencias palabra por palabra con IA, y organizá tus materias en un entorno 100% privado.
+                Herramienta diseñada para estudiantes. Transcribí grabaciones de clases y conferencias palabra por palabra con IA y organizá tus materias en un entorno 100% privado.
               </p>
 
               <div class="flex flex-wrap items-center justify-center gap-3 pt-6">
                 <button 
                   id="btnHeroOpenTranscriptor" 
                   type="button" 
-                  class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  class="bg-[#ffc700] hover:bg-amber-400 text-slate-950 font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2"
                 >
-                  <i data-lucide="mic" class="w-4 h-4 text-amber-500"></i>
+                  <i data-lucide="mic" class="w-4 h-4 text-slate-950"></i>
                   <span>Abrir Transcriptor</span>
                 </button>
                 <button 
                   id="btnHeroOpenOrganizer" 
                   type="button" 
-                  class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs sm:text-sm flex items-center gap-2 shadow-2xs hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  class="border border-amber-400/50 bg-slate-900/60 hover:bg-slate-800 text-amber-200 font-semibold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2"
                 >
-                  <i data-lucide="folder-open" class="w-4 h-4 text-amber-500"></i>
+                  <i data-lucide="folder-open" class="w-4 h-4 text-amber-300"></i>
                   <span>Abrir Organizador de Materias</span>
                 </button>
               </div>
@@ -500,209 +500,115 @@
           </div>
 
           <!-- Módulos Principales (Cards) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            <!-- Tarjeta 1: Transcriptor -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-blue-800 dark:hover:border-amber-400/50 hover:shadow-md transition-all group">
+            <!-- Tarjeta 1: Transcriptor IA -->
+            <div class="bg-slate-900/80 dark:bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-6 transition flex flex-col justify-between">
               <div>
-                <!-- Micro-ilustración vectorial: Ondas de audio dinámicas con degradado azul y dorado -->
-                <div class="w-full h-16 rounded-xl bg-gradient-to-r from-blue-950/5 via-blue-900/10 to-amber-400/10 dark:from-blue-950/40 dark:via-blue-900/40 dark:to-amber-950/30 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center p-2 mb-4 group-hover:scale-[1.02] transition-transform">
-                  <svg class="w-full h-10" viewBox="0 0 200 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#001b44" />
-                        <stop offset="50%" stop-color="#002d72" />
-                        <stop offset="100%" stop-color="#ffc700" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Barras dinámicas de sonido -->
-                    <rect x="10" y="16" width="3.5" height="8" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="20" y="12" width="3.5" height="16" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="30" y="7" width="3.5" height="26" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="40" y="14" width="3.5" height="12" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="50" y="4" width="3.5" height="32" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="60" y="10" width="3.5" height="20" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="70" y="2" width="3.5" height="36" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="80" y="8" width="3.5" height="24" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="90" y="5" width="3.5" height="30" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="100" y="11" width="3.5" height="18" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="110" y="3" width="3.5" height="34" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="120" y="9" width="3.5" height="22" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="130" y="6" width="3.5" height="28" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="140" y="13" width="3.5" height="14" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="150" y="8" width="3.5" height="24" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="160" y="12" width="3.5" height="16" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="170" y="15" width="3.5" height="10" rx="1.75" fill="url(#waveGrad)" />
-                    <rect x="180" y="17" width="3.5" height="6" rx="1.75" fill="url(#waveGrad)" />
-                  </svg>
-                </div>
-
-                <div class="flex items-center gap-3 mb-2.5">
-                  <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-900 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
-                    <i data-lucide="mic" class="w-5 h-5"></i>
+                <!-- Cabecera: icono, título y onda sutil -->
+                <div class="flex items-center justify-between gap-3 mb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="mic" class="w-6 h-6 text-amber-400"></i>
+                    </div>
+                    <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Transcriptor IA</h3>
                   </div>
-                  <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">
-                    🎙️ Transcriptor de Audios
-                  </h3>
+                  <!-- Representación visual sutil de onda de sonido -->
+                  <div class="flex items-center gap-1 h-6 px-2.5 py-1 rounded-lg bg-slate-950/70 border border-slate-800 shrink-0" title="Onda de audio">
+                    <span class="w-0.5 h-2 bg-amber-400/50 rounded-full"></span>
+                    <span class="w-0.5 h-3.5 bg-amber-400/80 rounded-full"></span>
+                    <span class="w-0.5 h-5 bg-[#ffc700] rounded-full"></span>
+                    <span class="w-0.5 h-3 bg-amber-400/80 rounded-full"></span>
+                    <span class="w-0.5 h-4.5 bg-[#ffc700] rounded-full"></span>
+                    <span class="w-0.5 h-2 bg-amber-400/50 rounded-full"></span>
+                  </div>
                 </div>
 
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Subí grabaciones de clases magistrales, entrevistas o conferencias de hasta 2 horas. Detecta automáticamente oradores (docente y estudiantes), limpia muletillas y genera transcripciones textuales completas.
+                <p class="text-xs sm:text-sm text-slate-300 dark:text-slate-300 leading-relaxed">
+                  Subí audios de teóricos y entrevistas de hasta 2 horas. Diarización de oradores, vocabulario de cátedra y exportación limpia a Word y PDF.
                 </p>
-                
-                <ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300">
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Exportación directa a Word (.docx) con oradores</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Exportación a PDF A4 vectorial limpio</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Resumen con IA Gemini Flash a demanda</span>
-                  </li>
-                </ul>
               </div>
 
-              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+              <div class="pt-5 mt-5 border-t border-slate-800">
                 <button 
                   id="btnCardOpenTranscriptor" 
                   type="button" 
-                  style="background-color: #001b44; color: #ffc700;"
-                  class="w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:brightness-125 transition"
+                  class="text-amber-400 font-semibold text-sm hover:underline flex items-center gap-1"
                 >
-                  <span>Abrir Transcriptor</span>
-                  <i data-lucide="arrow-right" class="w-4 h-4" style="color: #ffc700;"></i>
+                  <span>Ir a transcribir →</span>
                 </button>
               </div>
             </div>
 
-            <!-- Tarjeta 2: Organizador -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-amber-400 dark:hover:border-amber-600/50 hover:shadow-md transition-all group">
+            <!-- Tarjeta 2: Organizador de Materias -->
+            <div class="bg-slate-900/80 dark:bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-6 transition flex flex-col justify-between">
               <div>
-                <!-- Micro-ilustración vectorial: Carpetas apiladas con pestañas doradas y documento PDF en perspectiva -->
-                <div class="w-full h-16 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-400/10 to-blue-900/10 dark:from-amber-950/40 dark:via-amber-900/30 dark:to-blue-950/40 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center p-2 mb-4 group-hover:scale-[1.02] transition-transform">
-                  <svg class="w-auto h-11" viewBox="0 0 110 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Carpeta fondo -->
-                    <rect x="8" y="12" width="56" height="26" rx="4" fill="#001b44" fill-opacity="0.25" />
-                    <!-- Carpeta media con pestaña dorada -->
-                    <path d="M16 12L28 12L33 16L72 16C74.2 16 76 17.8 76 20V36C76 38.2 74.2 40 72 40H16C13.8 40 12 38.2 12 36V16C12 13.8 13.8 12 16 12Z" fill="#001b44" stroke="#ffc700" stroke-width="1.2" />
-                    <line x1="22" y1="24" x2="48" y2="24" stroke="#ffc700" stroke-width="1.5" stroke-linecap="round" />
-                    <line x1="22" y1="29" x2="40" y2="29" stroke="#ffc700" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7" />
-                    <!-- Documento PDF en perspectiva -->
-                    <g transform="translate(62, 4) rotate(6)">
-                      <rect x="0" y="0" width="28" height="34" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
-                      <rect x="4" y="4" width="8" height="6" rx="1" fill="#001b44" />
-                      <line x1="14" y1="6" x2="24" y2="6" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
-                      <line x1="14" y1="9" x2="22" y2="9" stroke="#94a3b8" stroke-width="1" stroke-linecap="round" />
-                      <line x1="4" y1="14" x2="24" y2="14" stroke="#64748b" stroke-width="1.2" stroke-linecap="round" />
-                      <line x1="4" y1="18" x2="24" y2="18" stroke="#64748b" stroke-width="1.2" stroke-linecap="round" />
-                      <line x1="4" y1="22" x2="18" y2="22" stroke="#ffc700" stroke-width="1.2" stroke-linecap="round" />
-                    </g>
-                  </svg>
-                </div>
-
-                <div class="flex items-center gap-3 mb-2.5">
-                  <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
-                    <i data-lucide="folder-tree" class="w-5 h-5"></i>
+                <!-- Cabecera: icono, título y píldoras -->
+                <div class="mb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="folder" class="w-6 h-6 text-amber-400"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Organizador de Materias</h3>
+                      <div class="flex items-center gap-1.5 mt-1.5">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-400/10 text-amber-300 border border-amber-400/20">PDFs</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-950/70 text-blue-200 border border-blue-800/40">Apuntes</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">Fechas</span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                    📁 Organizador de Materias
-                  </h3>
                 </div>
 
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Creá tus materias académicas y guardá apuntes, guías y textos en PDF. Las subcarpetas son opcionales y tus archivos quedan guardados de forma permanente y privada en tu navegador.
+                <p class="text-xs sm:text-sm text-slate-300 dark:text-slate-300 leading-relaxed">
+                  Biblioteca privada local (IndexedDB) para guardar textos, apuntes y programas de cursada sin consumir servidores.
                 </p>
-
-                <ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300">
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Subida de PDFs directos o con subcarpetas</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Visor de PDF integrado a pantalla completa</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Almacenamiento 100% privado con IndexedDB</span>
-                  </li>
-                </ul>
               </div>
 
-              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+              <div class="pt-5 mt-5 border-t border-slate-800">
                 <button 
                   id="btnCardOpenOrganizer" 
                   type="button" 
-                  class="w-full py-2.5 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold text-xs flex items-center justify-center gap-2 transition"
+                  class="text-amber-400 font-semibold text-sm hover:underline flex items-center gap-1"
                 >
-                  <span>Abrir Organizador</span>
-                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                  <span>Abrir Organizador →</span>
                 </button>
               </div>
             </div>
 
             <!-- Tarjeta 3: Mi Carrera (Plan 504) -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-7 flex flex-col justify-between hover:border-[#001b44] dark:hover:border-[#ffc700] hover:shadow-md transition-all group">
+            <div class="bg-slate-900/80 dark:bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-6 transition flex flex-col justify-between">
               <div>
-                <!-- Micro-ilustración vectorial: Birrete y emblema universitario con anillo de progreso y sigla UBA Comu -->
-                <div class="w-full h-16 rounded-xl bg-gradient-to-r from-blue-950/10 via-amber-400/10 to-blue-900/15 dark:from-blue-950/50 dark:via-amber-950/40 dark:to-blue-900/50 border border-slate-100 dark:border-slate-800/80 flex items-center justify-center p-2 mb-4 group-hover:scale-[1.02] transition-transform">
-                  <svg class="w-auto h-12" viewBox="0 0 140 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Anillo circular de progreso -->
-                    <circle cx="28" cy="22" r="16" stroke="#001b44" stroke-width="2.5" stroke-opacity="0.2" />
-                    <circle cx="28" cy="22" r="16" stroke="#ffc700" stroke-width="2.5" stroke-dasharray="100" stroke-dashoffset="30" stroke-linecap="round" />
-                    <!-- Birrete universitario centrado -->
-                    <path d="M28 14L17 19.5L28 25L39 19.5L28 14Z" fill="#001b44" stroke="#ffc700" stroke-width="1.2" />
-                    <path d="M21 21.5V26C21 28.5 24 30 28 30C32 30 35 28.5 35 26V21.5" stroke="#001b44" stroke-width="1.5" stroke-linecap="round" />
-                    <circle cx="39" cy="22" r="1.5" fill="#ffc700" />
-                    <path d="M39 23.5V28" stroke="#ffc700" stroke-width="1" stroke-linecap="round" />
-                    <!-- Emblema tipográfico UBA Comu -->
-                    <text x="56" y="20" fill="#001b44" class="dark:fill-amber-300 font-bold" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" letter-spacing="0.05em">UBA COMU</text>
-                    <text x="56" y="30" fill="#64748b" class="dark:fill-slate-400 font-medium" font-family="'Inter', sans-serif" font-size="8.5">Plan de Estudios 504</text>
-                  </svg>
-                </div>
-
-                <div class="flex items-center gap-3 mb-2.5">
-                  <div class="w-10 h-10 rounded-xl bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs shrink-0">
-                    <i data-lucide="graduation-cap" class="w-5 h-5 text-[#ffc700]"></i>
+                <!-- Cabecera: icono, título y badge de progreso -->
+                <div class="mb-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
+                      <i data-lucide="graduation-cap" class="w-6 h-6 text-amber-400"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Mi Carrera (Plan 504)</h3>
+                      <div class="flex items-center gap-1.5 mt-1.5">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#001b44] text-amber-300 border border-amber-400/30">
+                          <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                          Plan 504 - FSOC UBA
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-900 dark:group-hover:text-amber-400 transition-colors">
-                    🎓 Lic. en Ciencias de la Comunicación (Plan 504 - UBA)
-                  </h3>
                 </div>
 
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                  Simulá tu camino de correlatividades, elegí tu orientación entre las 6 disponibles y hacé el seguimiento de parciales, finales y promedio.
+                <p class="text-xs sm:text-sm text-slate-300 dark:text-slate-300 leading-relaxed">
+                  Seguimiento de materias aprobadas, cálculo automático de promedio y alertas de habilitación para PPP I y Ciclo Orientado.
                 </p>
-
-                <ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300">
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Cálculo automático de promedio y materias aprobadas</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Alertas automáticas de PPP I y pase al Ciclo Orientado</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                    <span>Explorador interactivo de las 6 orientaciones profesionales</span>
-                  </li>
-                </ul>
               </div>
 
-              <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
+              <div class="pt-5 mt-5 border-t border-slate-800">
                 <button 
                   id="btnCardOpenCareer" 
                   type="button" 
-                  style="background-color: #001b44; color: #ffc700;"
-                  class="w-full py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 hover:brightness-125 transition shadow-xs"
+                  class="text-amber-400 font-semibold text-sm hover:underline flex items-center gap-1"
                 >
-                  <span>Ver mi carrera</span>
-                  <i data-lucide="arrow-right" class="w-4 h-4" style="color: #ffc700;"></i>
+                  <span>Ver mi carrera →</span>
                 </button>
               </div>
             </div>
