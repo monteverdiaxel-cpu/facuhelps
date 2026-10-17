@@ -818,8 +818,37 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("Error al descargar user_career_plan:", ePlan);
       }
 
+      // d. Descargar archivos PDF de ese usuario desde Supabase
+      let remoteFiles = [];
+      try {
+        const { data, error } = await supabaseClient
+          .from("user_files")
+          .select("*")
+          .eq("user_id", userId);
+        if (!error && Array.isArray(data)) remoteFiles = data;
+      } catch (eFiles) {
+        console.warn("Error al descargar user_files:", eFiles);
+      }
+
+      // Leer archivos locales existentes para preservar blobs en memoria
+      const localFilesMap = new Map();
+      if (db.objectStoreNames.contains("files")) {
+        try {
+          const rTx = db.transaction("files", "readonly");
+          const rStore = rTx.objectStore("files");
+          const allReq = rStore.getAll();
+          await new Promise((res) => {
+            allReq.onsuccess = () => {
+              (allReq.result || []).forEach(f => localFilesMap.set(Number(f.id), f));
+              res();
+            };
+            allReq.onerror = () => res();
+          });
+        } catch (e) {}
+      }
+
       // Actualizar la base de datos IndexedDB local de forma aislada
-      const storeNames = ["subjects", "notes", "careerPlan"];
+      const storeNames = ["subjects", "notes", "careerPlan", "files"];
       const existingStores = storeNames.filter(name => db.objectStoreNames.contains(name));
       if (existingStores.length > 0) {
         const tx = db.transaction(existingStores, "readwrite");
@@ -865,6 +894,27 @@ document.addEventListener("DOMContentLoaded", () => {
             careerPlanData = Object.assign({ selectedOrientation: "periodismo", grades: {} }, parsedPlan);
           } else {
             careerPlanData = { selectedOrientation: "periodismo", grades: {} };
+          }
+        }
+
+        if (db.objectStoreNames.contains("files") && remoteFiles.length > 0) {
+          const filesStore = tx.objectStore("files");
+          for (const rf of remoteFiles) {
+            const existing = localFilesMap.get(Number(rf.id));
+            filesStore.put({
+              id: Number(rf.id),
+              subjectId: Number(rf.subject_id),
+              folderId: rf.folder_id ? Number(rf.folder_id) : null,
+              name: rf.name,
+              size: Number(rf.size) || 0,
+              type: "application/pdf",
+              blob: (existing && existing.blob) ? existing.blob : null,
+              url: rf.url || null,
+              filePath: rf.file_path || null,
+              summary: rf.summary || (existing ? existing.summary : null),
+              summaryUpdatedAt: rf.summary_updated_at || (existing ? existing.summaryUpdatedAt : null),
+              uploadedAt: Number(rf.created_at) || Date.now()
+            });
           }
         }
 
@@ -3081,23 +3131,82 @@ ${speakerHint}${kw}
   }
 
   async function dbAddFile(subjectId, folderId, file) {
+    let publicUrl = null;
+    let filePath = null;
+
+    let user = currentAuthUser;
+    if (!user && supabaseClient && supabaseClient.auth) {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && session.user) user = session.user;
+      } catch (e) {}
+    }
+
+    if (supabaseClient && user) {
+      try {
+        const folderSegment = folderId ? String(folderId) : "general";
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        filePath = `${user.id}/${subjectId}/${folderSegment}/${Date.now()}_${safeName}`;
+
+        const { data: uploadData, error: uploadError } = await supabaseClient
+          .storage
+          .from("user_pdfs")
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) {
+          console.warn("[Supabase Storage] Error al subir archivo:", uploadError);
+        } else {
+          const { data: urlData } = supabaseClient
+            .storage
+            .from("user_pdfs")
+            .getPublicUrl(filePath);
+
+          if (urlData && urlData.publicUrl) {
+            publicUrl = urlData.publicUrl;
+          }
+        }
+      } catch (err) {
+        console.warn("[Supabase Storage] Excepción al subir PDF:", err);
+      }
+    }
+
     const db = await openDatabase();
-    return new Promise((resolve, reject) => {
+    const fileId = await new Promise((resolve, reject) => {
       const tx = db.transaction("files", "readwrite");
       const store = tx.objectStore("files");
       const item = {
-        subjectId,
-        folderId: folderId || null,
+        subjectId: Number(subjectId),
+        folderId: folderId ? Number(folderId) : null,
         name: file.name,
         size: file.size,
         type: file.type || "application/pdf",
-        blob: file,
+        blob: file, // Respaldo local persistente en IndexedDB
+        url: publicUrl || null,
+        filePath: filePath || null,
         uploadedAt: Date.now()
       };
       const req = store.add(item);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+
+    if (supabaseClient && user) {
+      try {
+        await supabaseClient.from("user_files").upsert({
+          id: fileId,
+          user_id: user.id,
+          subject_id: Number(subjectId),
+          folder_id: folderId ? Number(folderId) : null,
+          name: file.name,
+          size: file.size,
+          url: publicUrl || null,
+          file_path: filePath || null,
+          created_at: Date.now()
+        });
+      } catch (e) {}
+    }
+
+    return fileId;
   }
 
   async function dbUpdateFileSummary(fileId, summary) {
@@ -3115,7 +3224,17 @@ ${speakerHint}${kw}
         item.summary = summary;
         item.summaryUpdatedAt = Date.now();
         const putReq = store.put(item);
-        putReq.onsuccess = () => resolve(putReq.result);
+        putReq.onsuccess = () => {
+          if (supabaseClient && currentAuthUser) {
+            try {
+              supabaseClient.from("user_files").update({
+                summary: summary,
+                summary_updated_at: Date.now()
+              }).eq("user_id", currentAuthUser.id).eq("id", Number(fileId)).then();
+            } catch (e) {}
+          }
+          resolve(putReq.result);
+        };
         putReq.onerror = () => reject(putReq.error);
       };
       getReq.onerror = () => reject(getReq.error);
@@ -3134,6 +3253,40 @@ ${speakerHint}${kw}
   }
 
   async function dbDeleteFile(fileId) {
+    const fileItem = await dbGetFile(fileId);
+
+    let user = currentAuthUser;
+    if (!user && supabaseClient && supabaseClient.auth) {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && session.user) user = session.user;
+      } catch (e) {}
+    }
+
+    if (fileItem && supabaseClient && user) {
+      let targetPath = fileItem.filePath;
+      if (!targetPath && fileItem.url) {
+        const match = fileItem.url.match(/\/user_pdfs\/(.+)$/);
+        if (match) targetPath = decodeURIComponent(match[1]);
+      }
+
+      if (targetPath) {
+        try {
+          await supabaseClient.storage.from("user_pdfs").remove([targetPath]);
+        } catch (err) {
+          console.warn("[Supabase Storage] Error al eliminar PDF:", err);
+        }
+      }
+
+      try {
+        await supabaseClient
+          .from("user_files")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("id", Number(fileId));
+      } catch (err) {}
+    }
+
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const tx = db.transaction("files", "readwrite");
@@ -3146,7 +3299,11 @@ ${speakerHint}${kw}
 
   // Visor de PDF Integrado (Embebido a Pantalla Completa)
   function openEmbeddedPdfViewer(fileItem, autoShowSummary = false) {
-    if (!fileItem || !fileItem.blob) return;
+    if (!fileItem) return;
+    if (!fileItem.blob && !fileItem.url) {
+      alert("No se encontró el contenido del archivo PDF ni su enlace en la nube.");
+      return;
+    }
     currentViewerFileItem = fileItem;
 
     if (currentViewerBlobUrl) {
@@ -3154,16 +3311,32 @@ ${speakerHint}${kw}
       currentViewerBlobUrl = null;
     }
 
-    currentViewerBlobUrl = URL.createObjectURL(fileItem.blob);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+    // En celulares, si cuenta con URL pública de Supabase, abrirlo en pestaña nueva nativa
+    if (isMobile && fileItem.url && !autoShowSummary) {
+      window.open(fileItem.url, "_blank");
+      return;
+    }
+
+    let pdfSrc = "";
+    if (fileItem.blob) {
+      currentViewerBlobUrl = URL.createObjectURL(fileItem.blob);
+      pdfSrc = currentViewerBlobUrl;
+    } else if (fileItem.url) {
+      pdfSrc = fileItem.url;
+    }
+
     if (pdfViewerTitle) pdfViewerTitle.textContent = fileItem.name;
     if (pdfViewerSubtitle) {
       const parentName = currentFolder 
         ? `${currentSubject ? currentSubject.name + ' > ' : ''}${currentFolder.name}` 
         : (currentSubject ? currentSubject.name : 'Materia');
-      pdfViewerSubtitle.textContent = `${formatBytes(fileItem.size)} • ${parentName}`;
+      const originNotice = fileItem.url ? " • ☁️ Sincronizado en Supabase" : " • 💾 Guardado local";
+      pdfViewerSubtitle.textContent = `${formatBytes(fileItem.size)} • ${parentName}${originNotice}`;
     }
     if (pdfViewerFrame) {
-      pdfViewerFrame.src = currentViewerBlobUrl;
+      pdfViewerFrame.src = pdfSrc;
     }
 
     currentPdfSummaryText = (fileItem.summary && fileItem.summary.trim()) ? fileItem.summary : "";
@@ -3214,15 +3387,19 @@ ${speakerHint}${kw}
 
   if (btnPdfViewerDownload) {
     btnPdfViewerDownload.addEventListener("click", () => {
-      if (!currentViewerFileItem || !currentViewerFileItem.blob) return;
-      const blobUrl = URL.createObjectURL(currentViewerFileItem.blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = currentViewerFileItem.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      if (!currentViewerFileItem) return;
+      if (currentViewerFileItem.blob) {
+        const blobUrl = URL.createObjectURL(currentViewerFileItem.blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = currentViewerFileItem.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      } else if (currentViewerFileItem.url) {
+        window.open(currentViewerFileItem.url, "_blank");
+      }
     });
   }
 
@@ -3271,8 +3448,27 @@ ${speakerHint}${kw}
     const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     try {
+      let fileBlob = currentViewerFileItem.blob;
+      if (!fileBlob && currentViewerFileItem.url) {
+        try {
+          const resp = await fetch(currentViewerFileItem.url);
+          if (resp.ok) {
+            fileBlob = await resp.blob();
+            currentViewerFileItem.blob = fileBlob;
+          }
+        } catch (e) {
+          console.warn("No se pudo descargar el PDF desde la URL de Supabase:", e);
+        }
+      }
+
+      if (!fileBlob) {
+        alert("No se encontró el contenido del archivo PDF para generar el resumen.");
+        if (pdfSummaryLoading) pdfSummaryLoading.classList.add("hidden");
+        return;
+      }
+
       const formData = new FormData();
-      formData.append("file", currentViewerFileItem.blob, currentViewerFileItem.name);
+      formData.append("file", fileBlob, currentViewerFileItem.name);
       if (apiKey) {
         formData.append("api_key", apiKey);
       }
@@ -3689,7 +3885,22 @@ ${speakerHint}${kw}
   }
 
   async function generateSummaryForDedicatedViewer(fileItem) {
-    if (!fileItem || !fileItem.blob) {
+    if (!fileItem) return;
+
+    let fileBlob = fileItem.blob;
+    if (!fileBlob && fileItem.url) {
+      try {
+        const resp = await fetch(fileItem.url);
+        if (resp.ok) {
+          fileBlob = await resp.blob();
+          fileItem.blob = fileBlob;
+        }
+      } catch (e) {
+        console.warn("No se pudo descargar el PDF desde la URL de Supabase:", e);
+      }
+    }
+
+    if (!fileBlob) {
       alert("No se encontró el archivo para generar el resumen.");
       closeSummaryDedicatedViewer();
       return;
@@ -3707,7 +3918,7 @@ ${speakerHint}${kw}
     try {
       const apiKey = (localStorage.getItem("gemini_api_key") || "").trim();
       const formData = new FormData();
-      formData.append("file", fileItem.blob, fileItem.name);
+      formData.append("file", fileBlob, fileItem.name);
       if (apiKey) formData.append("api_key", apiKey);
 
       const res = await fetch("/api/summarize-pdf", {
@@ -4266,12 +4477,17 @@ ${speakerHint}${kw}
       const row = document.createElement("div");
       row.className = "px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition";
       row.innerHTML = `
-        <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center gap-3 min-w-0 cursor-pointer btn-open-pdf-title" title="Clic para leer PDF">
           <div class="w-9 h-9 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
             <i data-lucide="file-text" class="w-4 h-4 text-[#ffc700]"></i>
           </div>
           <div class="min-w-0">
-            <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${fileItem.name}</h4>
+            <div class="flex items-center gap-2">
+              <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate hover:text-amber-500 transition">${fileItem.name}</h4>
+              ${fileItem.url 
+                ? '<span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">☁️ Supabase</span>' 
+                : '<span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shrink-0">💾 Local</span>'}
+            </div>
             <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
               ${formatBytes(fileItem.size)} • Guardado el ${dateStr}
             </p>
@@ -4287,6 +4503,10 @@ ${speakerHint}${kw}
             <i data-lucide="eye" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
             <span>Ver / Leer</span>
           </button>
+          ${fileItem.url ? `
+          <a href="${fileItem.url}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Abrir en pestaña nueva">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          </a>` : ''}
           <button type="button" class="btn-download-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Descargar PDF">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
           </button>
@@ -4296,30 +4516,40 @@ ${speakerHint}${kw}
         </div>
       `;
 
+      // Clic en el título o icono del archivo para abrirlo
+      row.querySelector(".btn-open-pdf-title").addEventListener("click", () => {
+        openEmbeddedPdfViewer(fileItem);
+      });
+
       // Resumen IA desde la tarjeta del PDF (Abre el Modal Dedicado de Resumen a Ancho Completo)
       row.querySelector(".btn-summarize-pdf-card").addEventListener("click", () => {
         openSummaryDedicatedViewer(fileItem);
       });
 
-      // Ver / Leer PDF dentro del visor embebido integrado
+      // Ver / Leer PDF dentro del visor embebido integrado o pestaña nueva en celular
       row.querySelector(".btn-open-pdf").addEventListener("click", () => {
         openEmbeddedPdfViewer(fileItem);
       });
 
       // Descargar PDF
       row.querySelector(".btn-download-pdf-db").addEventListener("click", () => {
-        if (!fileItem.blob) return;
-        const blobUrl = URL.createObjectURL(fileItem.blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = fileItem.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        if (fileItem.blob) {
+          const blobUrl = URL.createObjectURL(fileItem.blob);
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.download = fileItem.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        } else if (fileItem.url) {
+          window.open(fileItem.url, "_blank");
+        } else {
+          alert("No se encontró el contenido del archivo para descargar.");
+        }
       });
 
-      // Eliminar PDF
+      // Eliminar PDF (de Supabase Storage y de IndexedDB)
       row.querySelector(".btn-delete-pdf-db").addEventListener("click", async () => {
         if (confirm(`¿Eliminar el archivo "${fileItem.name}"?`)) {
           await dbDeleteFile(fileItem.id);
@@ -4527,14 +4757,23 @@ ${speakerHint}${kw}
 
     orgPdfFileInput.addEventListener("change", async (e) => {
       if (e.target.files.length > 0 && currentSubject) {
-        for (const f of e.target.files) {
-          if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
-            const folderId = currentFolder ? currentFolder.id : null;
-            await dbAddFile(currentSubject.id, folderId, f);
+        const originalLabel = orgPdfDropZoneLabel ? orgPdfDropZoneLabel.textContent : "";
+        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = "⏳ Subiendo y sincronizando PDF con la nube...";
+        try {
+          for (const f of e.target.files) {
+            if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+              const folderId = currentFolder ? currentFolder.id : null;
+              await dbAddFile(currentSubject.id, folderId, f);
+            }
           }
+        } catch (err) {
+          console.error("Error al subir archivo PDF:", err);
+          alert("Ocurrió un error al subir el archivo: " + err.message);
+        } finally {
+          orgPdfFileInput.value = "";
+          if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = originalLabel;
+          renderFilesList();
         }
-        orgPdfFileInput.value = "";
-        renderFilesList();
       }
     });
 
@@ -4552,13 +4791,22 @@ ${speakerHint}${kw}
       e.preventDefault();
       orgPdfDropZone.classList.remove("border-amber-400", "bg-blue-50/30");
       if (e.dataTransfer.files.length > 0 && currentSubject) {
-        for (const f of e.dataTransfer.files) {
-          if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
-            const folderId = currentFolder ? currentFolder.id : null;
-            await dbAddFile(currentSubject.id, folderId, f);
+        const originalLabel = orgPdfDropZoneLabel ? orgPdfDropZoneLabel.textContent : "";
+        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = "⏳ Subiendo y sincronizando PDF con la nube...";
+        try {
+          for (const f of e.dataTransfer.files) {
+            if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+              const folderId = currentFolder ? currentFolder.id : null;
+              await dbAddFile(currentSubject.id, folderId, f);
+            }
           }
+        } catch (err) {
+          console.error("Error al subir archivo PDF por arrastre:", err);
+          alert("Ocurrió un error al subir el archivo: " + err.message);
+        } finally {
+          if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = originalLabel;
+          renderFilesList();
         }
-        renderFilesList();
       }
     });
   }
