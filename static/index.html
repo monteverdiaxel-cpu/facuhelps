@@ -480,15 +480,16 @@
 
           <!-- Las 3 Tarjetas con LOGOS GRANDES (100% Clickeables) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-            <!-- Tarjeta 1: Transcriptor IA (Micrófono Grande + Onda Ancha) -->
+            <!-- Tarjeta 1: Transcriptor IA (Micrófono Limpio + Onda Ancha) -->
             <div 
               id="btnCardOpenTranscriptor"
               onclick="document.getElementById('tabBtnTranscriptor').click()"
               class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <!-- Fila Superior: Micrófono Grande al Aire + Onda Sonora Ancha -->
-                <div class="flex items-center justify-between gap-4">
+                <!-- Fila Superior de Iconos -->
+                <div class="flex items-center justify-between gap-4 h-14">
+                  <!-- Micrófono Limpio y Abierto (Sin línea diagonal) -->
                   <svg class="w-12 h-12 text-[#ffc700] shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -496,7 +497,7 @@
                     <line x1="8" y1="22" x2="16" y2="22"/>
                   </svg>
                   
-                  <!-- Onda Ancha y Detallada -->
+                  <!-- Onda Ancha -->
                   <svg class="h-9 w-32 sm:w-36 text-[#ffc700]" viewBox="0 0 140 32" fill="currentColor">
                     <rect x="4" y="11" width="3.5" height="10" rx="1.75"/>
                     <rect x="13" y="7" width="3.5" height="18" rx="1.75"/>
@@ -516,7 +517,7 @@
                   </svg>
                 </div>
 
-                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-6 group-hover:text-[#ffc700] transition-colors">Transcriptor IA</h3>
+                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Transcriptor IA</h3>
                 <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
                   Audio a texto con IA para clases y entrevistas de hasta 2 horas con oradores.
                 </p>
@@ -528,19 +529,21 @@
               </div>
             </div>
 
-            <!-- Tarjeta 2: Organizador de Materias (Carpeta Grande de Trazo Fino al Aire) -->
+            <!-- Tarjeta 2: Organizador de Materias (Carpeta Grande Arriba) -->
             <div 
               id="btnCardOpenOrganizer"
               onclick="document.getElementById('tabBtnOrganizer').click()"
               class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <!-- Carpeta Grande al Aire -->
-                <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
-                  <svg class="w-14 h-14" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 9C5 7.89543 5.89543 7 7 7H13L15.5 10H25C26.1046 10 27 10.8954 27 12V23C27 24.1046 26.1046 25 25 25H7C5.89543 25 5 24.1046 5 23V9Z" />
-                    <path d="M5 14H27" />
-                  </svg>
+                <!-- Fila Superior de Iconos -->
+                <div class="flex items-center justify-start h-14">
+                  <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
+                    <svg class="w-14 h-14" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 9C5 7.89543 5.89543 7 7 7H13L15.5 10H25C26.1046 10 27 10.8954 27 12V23C27 24.1046 26.1046 25 25 25H7C5.89543 25 5 24.1046 5 23V9Z" />
+                      <path d="M5 14H27" />
+                    </svg>
+                  </div>
                 </div>
 
                 <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Organizador de Materias</h3>
@@ -562,46 +565,45 @@
               </div>
             </div>
 
-            <!-- Tarjeta 3: Mi Carrera Plan 504 (Birrete UBA Grande + Anillo Gigante 3%) -->
+            <!-- Tarjeta 3: Mi Carrera Plan 504 (Birrete UBA Arriba + Anillo 3% a la Derecha) -->
             <div 
               id="btnCardOpenCareer"
               onclick="document.getElementById('tabBtnCareer').click()"
               class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <!-- Parte Superior Dividida: Título e Icono a la Izquierda / Anillo Gigante a la Derecha -->
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block">Mi Carrera</span>
-                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-[#ffc700] transition-colors">Plan 504</h3>
-                    
-                    <!-- Birrete UBA Grande al Aire -->
-                    <div class="mt-3 text-[#ffc700] group-hover:scale-105 transition-transform">
-                      <svg class="w-14 h-11" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M16 2L2 8L16 14L30 8L16 2Z" />
-                        <path d="M6 10.5V16C6 18.5 10.5 21 16 21C21.5 21 26 18.5 26 16V10.5" />
-                        <path d="M30 8V16" />
-                        <text x="16" y="17.5" font-size="5" font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle" letter-spacing="1">UBA</text>
-                      </svg>
-                    </div>
+                <!-- Fila Superior de Iconos: Birrete UBA alineado con la Carpeta y Micrófono -->
+                <div class="flex items-center justify-between gap-3 h-14">
+                  <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
+                    <svg class="w-14 h-11" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M16 2L2 8L16 14L30 8L16 2Z" />
+                      <path d="M6 10.5V16C6 18.5 10.5 21 16 21C21.5 21 26 18.5 26 16V10.5" />
+                      <path d="M30 8V16" />
+                      <text x="16" y="17.5" font-size="5" font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle" letter-spacing="1">UBA</text>
+                    </svg>
                   </div>
 
-                  <!-- Anillo Circular Grande Proporcional -->
-                  <div class="relative w-20 h-20 flex items-center justify-center shrink-0">
+                  <!-- Anillo Circular 3% Grande -->
+                  <div class="relative w-16 h-16 flex items-center justify-center shrink-0">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                       <path class="text-slate-200 dark:text-slate-800" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                       <path id="homeCareerCircle" class="text-[#ffc700]" stroke-dasharray="3, 100" stroke-width="3.2" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                     </svg>
                     <div class="absolute flex flex-col items-center justify-center">
-                      <span id="homeCareerPercent" class="text-sm font-black text-slate-800 dark:text-slate-100 leading-none">3%</span>
+                      <span id="homeCareerPercent" class="text-xs font-black text-slate-800 dark:text-slate-100 leading-none">3%</span>
                       <span class="text-[8px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Completado</span>
                     </div>
                   </div>
                 </div>
 
-                <p class="text-xs text-slate-600 dark:text-slate-400 mt-4 leading-relaxed">
-                  Seguimiento de materias aprobadas, cálculo de promedio y habilitación de PPP.
-                </p>
+                <!-- Título alineado con las tarjetas 1 y 2 -->
+                <div class="mt-5">
+                  <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block leading-tight">Mi Carrera</span>
+                  <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-[#ffc700] transition-colors">Plan 504</h3>
+                  <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                    Seguimiento de materias aprobadas, cálculo de promedio y habilitación de PPP.
+                  </p>
+                </div>
               </div>
 
               <div class="flex items-center justify-between mt-6 pt-3 border-t border-slate-100 dark:border-slate-800/60">
