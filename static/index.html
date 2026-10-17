@@ -458,124 +458,158 @@
     <main class="p-8 max-w-6xl mx-auto w-full flex-1">
 
         <!-- Vista 0: Inicio / Portada (activa por defecto) -->
-        <div id="viewHome" class="space-y-4 animate-fade-in pb-6 max-w-6xl mx-auto">
-          <!-- Hero Compacto -->
-          <div class="text-center max-w-2xl mx-auto pt-1 pb-1 flex flex-col items-center">
-            <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-medium border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 mb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+        <div id="viewHome" class="space-y-8 animate-fade-in pb-10 max-w-6xl mx-auto">
+          <!-- Hero Section (Sin botones intermedios) -->
+          <div class="text-center max-w-2xl mx-auto pt-6 pb-2 flex flex-col items-center">
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 mb-4 shadow-2xs">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#ffc700] animate-pulse"></span>
               Plataforma Académica Integral
             </div>
 
-            <h1 class="text-3xl sm:text-5xl font-serif font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-[1.18] text-center max-w-xl mx-auto">
+            <!-- Título Principal en 2 Renglones -->
+            <h1 class="text-4xl sm:text-5xl font-['Playfair_Display'] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-[1.15] text-center max-w-xl mx-auto">
               <span class="block">Tu espacio integral de</span>
-              <span class="block text-[#ffc700] dark:text-slate-100">estudio universitario</span>
+              <span class="block">estudio universitario</span>
             </h1>
 
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-2">
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-3 font-medium">
               Para estudiantes de la carrera de Comunicación de la UBA
             </p>
           </div>
 
-          <!-- Las 3 Tarjetas Visibles en Pantalla -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-            <!-- Tarjeta 1: Transcriptor IA -->
-            <div class="bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-500/40 rounded-xl p-4 transition shadow-sm dark:shadow-lg flex flex-col justify-between group">
+          <!-- Las 3 Tarjetas con LOGOS GRANDES (100% Clickeables) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+            <!-- Tarjeta 1: Transcriptor IA (Micrófono Grande + Onda Ancha) -->
+            <div 
+              id="btnCardOpenTranscriptor"
+              onclick="document.getElementById('tabBtnTranscriptor').click()"
+              class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            >
               <div>
-                <div class="flex items-center justify-between">
-                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 dark:text-amber-400">
-                    <i data-lucide="mic" class="w-4 h-4"></i>
-                  </div>
-                  <svg class="h-5 w-20 text-amber-500/70 dark:text-amber-400/70" viewBox="0 0 100 24" fill="currentColor">
-                    <rect x="5" y="8" width="3" height="8" rx="1.5"/>
-                    <rect x="15" y="4" width="3" height="16" rx="1.5"/>
-                    <rect x="25" y="1" width="3" height="22" rx="1.5"/>
-                    <rect x="35" y="6" width="3" height="12" rx="1.5"/>
-                    <rect x="45" y="0" width="3" height="24" rx="1.5"/>
-                    <rect x="55" y="4" width="3" height="16" rx="1.5"/>
-                    <rect x="65" y="8" width="3" height="8" rx="1.5"/>
-                    <rect x="75" y="2" width="3" height="20" rx="1.5"/>
-                    <rect x="85" y="6" width="3" height="12" rx="1.5"/>
+                <!-- Fila Superior: Micrófono Grande al Aire + Onda Sonora Ancha -->
+                <div class="flex items-center justify-between gap-4">
+                  <svg class="w-12 h-12 text-[#ffc700] shrink-0 group-hover:scale-105 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="2" width="8" height="12" rx="4"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" x2="12" y1="19" y2="22"/>
+                    <line x1="8" x2="16" y1="22" x2="22"/>
+                  </svg>
+                  
+                  <!-- Onda Ancha y Detallada -->
+                  <svg class="h-9 w-32 sm:w-36 text-[#ffc700]" viewBox="0 0 140 32" fill="currentColor">
+                    <rect x="4" y="11" width="3.5" height="10" rx="1.75"/>
+                    <rect x="13" y="7" width="3.5" height="18" rx="1.75"/>
+                    <rect x="22" y="3" width="3.5" height="26" rx="1.75"/>
+                    <rect x="31" y="9" width="3.5" height="14" rx="1.75"/>
+                    <rect x="40" y="1" width="3.5" height="30" rx="1.75"/>
+                    <rect x="49" y="5" width="3.5" height="22" rx="1.75"/>
+                    <rect x="58" y="0" width="3.5" height="32" rx="1.75"/>
+                    <rect x="67" y="4" width="3.5" height="24" rx="1.75"/>
+                    <rect x="76" y="8" width="3.5" height="16" rx="1.75"/>
+                    <rect x="85" y="1" width="3.5" height="30" rx="1.75"/>
+                    <rect x="94" y="6" width="3.5" height="20" rx="1.75"/>
+                    <rect x="103" y="10" width="3.5" height="12" rx="1.75"/>
+                    <rect x="112" y="3" width="3.5" height="26" rx="1.75"/>
+                    <rect x="121" y="8" width="3.5" height="16" rx="1.75"/>
+                    <rect x="130" y="11" width="3.5" height="10" rx="1.75"/>
                   </svg>
                 </div>
-                <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100 mt-3">Transcriptor IA</h3>
-                <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+
+                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-6 group-hover:text-[#ffc700] transition-colors">Transcriptor IA</h3>
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
                   Audio a texto con IA para clases y entrevistas de hasta 2 horas con oradores.
                 </p>
               </div>
-              <button 
-                id="btnCardOpenTranscriptor"
-                type="button" 
-                onclick="document.getElementById('tabBtnTranscriptor').click()" 
-                class="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:group-hover:text-amber-300 font-semibold text-xs flex items-center gap-1 mt-4 transition cursor-pointer"
-              >
+
+              <div class="text-[#ffc700] font-semibold text-xs flex items-center gap-1.5 mt-6 pt-3 border-t border-slate-100 dark:border-slate-800/60 group-hover:translate-x-1 transition-all">
                 <span>Ir a transcribir</span>
                 <span>&rarr;</span>
-              </button>
+              </div>
             </div>
 
-            <!-- Tarjeta 2: Organizador de Materias -->
-            <div class="bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-500/40 rounded-xl p-4 transition shadow-sm dark:shadow-lg flex flex-col justify-between group">
+            <!-- Tarjeta 2: Organizador de Materias (Carpeta Grande de Trazo Fino al Aire) -->
+            <div 
+              id="btnCardOpenOrganizer"
+              onclick="document.getElementById('tabBtnOrganizer').click()"
+              class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            >
               <div>
-                <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 dark:text-amber-400">
-                  <i data-lucide="folder" class="w-4 h-4"></i>
+                <!-- Carpeta Grande al Aire -->
+                <div class="text-[#ffc700] group-hover:scale-105 transition-transform">
+                  <svg class="w-14 h-14" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 9C5 7.89543 5.89543 7 7 7H13L15.5 10H25C26.1046 10 27 10.8954 27 12V23C27 24.1046 26.1046 25 25 25H7C5.89543 25 5 24.1046 5 23V9Z" />
+                    <path d="M5 14H27" />
+                  </svg>
                 </div>
-                <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100 mt-3">Organizador de Materias</h3>
-                <div class="flex items-center gap-1 mt-1.5">
-                  <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">PDFs</span>
-                  <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">Apuntes</span>
-                  <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">Fechas</span>
+
+                <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Organizador de Materias</h3>
+                
+                <div class="flex items-center gap-1.5 mt-2.5">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">PDFs</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">Apuntes</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-slate-200 dark:border-slate-700/60">Fechas</span>
                 </div>
-                <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
                   Biblioteca privada en tu navegador (IndexedDB) para guardar textos sin consumir servidores.
                 </p>
               </div>
-              <button 
-                id="btnCardOpenOrganizer"
-                type="button" 
-                onclick="document.getElementById('tabBtnOrganizer').click()" 
-                class="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:group-hover:text-amber-300 font-semibold text-xs flex items-center gap-1 mt-4 transition cursor-pointer"
-              >
+
+              <div class="text-[#ffc700] font-semibold text-xs flex items-center gap-1.5 mt-6 pt-3 border-t border-slate-100 dark:border-slate-800/60 group-hover:translate-x-1 transition-all">
                 <span>Abrir Organizador</span>
                 <span>&rarr;</span>
-              </button>
+              </div>
             </div>
 
-            <!-- Tarjeta 3: Mi Carrera (Plan 504) -->
-            <div class="bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-500/40 rounded-xl p-4 transition shadow-sm dark:shadow-lg flex flex-col justify-between group">
+            <!-- Tarjeta 3: Mi Carrera Plan 504 (Birrete UBA Grande + Anillo Gigante 3%) -->
+            <div 
+              id="btnCardOpenCareer"
+              onclick="document.getElementById('tabBtnCareer').click()"
+              class="group p-6 rounded-2xl bg-white dark:bg-[#0b1220] border border-slate-200 dark:border-slate-800 hover:border-amber-400/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between"
+            >
               <div>
-                <div class="flex items-center justify-between">
+                <!-- Parte Superior Dividida: Título e Icono a la Izquierda / Anillo Gigante a la Derecha -->
+                <div class="flex items-center justify-between gap-3">
                   <div>
-                    <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 block">Mi Carrera</span>
-                    <h3 class="text-sm font-bold text-slate-900 dark:text-slate-100">Plan 504</h3>
+                    <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 block">Mi Carrera</span>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-[#ffc700] transition-colors">Plan 504</h3>
+                    
+                    <!-- Birrete UBA Grande al Aire -->
+                    <div class="mt-3 text-[#ffc700] group-hover:scale-105 transition-transform">
+                      <svg class="w-14 h-11" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 2L2 8L16 14L30 8L16 2Z" />
+                        <path d="M6 10.5V16C6 18.5 10.5 21 16 21C21.5 21 26 18.5 26 16V10.5" />
+                        <path d="M30 8V16" />
+                        <text x="16" y="17.5" font-size="5" font-weight="bold" fill="currentColor" stroke="none" text-anchor="middle" letter-spacing="1">UBA</text>
+                      </svg>
+                    </div>
                   </div>
-                  <div class="relative w-11 h-11 flex items-center justify-center shrink-0">
+
+                  <!-- Anillo Circular Grande Proporcional -->
+                  <div class="relative w-20 h-20 flex items-center justify-center shrink-0">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path class="text-slate-200 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                      <path id="homeCareerRing" class="text-amber-500 dark:text-amber-400" stroke-dasharray="3, 100" stroke-width="3.5" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                      <path class="text-slate-200 dark:text-slate-800" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                      <path id="homeCareerCircle" class="text-[#ffc700]" stroke-dasharray="3, 100" stroke-width="3.2" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                     </svg>
-                    <span id="homeCareerPercent" class="absolute text-[10px] font-extrabold text-slate-900 dark:text-slate-100">3%</span>
+                    <div class="absolute flex flex-col items-center justify-center">
+                      <span id="homeCareerPercent" class="text-sm font-black text-slate-800 dark:text-slate-100 leading-none">3%</span>
+                      <span class="text-[8px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">Completado</span>
+                    </div>
                   </div>
                 </div>
-                <div class="flex items-center gap-1.5 mt-2 text-amber-500 dark:text-amber-400">
-                  <i data-lucide="graduation-cap" class="w-4 h-4"></i>
-                  <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">UBA Sociales</span>
-                </div>
-                <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                  Seguimiento de correlatividades, cálculo de promedio y habilitación de PPP.
+
+                <p class="text-xs text-slate-600 dark:text-slate-400 mt-4 leading-relaxed">
+                  Seguimiento de materias aprobadas, cálculo de promedio y habilitación de PPP.
                 </p>
               </div>
 
-              <div class="flex items-center justify-between mt-4 pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
-                <span class="px-2 py-0.5 rounded text-[9px] font-medium bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20">Plan 504 - UBA</span>
-                <button 
-                  id="btnCardOpenCareer"
-                  type="button" 
-                  onclick="document.getElementById('tabBtnCareer').click()" 
-                  class="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:group-hover:text-amber-300 font-semibold text-xs flex items-center gap-1 transition cursor-pointer"
-                >
+              <div class="flex items-center justify-between mt-6 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20">Plan 504 - UBA</span>
+                <div class="text-[#ffc700] font-semibold text-xs flex items-center gap-1.5 group-hover:translate-x-1 transition-all">
                   <span>Ver carrera</span>
                   <span>&rarr;</span>
-                </button>
+                </div>
               </div>
             </div>
           </div>

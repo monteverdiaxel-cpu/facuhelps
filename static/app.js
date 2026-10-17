@@ -6153,7 +6153,7 @@ ${speakerHint}${kw}
     // Sincronizar anillo y porcentaje de la tarjeta de inicio
     const elHomePercent = document.getElementById("homeCareerPercent");
     if (elHomePercent) elHomePercent.textContent = `${progressPercent}%`;
-    const elHomeRing = document.getElementById("homeCareerRing");
+    const elHomeRing = document.getElementById("homeCareerCircle") || document.getElementById("homeCareerRing");
     if (elHomeRing) elHomeRing.setAttribute("stroke-dasharray", `${progressPercent}, 100`);
 
     // 6. Promedio General Académico
