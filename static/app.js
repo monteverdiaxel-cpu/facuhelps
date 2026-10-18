@@ -5,14 +5,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Elementos DOM
-  const btnHistoryToggle = document.getElementById("btnHistoryToggle");
+  const btnHistoryToggle = document.getElementById("btnHistoryToggle") || document.getElementById("btnOpenHistory");
   const historyBadgeCount = document.getElementById("historyBadgeCount");
   const historyModal = document.getElementById("historyModal");
   const btnCloseHistoryModal = document.getElementById("btnCloseHistoryModal");
   const btnClearHistory = document.getElementById("btnClearHistory");
   const historyListContainer = document.getElementById("historyListContainer");
 
-  const btnThemeToggle = document.getElementById("btnThemeToggle");
+  const btnThemeToggle = document.getElementById("btnThemeToggle") || document.getElementById("themeToggle");
   const themeIcon = document.getElementById("themeIcon");
 
   const btnApiKeyToggle = document.getElementById("btnApiKeyToggle");
@@ -26,8 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const selectModel = document.getElementById("selectModel");
 
   // Elementos DOM Autenticación / Supabase
-  const btnUserAuth = document.getElementById("btnUserAuth");
-  const userAuthLabel = document.getElementById("userAuthLabel");
+  const btnUserAuth = document.getElementById("btnUserAuth") || document.getElementById("btnAuthHeader");
+  const userAuthLabel = document.getElementById("userAuthLabel") || document.getElementById("headerUserLabel");
   const modalAuth = document.getElementById("modalAuth");
   const btnCloseAuthModal = document.getElementById("btnCloseAuthModal");
   const authLoggedInView = document.getElementById("authLoggedInView");
