@@ -67,8 +67,17 @@
 
     #sidebarNav.w-16 .sidebar-header {
       justify-content: center !important;
-      padding-left: 0.5rem !important;
-      padding-right: 0.5rem !important;
+      padding: 0 !important;
+      width: 100% !important;
+    }
+
+    /* Cuando el sidebar está colapsado (w-16): ocultar el logo para dejar solo el botón de toggle centrado */
+    #sidebarNav.w-16 #btnHeaderLogoHome {
+      display: none !important;
+    }
+
+    #sidebarNav.w-16 #btnToggleSidebar {
+      margin: 0 auto !important;
     }
 
     /* Evitar que el contenedor derecho desborde la pantalla */
