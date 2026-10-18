@@ -35,23 +35,34 @@
       font-family: 'Alegreya', Georgia, serif !important;
     }
 
-    /* Bloquear desborde en la barra lateral */
+    /* 1. Bloqueo estricto de desborde y ancho fijo colapsado (64px) */
     #sidebarNav {
       overflow: hidden !important;
+      transition: width 0.3s ease-in-out !important;
     }
 
-    /* Ocultar completamente los textos cuando la barra está colapsada (w-16) */
+    #sidebarNav.w-16 {
+      width: 4rem !important; /* 64px exactos */
+    }
+
+    /* 2. Ocultar el 100% de los textos en modo colapsado (solo queda el icono) */
+    #sidebarNav.w-16 button > *:not(:first-child),
     #sidebarNav.w-16 .sidebar-text-label,
+    #sidebarNav.w-16 button div:not(:first-child),
+    #sidebarNav.w-16 button span,
+    #sidebarNav.w-16 button p,
     #sidebarNav.w-16 #btnHeaderLogoHome span,
     #sidebarNav.w-16 #btnHeaderLogoHome p {
       display: none !important;
     }
 
-    /* Centrar los iconos en modo colapsado */
-    #sidebarNav.w-16 .nav-tab-btn {
+    /* 3. Centrado perfecto de los 4 iconos en la columna de 64px */
+    #sidebarNav.w-16 .nav-tab-btn,
+    #sidebarNav.w-16 button {
       justify-content: center !important;
       padding-left: 0 !important;
       padding-right: 0 !important;
+      gap: 0 !important;
     }
 
     #sidebarNav.w-16 .sidebar-header {
