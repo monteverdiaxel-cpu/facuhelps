@@ -2629,6 +2629,19 @@ ${speakerHint}${kw}
       renderCareerView();
     }
 
+    // 4. Alternar entre logo de Inicio y botón de retroceso en celulares
+    const mobileHeaderBrand = document.getElementById("mobileHeaderBrand");
+    const btnHeaderBackMobile = document.getElementById("btnHeaderBackMobile");
+    if (mobileHeaderBrand && btnHeaderBackMobile) {
+      if (target === "home") {
+        mobileHeaderBrand.classList.remove("hidden");
+        btnHeaderBackMobile.classList.add("hidden");
+      } else {
+        mobileHeaderBrand.classList.add("hidden");
+        btnHeaderBackMobile.classList.remove("hidden");
+      }
+    }
+
     // Scroll suave hacia arriba
     window.scrollTo({ top: 0, behavior: "smooth" });
 
@@ -2651,6 +2664,10 @@ ${speakerHint}${kw}
   // Redirecciones desde la portada y header
   if (btnHeaderLogoHome) {
     btnHeaderLogoHome.addEventListener("click", () => switchTab("home"));
+  }
+  const btnHeaderBackMobile = document.getElementById("btnHeaderBackMobile");
+  if (btnHeaderBackMobile) {
+    btnHeaderBackMobile.addEventListener("click", () => switchTab("home"));
   }
   if (btnHeroOpenTranscriptor) {
     btnHeroOpenTranscriptor.addEventListener("click", () => switchTab("transcriptor"));
