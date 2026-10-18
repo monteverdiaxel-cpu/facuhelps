@@ -505,22 +505,15 @@
       <!-- Espacio invisible en computadora para empujar los botones a la derecha -->
       <div class="hidden lg:block"></div>
 
-      <!-- Derecha: Acciones Compactas (Historial, Tema, Usuario) -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <!-- Historial compacto -->
-        <button id="btnOpenHistory" type="button" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer" title="Mis Transcripciones">
-          <i data-lucide="book-open" class="w-4 h-4 text-amber-500"></i>
-          <span class="hidden sm:inline">Historial</span>
-          <span id="historyBadgeCount" class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-500 font-bold"></span>
-        </button>
-
+      <!-- Derecha: Tema y Usuario (Sin botón de Historial en la cabecera global) -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
         <!-- Conmutador Tema -->
         <button id="themeToggle" type="button" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 transition cursor-pointer" title="Cambiar tema">
           <i id="themeIcon" data-lucide="sun" class="w-4 h-4"></i>
         </button>
 
         <!-- Botón Usuario compacto -->
-        <button id="btnAuthHeader" type="button" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold bg-[#ffc700] hover:bg-amber-400 text-slate-950 transition truncate max-w-[130px] sm:max-w-[200px] cursor-pointer shadow-2xs">
+        <button id="btnAuthHeader" type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#ffc700] hover:bg-amber-400 text-slate-950 transition truncate max-w-[130px] sm:max-w-[200px] cursor-pointer shadow-2xs">
           <i data-lucide="user" class="w-4 h-4 shrink-0 text-slate-950"></i>
           <span id="headerUserLabel" class="truncate hidden sm:inline">Iniciar sesión</span>
         </button>
@@ -662,23 +655,39 @@
         <!-- Vista 1: Transcriptor (oculta por defecto) -->
         <div id="viewTranscriptor" class="space-y-6 hidden">
 
-      <!-- Hero / Intro Banner Estilizado -->
-      <div class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 text-center shadow-sm">
+      <!-- Hero / Intro Banner Estilizado con botón de Historial -->
+      <div class="relative overflow-hidden bg-gradient-to-b from-slate-50 via-blue-50/20 to-white dark:from-slate-900 dark:via-blue-950/20 dark:to-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
         <div class="absolute inset-0 bg-grid-subtle pointer-events-none opacity-50"></div>
-        <div class="relative z-10 max-w-2xl mx-auto">
-          <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-950 dark:text-amber-300 font-semibold mb-3 border border-amber-400/40 text-[11px] shadow-2xs">
-            <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-500"></i>
-            <span>Motor de Transcripción con IA</span>
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="min-w-0">
+            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-950 dark:text-amber-300 font-semibold mb-2.5 border border-amber-400/40 text-[11px] shadow-2xs">
+              <i data-lucide="mic" class="w-3.5 h-3.5 text-amber-500"></i>
+              <span>Motor de Transcripción con IA</span>
+            </div>
+            <h2 class="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Transcripción de Alta Fidelidad
+            </h2>
+            <p class="font-editorial italic text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+              Transformá clases y conferencias de hasta 2 horas en texto estructurado
+            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl font-sans">
+              Fidelidad textual palabra por palabra sin omitir contenido, diferenciación de oradores y exportación directa a Word y PDF.
+            </p>
           </div>
-          <h2 class="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            Transcripción de Alta Fidelidad
-          </h2>
-          <p class="font-editorial italic text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-2">
-            Transformá clases y conferencias de hasta 2 horas en texto estructurado
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl mx-auto font-sans">
-            Fidelidad textual palabra por palabra sin omitir contenido, diferenciación de oradores y exportación directa a Word (.docx) y PDF.
-          </p>
+
+          <!-- Botón de Historial exclusivo del Transcriptor -->
+          <div class="flex items-center gap-2 shrink-0">
+            <button 
+              id="btnOpenHistory" 
+              type="button" 
+              class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 shadow-2xs transition cursor-pointer"
+              title="Mis Transcripciones guardadas"
+            >
+              <i data-lucide="book-open" class="w-4 h-4 text-amber-500"></i>
+              <span>Mis Transcripciones</span>
+              <span id="historyBadgeCount" class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30"></span>
+            </button>
+          </div>
         </div>
       </div>
 
