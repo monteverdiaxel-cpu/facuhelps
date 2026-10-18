@@ -2585,8 +2585,9 @@ ${speakerHint}${kw}
 
   function setTabButtonState(btn, isActive) {
     if (!btn) return;
-    const activeClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-amber-500/40 dark:border-amber-400/40 bg-amber-500/10 dark:bg-slate-900/90 text-amber-950 dark:text-amber-300 font-semibold text-xs transition-all shadow-xs text-left";
-    const inactiveClasses = "nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left";
+    const isCollapsed = sidebarNav && sidebarNav.classList.contains("w-16");
+    const activeClasses = `nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-amber-500/40 dark:border-amber-400/40 bg-amber-500/10 dark:bg-slate-900/90 text-amber-950 dark:text-amber-300 font-semibold text-xs transition-all shadow-xs text-left ${isCollapsed ? "justify-center px-0" : ""}`;
+    const inactiveClasses = `nav-tab-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900/60 text-slate-600 dark:text-slate-400 font-medium text-xs transition-all text-left ${isCollapsed ? "justify-center px-0" : ""}`;
 
     btn.className = isActive ? activeClasses : inactiveClasses;
     const iconContainer = btn.querySelector("div");
@@ -2683,6 +2684,53 @@ ${speakerHint}${kw}
   }
   if (btnCardOpenCareer) {
     btnCardOpenCareer.addEventListener("click", () => switchTab("career"));
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Alternar Barra Lateral Colapsable Estilo Gemini (w-64 <-> w-16)
+  // ─────────────────────────────────────────────────────────────
+  const sidebarNav = document.getElementById("sidebarNav");
+  const mainWrapper = document.getElementById("mainContentWrapper");
+  const btnToggleSidebar = document.getElementById("btnToggleSidebar");
+  const sidebarLabels = document.querySelectorAll(".sidebar-text-label");
+  const navTabBtns = document.querySelectorAll(".nav-tab-btn");
+
+  function applySidebarState(collapsed) {
+    if (!sidebarNav || !mainWrapper) return;
+    if (collapsed) {
+      sidebarNav.classList.replace("w-64", "w-16");
+      sidebarNav.classList.add("items-center");
+      mainWrapper.classList.replace("lg:pl-64", "lg:pl-16");
+      sidebarLabels.forEach(el => el.classList.add("hidden"));
+      navTabBtns.forEach(btn => btn.classList.add("justify-center", "px-0"));
+      if (btnToggleSidebar) {
+        btnToggleSidebar.innerHTML = '<i data-lucide="panel-left-open" class="w-4 h-4"></i>';
+      }
+    } else {
+      sidebarNav.classList.replace("w-16", "w-64");
+      sidebarNav.classList.remove("items-center");
+      mainWrapper.classList.replace("lg:pl-16", "lg:pl-64");
+      sidebarLabels.forEach(el => el.classList.remove("hidden"));
+      navTabBtns.forEach(btn => btn.classList.remove("justify-center", "px-0"));
+      if (btnToggleSidebar) {
+        btnToggleSidebar.innerHTML = '<i data-lucide="panel-left-close" class="w-4 h-4"></i>';
+      }
+    }
+    if (window.lucide) window.lucide.createIcons();
+    localStorage.setItem("facuhelps_sidebar_collapsed", collapsed ? "true" : "false");
+  }
+
+  if (btnToggleSidebar) {
+    btnToggleSidebar.addEventListener("click", () => {
+      const isCurrentlyCollapsed = sidebarNav.classList.contains("w-16");
+      applySidebarState(!isCurrentlyCollapsed);
+    });
+  }
+
+  // Cargar preferencia guardada
+  const savedSidebarPref = localStorage.getItem("facuhelps_sidebar_collapsed") === "true";
+  if (savedSidebarPref && window.innerWidth >= 1024) {
+    applySidebarState(true);
   }
 
   // ─────────────────────────────────────────────────────────────
