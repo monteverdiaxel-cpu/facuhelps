@@ -34,6 +34,37 @@
     .font-alegreya, .font-heading {
       font-family: 'Alegreya', Georgia, serif !important;
     }
+
+    /* Bloquear desborde en la barra lateral */
+    #sidebarNav {
+      overflow: hidden !important;
+    }
+
+    /* Ocultar completamente los textos cuando la barra está colapsada (w-16) */
+    #sidebarNav.w-16 .sidebar-text-label,
+    #sidebarNav.w-16 #btnHeaderLogoHome span,
+    #sidebarNav.w-16 #btnHeaderLogoHome p {
+      display: none !important;
+    }
+
+    /* Centrar los iconos en modo colapsado */
+    #sidebarNav.w-16 .nav-tab-btn {
+      justify-content: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
+    #sidebarNav.w-16 .sidebar-header {
+      justify-content: center !important;
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+
+    /* Evitar que el contenedor derecho desborde la pantalla */
+    #mainContentWrapper {
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
   </style>
   <script>
     tailwind.config = {
@@ -74,7 +105,7 @@
   <!-- Barra Lateral Izquierda Fija -->
   <aside id="sidebarNav" class="hidden lg:flex w-64 min-h-screen bg-white dark:bg-[#070d19] border-r border-slate-200 dark:border-slate-800/80 fixed inset-y-0 left-0 z-30 flex-col justify-between transition-all duration-300 ease-in-out">
     <!-- Encabezado Superior: Logo FacuHelps y Toggle Estilo Gemini -->
-    <div class="h-16 flex items-center justify-between px-4 border-b border-slate-200/80 dark:border-slate-800/80 shrink-0">
+    <div class="sidebar-header h-16 flex items-center justify-between px-4 border-b border-slate-200/80 dark:border-slate-800/80 shrink-0">
       <div id="btnHeaderLogoHome" class="flex items-center gap-3 cursor-pointer group overflow-hidden" title="Ir al Inicio">
         <!-- Isotipo: Birrete dorado sobre libro abierto -->
         <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#ffc700] shrink-0">
