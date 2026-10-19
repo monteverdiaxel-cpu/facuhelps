@@ -530,9 +530,10 @@ class TranscribeFileUriRequest(BaseModel):
     audio_type: Optional[str] = "clase"
     keywords: Optional[str] = ""
     api_key: Optional[str] = None
-    model_name: Optional[str] = "gemini-3.8-flash"
+    model_name: Optional[str] = "gemini-2.5-flash"
 
 import traceback
+import time
 
 @app.post("/api/transcribe-file-uri")
 async def transcribe_file_uri(req: TranscribeFileUriRequest):
@@ -562,11 +563,11 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     clean_mime = sanitize_audio_mime(file_name, req.mime_type or "audio/mp3")
     system_instruction, user_prompt = get_transcription_prompts(req.audio_type, req.keywords)
 
-    # Configuración limpia 100% compatible con multimodalidad de audio (sin thinking_config ni thinking_budget)
+    # Configuración limpia 100% compatible con multimodalidad de audio (sin thinking_config)
     gen_config = types.GenerateContentConfig(
         system_instruction=system_instruction,
-        temperature=0.1,
-        max_output_tokens=8192
+        temperature=0.0,
+        max_output_tokens=65536
     )
 
     client = genai.Client(api_key=current_key)
@@ -604,42 +605,53 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     except Exception:
         pass
 
-    # 3. Llamar a Gemini pasando directamente el objeto google_file (nunca Part.from_uri con HTTPS)
-    try:
-        target_model = (req.model_name or "gemini-3.8-flash").strip() or "gemini-3.8-flash"
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model=target_model,
-            contents=[google_file, user_prompt],
-            config=gen_config
-        )
+    # 3. Llamar a Gemini ("gemini-2.5-flash") con reintentos ante errores temporales o de cuota (429/503)
+    target_model = "gemini-2.5-flash"
+    last_exc = None
 
-        transcript_text = (response.text or "").strip() if response else ""
-        if not transcript_text:
-            raise Exception("Gemini devolvió una transcripción vacía.")
-
-        # Limpiar archivo temporal de Google
+    for gen_attempt in range(1, 4):
         try:
-            await asyncio.to_thread(client.files.delete, name=google_file.name)
-        except Exception:
-            pass
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model=target_model,
+                contents=[google_file, user_prompt],
+                config=gen_config
+            )
 
-        return JSONResponse({
-            "success": True,
-            "transcript": transcript_text,
-            "model_used": target_model
-        })
+            transcript_text = (response.text or "").strip() if response else ""
+            if not transcript_text:
+                raise Exception("Gemini devolvió una transcripción vacía.")
 
-    except Exception as exc:
-        traceback.print_exc()
-        error_detail = str(exc)
-        if hasattr(exc, "message"):
-            error_detail = exc.message
-        print(f"[ERROR GENERATE CONTENT]: {error_detail}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error durante la transcripción directa: {error_detail}"
-        )
+            # Limpiar archivo temporal de Google tras transcribir exitosamente
+            try:
+                await asyncio.to_thread(client.files.delete, name=google_file.name)
+            except Exception:
+                pass
+
+            return JSONResponse({
+                "success": True,
+                "transcript": transcript_text,
+                "model_used": target_model
+            })
+
+        except Exception as exc:
+            last_exc = exc
+            err_str = str(exc)
+            print(f"[WARN GENERATE CONTENT] Intento {gen_attempt}/3 falló: {err_str}")
+            if gen_attempt < 3 and any(code in err_str.upper() for code in ["429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "QUOTA", "OVERLOADED", "TIMEOUT"]):
+                time.sleep(5)
+                continue
+            break
+
+    traceback.print_exc()
+    error_detail = str(last_exc)
+    if hasattr(last_exc, "message"):
+        error_detail = last_exc.message
+    print(f"[ERROR GENERATE CONTENT]: {error_detail}")
+    raise HTTPException(
+        status_code=500,
+        detail=f"Error durante la transcripción directa: {error_detail}"
+    )
 
 class SummarizeRequest(BaseModel):
     transcript: str

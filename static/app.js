@@ -1297,12 +1297,26 @@ ${speakerHint}${kw}
    *    Si pesa > 85 MB, lo sube en bloques de 8 MB exactos por Cloudflare Worker usando ?action=chunk (0 MB en Render).
    */
   async function uploadAudioDirectToGoogle(file, onProgress) {
+    // Limpiar cualquier identificador o referencia de archivo subida en ejecuciones anteriores
+    if (file) {
+      delete file.googleFileName;
+      delete file.googleFileUri;
+      delete file._googleFile;
+    }
+    window._lastGoogleFileName = null;
+    window._lastGoogleFileUri = null;
+
     const cleanMimeType = normalizeAudioMimeType(file.name, file.type);
 
-    // 1. Obtener la sesión de subida resumible en Google vía Render (150 bytes)
-    const sessionRes = await fetch("/api/create-upload-session", {
+    // 1. Generar SIEMPRE una nueva sesión de subida resumible en Google vía Render (150 bytes, sin caché)
+    const sessionRes = await fetch(`/api/create-upload-session?_t=${Date.now()}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+      },
       body: JSON.stringify({
         filename: file.name,
         file_size: file.size,
@@ -1335,6 +1349,7 @@ ${speakerHint}${kw}
 
       const singleRes = await fetch(singleChunkUrl, {
         method: "POST",
+        cache: "no-store",
         headers: {
           "Content-Type": cleanMimeType,
           "X-Goog-Upload-Offset": "0",
@@ -1370,6 +1385,7 @@ ${speakerHint}${kw}
 
         const chunkRes = await fetch(workerChunkUrl, {
           method: "POST",
+          cache: "no-store",
           headers: {
             "Content-Type": cleanMimeType,
             "X-Goog-Upload-Offset": offset.toString(),
@@ -1392,7 +1408,7 @@ ${speakerHint}${kw}
       }
     }
 
-    // Resolver el objeto del archivo retornado por Google Files API
+    // Resolver el objeto del archivo nuevo retornado por Google Files API
     const googleFileObj = fileData?.file || fileData;
     return { googleFile: googleFileObj, usedKey: key_used, cleanMimeType };
   }
@@ -1404,6 +1420,13 @@ ${speakerHint}${kw}
     if (errorBannerEl) errorBannerEl.classList.add("hidden");
 
     if (!currentFile) return;
+
+    // Limpiar cualquier identificador de archivo anterior antes de iniciar una nueva transcripción
+    delete currentFile.googleFileName;
+    delete currentFile.googleFileUri;
+    delete currentFile._googleFile;
+    window._lastGoogleFileName = null;
+    window._lastGoogleFileUri = null;
 
     setEditMode(false);
     resultSection.classList.add("hidden");
@@ -1420,7 +1443,7 @@ ${speakerHint}${kw}
     try {
       const cleanMimeType = normalizeAudioMimeType(currentFile.name, currentFile.type);
 
-      // Paso 1: Subir audio directamente a Google Files API vía Cloudflare Worker (0 MB en Render)
+      // Paso 1: Subir audio directamente a Google Files API vía Cloudflare Worker con nueva sesión (0 MB en Render)
       setProgressStep("cloud");
       const { googleFile, usedKey } = await uploadAudioDirectToGoogle(currentFile, (pct, uploadedBytes, totalBytes) => {
         if (progressSubtitle) {
@@ -1442,11 +1465,12 @@ ${speakerHint}${kw}
       }
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador/URI (1 KB) y la clave exacta con la que se subió
+      // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador/URI nuevo (1 KB) y la clave exacta con la que se subió
       setProgressStep("gemini");
-      const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
+      const selectedModelName = "gemini-2.5-flash";
       const transcribeResponse = await fetch("/api/transcribe-file-uri", {
         method: "POST",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json"
         },
