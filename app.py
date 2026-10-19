@@ -258,7 +258,7 @@ async def transcribe_audio(
             system_instruction=system_instruction,
             temperature=0.0,
             max_output_tokens=65536,
-            thinking_config=types.ThinkingConfig(thinking_budget=0)
+            thinking_config=types.ThinkingConfig(thinking_level="LOW")
         )
 
         transcript_text = ""
@@ -464,6 +464,10 @@ async def create_upload_session(req: CreateUploadSessionRequest):
     if not key_pool:
         raise HTTPException(status_code=400, detail="No hay claves configuradas en el servidor (.env).")
 
+    clean_mime = (req.mime_type or "audio/mp3").strip()
+    if req.filename.lower().endswith(".m4a") or "m4a" in clean_mime.lower():
+        clean_mime = "audio/mp4"
+
     last_err = None
     for k_idx, current_key in enumerate(key_pool):
         try:
@@ -474,7 +478,7 @@ async def create_upload_session(req: CreateUploadSessionRequest):
                 "X-Goog-Upload-Protocol": "resumable",
                 "X-Goog-Upload-Command": "start",
                 "X-Goog-Upload-Header-Content-Length": str(req.file_size),
-                "X-Goog-Upload-Header-Content-Type": req.mime_type or "audio/mp3",
+                "X-Goog-Upload-Header-Content-Type": clean_mime,
                 "Content-Type": "application/json",
                 "x-goog-api-key": current_key
             }
@@ -527,6 +531,11 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     if not current_key:
         raise HTTPException(status_code=400, detail="No se encontró una API Key válida.")
 
+    # Normalizar MIME type para archivos .m4a (formato oficial de Google Files API: audio/mp4)
+    clean_mime = (req.mime_type or "audio/mp3").strip()
+    if "m4a" in clean_mime.lower() or (req.file_name and req.file_name.lower().endswith(".m4a")):
+        clean_mime = "audio/mp4"
+
     # Asegurar el formato "files/xxxx"
     file_name = req.file_name
     if not file_name and req.file_uri:
@@ -542,7 +551,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
         system_instruction=system_instruction,
         temperature=0.1,
         max_output_tokens=8192,
-        thinking_config=types.ThinkingConfig(thinking_budget=0)
+        thinking_config=types.ThinkingConfig(thinking_level="LOW")
     )
 
     client = genai.Client(api_key=current_key)
@@ -585,7 +594,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
         contents = [google_file, user_prompt]
     elif req.file_uri:
         contents = [
-            types.Part.from_uri(file_uri=req.file_uri, mime_type=req.mime_type or "audio/mp3"),
+            types.Part.from_uri(file_uri=req.file_uri, mime_type=clean_mime),
             user_prompt
         ]
     else:
@@ -669,7 +678,7 @@ async def summarize_transcript(req: SummarizeRequest):
             system_instruction=system_instruction,
             temperature=0.1,
             max_output_tokens=4096,
-            thinking_config=types.ThinkingConfig(thinking_budget=0)
+            thinking_config=types.ThinkingConfig(thinking_level="LOW")
         )
 
         response = None

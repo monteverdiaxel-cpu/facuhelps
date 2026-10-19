@@ -1272,6 +1272,11 @@ ${speakerHint}${kw}
    *    Si pesa > 85 MB, lo sube en bloques de 8 MB exactos por Cloudflare Worker (0 MB en Render).
    */
   async function uploadAudioDirectToGoogle(file, onProgress) {
+    let cleanMimeType = file.type || "audio/mp3";
+    if (file.name.toLowerCase().endsWith(".m4a") || cleanMimeType.toLowerCase().includes("m4a")) {
+      cleanMimeType = "audio/mp4"; // Formato oficial que exige Google para archivos .m4a
+    }
+
     // 1. Obtener la sesión de subida en Google vía Render (150 bytes)
     const sessionRes = await fetch("/api/create-upload-session", {
       method: "POST",
@@ -1279,7 +1284,7 @@ ${speakerHint}${kw}
       body: JSON.stringify({
         filename: file.name,
         file_size: file.size,
-        mime_type: file.type || "audio/mp3"
+        mime_type: cleanMimeType
       })
     });
 
@@ -1354,7 +1359,7 @@ ${speakerHint}${kw}
 
     // Resolver el nombre del archivo retornado por Google
     const googleFileObj = fileData?.file || fileData;
-    return { googleFile: googleFileObj, usedKey: key_used };
+    return { googleFile: googleFileObj, usedKey: key_used, cleanMimeType };
   }
 
   // 7. Iniciar Proceso de Transcripción (Subida Directa Exclusiva a Google vía Cloudflare Worker - 0 MB en Render)
@@ -1378,6 +1383,11 @@ ${speakerHint}${kw}
     setProgressStep("local");
 
     try {
+      let cleanMimeType = currentFile.type || "audio/mp3";
+      if (currentFile.name.toLowerCase().endsWith(".m4a") || cleanMimeType.toLowerCase().includes("m4a")) {
+        cleanMimeType = "audio/mp4"; // Formato oficial que exige Google para archivos .m4a
+      }
+
       // Paso 1: Subir audio directamente a Google Files API vía Cloudflare Worker (0 MB en Render)
       setProgressStep("cloud");
       const { googleFile, usedKey } = await uploadAudioDirectToGoogle(currentFile, (pct, uploadedBytes, totalBytes) => {
@@ -1411,7 +1421,7 @@ ${speakerHint}${kw}
         body: JSON.stringify({
           file_uri: googleFileUri,
           file_name: googleFileName,
-          mime_type: currentFile.type || "audio/mp3",
+          mime_type: cleanMimeType,
           api_key: usedKey,
           audio_type: currentAudioType || "clase",
           keywords: (inputKeywords && inputKeywords.value.trim()) || "",
