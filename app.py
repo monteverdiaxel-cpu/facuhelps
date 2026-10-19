@@ -549,8 +549,9 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     google_file = None
 
     # 2. Espera activa hasta que Google confirme estado ACTIVE (hasta 60 segundos para audios de más de 100 MB)
+    is_file_active = False
     if file_name:
-        for attempt in range(1, 30):
+        for attempt in range(1, 31):
             try:
                 google_file = await asyncio.to_thread(client.files.get, name=file_name)
                 state_str = str(getattr(google_file, "state", "")).upper()
@@ -558,14 +559,25 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
 
                 # Si ya terminó de procesar y está activo, salir del bucle y transcribir
                 if "ACTIVE" in state_str:
+                    is_file_active = True
                     break
                 elif "FAIL" in state_str:
                     raise Exception("Google Files API reportó fallo al procesar el archivo de audio.")
             except Exception as e:
+                if "reportó fallo" in str(e):
+                    raise HTTPException(status_code=500, detail=str(e))
                 print(f"[Google Files API] Intento {attempt}/30: {e}")
 
             # Esperar 2 segundos antes del siguiente chequeo
             await asyncio.sleep(2)
+
+        if google_file and not is_file_active:
+            final_state = str(getattr(google_file, "state", "")).upper()
+            if "ACTIVE" not in final_state:
+                raise HTTPException(
+                    status_code=504,
+                    detail=f"El archivo aún se está procesando en Google Files API (estado: {final_state}). Intenta nuevamente en unos segundos."
+                )
 
     # 3. Preparar contenido
     contents = []
