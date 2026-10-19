@@ -1267,17 +1267,39 @@ ${speakerHint}${kw}
   const SINGLE_SHOT_LIMIT = 85 * 1024 * 1024; // 85 MB
 
   /**
+   * Normaliza el MIME type al estándar exigido por Google Gemini Files API.
+   * Crítico: Google rechaza audio/x-m4a con 400 INVALID_ARGUMENT; exige audio/mp4.
+   */
+  function normalizeAudioMimeType(filename, rawMime) {
+    const fn = (filename || "").toLowerCase().trim();
+    const m = (rawMime || "").toLowerCase().trim();
+    if (fn.endsWith(".m4a") || fn.endsWith(".aac") || m.includes("m4a") || m.includes("aac")) {
+      return "audio/mp4";
+    }
+    if (fn.endsWith(".mp3") || m.includes("mp3") || m.includes("mpeg")) {
+      return "audio/mp3";
+    }
+    if (fn.endsWith(".wav") || m.includes("wav")) {
+      return "audio/wav";
+    }
+    if (fn.endsWith(".ogg") || m.includes("ogg")) {
+      return "audio/ogg";
+    }
+    if (fn.endsWith(".flac") || m.includes("flac")) {
+      return "audio/flac";
+    }
+    return m.includes("mp4") ? "audio/mp4" : (rawMime || "audio/mp3");
+  }
+
+  /**
    * 1. Inicia la sesión resumible desde el servidor Render (/api/create-upload-session, solo 150 bytes, sin CORS)
    * 2. Si el audio pesa <= 85 MB, lo sube en 1 solo envío directo por Cloudflare Worker (0 MB en Render).
-   *    Si pesa > 85 MB, lo sube en bloques de 8 MB exactos por Cloudflare Worker (0 MB en Render).
+   *    Si pesa > 85 MB, lo sube en bloques de 8 MB exactos por Cloudflare Worker usando ?action=chunk (0 MB en Render).
    */
   async function uploadAudioDirectToGoogle(file, onProgress) {
-    let cleanMimeType = file.type || "audio/mp3";
-    if (file.name.toLowerCase().endsWith(".m4a") || cleanMimeType.toLowerCase().includes("m4a")) {
-      cleanMimeType = "audio/mp4"; // Formato oficial que exige Google para archivos .m4a
-    }
+    const cleanMimeType = normalizeAudioMimeType(file.name, file.type);
 
-    // 1. Obtener la sesión de subida en Google vía Render (150 bytes)
+    // 1. Obtener la sesión de subida resumible en Google vía Render (150 bytes)
     const sessionRes = await fetch("/api/create-upload-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1298,21 +1320,22 @@ ${speakerHint}${kw}
       throw new Error("No se recibió la URL de subida o la clave del servidor.");
     }
 
-    // 2. Redirigir a través del Worker e inyectar SIEMPRE la API Key en la URL
-    let workerUploadUrl = upload_url.replace("https://generativelanguage.googleapis.com", CLOUDFLARE_WORKER_URL);
-    const separator = workerUploadUrl.includes("?") ? "&" : "?";
-    workerUploadUrl = `${workerUploadUrl}${separator}key=${encodeURIComponent(key_used)}`;
-
     const UPLOAD_SINGLE_LIMIT = 85 * 1024 * 1024; // 85 MB
     let fileData = null;
 
     if (file.size <= UPLOAD_SINGLE_LIMIT) {
-      // Subida directa de 1 solo tiro (para audios menores a 85 MB)
-      if (onProgress) onProgress(30);
-      const singleRes = await fetch(workerUploadUrl, {
+      // Subida directa de 1 solo tiro (para audios <= 85 MB)
+      if (onProgress) onProgress(30, Math.round(file.size * 0.3), file.size);
+      const singleChunkUrl =
+        `${CLOUDFLARE_WORKER_URL}/?action=chunk` +
+        `&upload_url=${encodeURIComponent(upload_url)}` +
+        `&offset=0` +
+        `&command=${encodeURIComponent("upload, finalize")}` +
+        `&key=${encodeURIComponent(key_used)}`;
+
+      const singleRes = await fetch(singleChunkUrl, {
         method: "POST",
         headers: {
-          "Content-Length": file.size.toString(),
           "Content-Type": cleanMimeType,
           "X-Goog-Upload-Offset": "0",
           "X-Goog-Upload-Command": "upload, finalize",
@@ -1321,28 +1344,38 @@ ${speakerHint}${kw}
         body: file
       });
 
-      if (!singleRes.ok) throw new Error(await singleRes.text());
+      if (!singleRes.ok) {
+        const errText = await singleRes.text();
+        throw new Error(`Error al subir audio (${singleRes.status}): ${errText}`);
+      }
       fileData = await singleRes.json();
-      if (onProgress) onProgress(100);
+      if (onProgress) onProgress(100, file.size, file.size);
     } else {
-      // Subida en bloques de 8 MB (para audios pesados de más de 85 MB como el de 112 MB)
+      // Subida en bloques de 8 MB exactos (8,388,608 bytes) para audios > 85 MB (ej. 112 MB .m4a)
       let offset = 0;
       while (offset < file.size) {
         const end = Math.min(offset + CHUNK_SIZE, file.size);
         const chunk = file.slice(offset, end);
         const isLastChunk = (end === file.size);
+        const command = isLastChunk ? "upload, finalize" : "upload";
 
-        const chunkHeaders = {
-          "Content-Length": chunk.size.toString(),
-          "Content-Type": cleanMimeType,
-          "X-Goog-Upload-Offset": offset.toString(),
-          "X-Goog-Upload-Command": isLastChunk ? "upload, finalize" : "upload",
-          "x-goog-api-key": key_used // <-- Inyectada en cada bloque
-        };
+        // CRÍTICO: Usar ?action=chunk&upload_url=... para que el Worker reenvíe cada bloque
+        // a la misma sesión resumible de Google con el offset real (y no trunque el archivo al último bloque)
+        const workerChunkUrl =
+          `${CLOUDFLARE_WORKER_URL}/?action=chunk` +
+          `&upload_url=${encodeURIComponent(upload_url)}` +
+          `&offset=${offset}` +
+          `&command=${encodeURIComponent(command)}` +
+          `&key=${encodeURIComponent(key_used)}`;
 
-        const chunkRes = await fetch(workerUploadUrl, {
+        const chunkRes = await fetch(workerChunkUrl, {
           method: "POST",
-          headers: chunkHeaders,
+          headers: {
+            "Content-Type": cleanMimeType,
+            "X-Goog-Upload-Offset": offset.toString(),
+            "X-Goog-Upload-Command": command,
+            "x-goog-api-key": key_used
+          },
           body: chunk
         });
 
@@ -1352,14 +1385,14 @@ ${speakerHint}${kw}
         }
 
         offset = end;
-        if (onProgress) onProgress(Math.round((offset / file.size) * 100));
+        if (onProgress) onProgress(Math.round((offset / file.size) * 100), offset, file.size);
         if (isLastChunk) {
           fileData = await chunkRes.json();
         }
       }
     }
 
-    // Resolver el nombre del archivo retornado por Google
+    // Resolver el objeto del archivo retornado por Google Files API
     const googleFileObj = fileData?.file || fileData;
     return { googleFile: googleFileObj, usedKey: key_used, cleanMimeType };
   }
@@ -1385,10 +1418,7 @@ ${speakerHint}${kw}
     setProgressStep("local");
 
     try {
-      let cleanMimeType = currentFile.type || "audio/mp3";
-      if (currentFile.name.toLowerCase().endsWith(".m4a") || cleanMimeType.toLowerCase().includes("m4a")) {
-        cleanMimeType = "audio/mp4"; // Formato oficial que exige Google para archivos .m4a
-      }
+      const cleanMimeType = normalizeAudioMimeType(currentFile.name, currentFile.type);
 
       // Paso 1: Subir audio directamente a Google Files API vía Cloudflare Worker (0 MB en Render)
       setProgressStep("cloud");
