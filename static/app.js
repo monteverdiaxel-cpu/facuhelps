@@ -4578,16 +4578,21 @@ ${speakerHint}${kw}
         ? new Date(fileItem.uploadedAt).toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' })
         : "Reciente";
 
+      const isWord = fileItem.name.toLowerCase().endsWith(".docx") || fileItem.name.toLowerCase().endsWith(".doc");
+      const fileIcon = isWord ? "file-text" : "file-text";
+      const fileTypeBadge = isWord ? "Word" : "PDF";
+
       const row = document.createElement("div");
       row.className = "px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition";
       row.innerHTML = `
-        <div class="flex items-center gap-3 min-w-0 cursor-pointer btn-open-pdf-title" title="Clic para leer PDF">
-          <div class="w-9 h-9 rounded-lg bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center shrink-0">
-            <i data-lucide="file-text" class="w-4 h-4 text-[#ffc700]"></i>
+        <div class="flex items-center gap-3 min-w-0 cursor-pointer btn-open-pdf-title" title="Clic para abrir documento">
+          <div class="w-9 h-9 rounded-lg ${isWord ? 'bg-blue-500/10 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-500/20' : 'bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#ffc700] border border-[#ffc700]/30'} flex items-center justify-center shrink-0">
+            <i data-lucide="${fileIcon}" class="w-4 h-4"></i>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2">
               <h4 class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate hover:text-amber-500 transition">${fileItem.name}</h4>
+              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded ${isWord ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'}">${fileTypeBadge}</span>
               ${fileItem.url 
                 ? '<span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40 shrink-0">☁️ Supabase</span>' 
                 : '<span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shrink-0">💾 Local</span>'}
@@ -4604,14 +4609,14 @@ ${speakerHint}${kw}
             <span>${fileItem.summary ? 'Ver Resumen' : '⚡ Resumen IA'}</span>
           </button>
           <button type="button" class="btn-open-pdf px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1.5 hover:brightness-125 transition shadow-xs" style="background-color: #001b44; color: #ffc700;">
-            <i data-lucide="eye" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
-            <span>Ver / Leer</span>
+            <i data-lucide="${isWord ? 'download' : 'eye'}" class="w-3.5 h-3.5" style="color: #ffc700;"></i>
+            <span>${isWord ? 'Descargar' : 'Ver / Leer'}</span>
           </button>
           ${fileItem.url ? `
           <a href="${fileItem.url}" target="_blank" rel="noopener noreferrer" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Abrir en pestaña nueva">
             <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
           </a>` : ''}
-          <button type="button" class="btn-download-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Descargar PDF">
+          <button type="button" class="btn-download-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="Descargar archivo">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
           </button>
           <button type="button" class="btn-delete-pdf-db p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-800 bg-white dark:bg-slate-800 text-slate-400 hover:text-rose-600 transition" title="Eliminar archivo">
@@ -4620,19 +4625,27 @@ ${speakerHint}${kw}
         </div>
       `;
 
-      // Clic en el título o icono del archivo para abrirlo
+      // Clic en el título o icono del archivo para abrirlo / descargarlo si es Word
       row.querySelector(".btn-open-pdf-title").addEventListener("click", () => {
-        openEmbeddedPdfViewer(fileItem);
+        if (isWord) {
+          row.querySelector(".btn-download-pdf-db").click();
+        } else {
+          openEmbeddedPdfViewer(fileItem);
+        }
       });
 
-      // Resumen IA desde la tarjeta del PDF (Abre el Modal Dedicado de Resumen a Ancho Completo)
+      // Resumen IA desde la tarjeta del archivo
       row.querySelector(".btn-summarize-pdf-card").addEventListener("click", () => {
         openSummaryDedicatedViewer(fileItem);
       });
 
-      // Ver / Leer PDF dentro del visor embebido integrado o pestaña nueva en celular
+      // Ver / Leer dentro del visor embebido o descargar si es Word
       row.querySelector(".btn-open-pdf").addEventListener("click", () => {
-        openEmbeddedPdfViewer(fileItem);
+        if (isWord) {
+          row.querySelector(".btn-download-pdf-db").click();
+        } else {
+          openEmbeddedPdfViewer(fileItem);
+        }
       });
 
       // Descargar PDF
@@ -4862,16 +4875,20 @@ ${speakerHint}${kw}
     orgPdfFileInput.addEventListener("change", async (e) => {
       if (e.target.files.length > 0 && currentSubject) {
         const originalLabel = orgPdfDropZoneLabel ? orgPdfDropZoneLabel.textContent : "";
-        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = "⏳ Subiendo y sincronizando PDF con la nube...";
+        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = "⏳ Subiendo y sincronizando archivo con la nube...";
         try {
           for (const f of e.target.files) {
-            if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+            const name = f.name.toLowerCase();
+            const isSupported = name.endsWith(".pdf") || name.endsWith(".docx") || name.endsWith(".doc") ||
+              f.type === "application/pdf" || f.type === "application/msword" ||
+              f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            if (isSupported) {
               const folderId = currentFolder ? currentFolder.id : null;
               await dbAddFile(currentSubject.id, folderId, f);
             }
           }
         } catch (err) {
-          console.error("Error al subir archivo PDF:", err);
+          console.error("Error al subir archivo:", err);
           alert("Ocurrió un error al subir el archivo: " + err.message);
         } finally {
           orgPdfFileInput.value = "";
@@ -4896,16 +4913,20 @@ ${speakerHint}${kw}
       orgPdfDropZone.classList.remove("border-amber-400", "bg-blue-50/30");
       if (e.dataTransfer.files.length > 0 && currentSubject) {
         const originalLabel = orgPdfDropZoneLabel ? orgPdfDropZoneLabel.textContent : "";
-        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = "⏳ Subiendo y sincronizando PDF con la nube...";
+        if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = "⏳ Subiendo y sincronizando archivo con la nube...";
         try {
           for (const f of e.dataTransfer.files) {
-            if (f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf") {
+            const name = f.name.toLowerCase();
+            const isSupported = name.endsWith(".pdf") || name.endsWith(".docx") || name.endsWith(".doc") ||
+              f.type === "application/pdf" || f.type === "application/msword" ||
+              f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            if (isSupported) {
               const folderId = currentFolder ? currentFolder.id : null;
               await dbAddFile(currentSubject.id, folderId, f);
             }
           }
         } catch (err) {
-          console.error("Error al subir archivo PDF por arrastre:", err);
+          console.error("Error al subir archivo por arrastre:", err);
           alert("Ocurrió un error al subir el archivo: " + err.message);
         } finally {
           if (orgPdfDropZoneLabel) orgPdfDropZoneLabel.textContent = originalLabel;

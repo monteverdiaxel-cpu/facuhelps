@@ -672,7 +672,7 @@
 
                 <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 mt-5 group-hover:text-[#ffc700] transition-colors">Organizador de Materias</h3>
                 <p class="text-xs sm:text-[13px] font-serif italic text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                  Biblioteca privada en tu navegador para guardar PDFs, apuntes y fechas de examen sin consumir servidores.
+                  Biblioteca privada en tu navegador para guardar PDFs, apuntes y fechas de examen.
                 </p>
               </div>
 
@@ -1287,20 +1287,26 @@
 
         <!-- Bloque 2: Archivos PDF de la materia (Directos o de la subcarpeta) -->
         <div class="space-y-4">
-          <!-- Zona Drag & Drop de PDFs -->
+          <!-- Zona Drag & Drop de Archivos (PDF y Word) -->
           <div 
             id="orgPdfDropZone" 
             class="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-amber-400 dark:hover:border-amber-500 bg-white dark:bg-slate-900 hover:bg-blue-50/20 dark:hover:bg-slate-800/40 rounded-2xl p-6 sm:p-8 transition-all cursor-pointer flex flex-col items-center justify-center text-center group"
           >
-            <input type="file" id="orgPdfFileInput" accept="application/pdf, .pdf" multiple class="hidden">
+            <input 
+              type="file" 
+              id="orgPdfFileInput" 
+              class="hidden" 
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+              multiple 
+            />
             <div class="w-12 h-12 rounded-xl bg-[#001b44]/10 dark:bg-[#001b44]/40 text-[#001b44] dark:text-[#ffc700] border border-[#ffc700]/30 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <i data-lucide="file-up" class="w-6 h-6 text-[#ffc700]"></i>
             </div>
             <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
-              <span id="orgPdfDropZoneLabel">Arrastra tus archivos PDF aquí a la materia</span> o <span class="text-[#002d72] dark:text-[#ffc700] group-hover:underline">haz clic para examinar</span>
+              <span id="orgPdfDropZoneLabel">Arrastra tus archivos PDF o Word aquí a la materia</span> o <span class="text-[#002d72] dark:text-[#ffc700] group-hover:underline">haz clic para examinar</span>
             </p>
             <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-sans">
-              Solo archivos .pdf • Almacenamiento local persistente con IndexedDB
+              Archivos PDF y documentos Word (.docx, .doc)
             </p>
           </div>
 
