@@ -1263,87 +1263,129 @@ ${speakerHint}${kw}
   }
 
   const CLOUDFLARE_WORKER_URL = "https://facuhelps-upload.monteverdiaxel.workers.dev";
-  const CHUNK_SIZE = 8 * 1024 * 1024; // 8,388,608 bytes exactos (múltiplo requerido por Google Files API)
+  const CHUNK_SIZE = 8 * 1024 * 1024; // 8,388,608 bytes exactos
 
   /**
-   * Sube el archivo de audio DIRECTAMENTE a Google Files API vía Cloudflare Worker
-   * Consumo en Render = 0 MB
+   * Sube el audio a Google Files API vía Cloudflare con rotación automática entre las 5 claves
    */
-  async function uploadAudioDirectToGoogle(file, apiKey, onProgress) {
-    // 1. Iniciar sesión de subida resumible a través del Worker
-    const initRes = await fetch(`${CLOUDFLARE_WORKER_URL}/upload/v1beta/files?uploadType=resumable`, {
-      method: "POST",
-      headers: {
-        "X-Goog-Upload-Protocol": "resumable",
-        "X-Goog-Upload-Command": "start",
-        "X-Goog-Upload-Header-Content-Length": file.size.toString(),
-        "X-Goog-Upload-Header-Content-Type": file.type || "audio/mp3",
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey
-      },
-      body: JSON.stringify({ file: { display_name: file.name } })
-    });
-
-    if (!initRes.ok) {
-      const errText = await initRes.text();
-      throw new Error(`Error al iniciar subida en Google Files API: ${errText}`);
-    }
-
-    let uploadUrl = initRes.headers.get("x-goog-upload-url");
-    if (!uploadUrl) {
-      try {
-        const initJson = await initRes.clone().json();
-        uploadUrl = initJson.upload_url || "";
-      } catch (e) {}
-    }
-    if (!uploadUrl) {
-      throw new Error("No se recibió la URL de subida de Google.");
-    }
-
-    // Redirigir la subida de los bloques a través del Worker
-    uploadUrl = uploadUrl.replace("https://generativelanguage.googleapis.com", CLOUDFLARE_WORKER_URL);
-
-    // 2. Subir en bloques de 8 MB
-    let offset = 0;
-    let fileData = null;
-
-    while (offset < file.size) {
-      const end = Math.min(offset + CHUNK_SIZE, file.size);
-      const chunk = file.slice(offset, end);
-      const isLastChunk = (end === file.size);
-
-      const chunkHeaders = {
-        "Content-Length": chunk.size.toString(),
-        "X-Goog-Upload-Offset": offset.toString(),
-        "X-Goog-Upload-Command": isLastChunk ? "upload, finalize" : "upload"
-      };
-
-      const chunkRes = await fetch(uploadUrl, {
-        method: "POST",
-        headers: chunkHeaders,
-        body: chunk
+  async function uploadAudioDirectToGoogle(file, onProgress) {
+    // 1. Obtener el pool de claves (de localStorage o del servidor Render .env)
+    let keyPool = [];
+    const localKey = localStorage.getItem("gemini_api_key");
+    if (localKey && localKey.trim()) {
+      localKey.split(/[\n,;]+/).forEach(k => {
+        const clean = k.trim();
+        if (clean && !keyPool.includes(clean)) keyPool.push(clean);
       });
+    }
 
-      if (!chunkRes.ok) {
-        const errText = await chunkRes.text();
-        throw new Error(`Fallo en bloque (${offset}-${end}): ${errText}`);
+    try {
+      const res = await fetch("/api/upload-keys");
+      const data = await res.json().catch(() => ({}));
+      if (data.keys && Array.isArray(data.keys)) {
+        data.keys.forEach(k => {
+          const clean = (typeof k === "string" ? k : k?.key || "").trim();
+          if (clean && !keyPool.includes(clean)) keyPool.push(clean);
+        });
       }
+    } catch (e) {
+      console.warn("No se pudo obtener pool de claves del servidor:", e);
+    }
 
-      offset = end;
-      if (onProgress) {
-        const pct = Math.round((offset / file.size) * 100);
-        onProgress(pct, offset, file.size);
-      }
+    if (keyPool.length === 0) {
+      throw new Error("No hay API Keys disponibles en el servidor (.env) ni en la interfaz.");
+    }
 
-      if (isLastChunk) {
-        fileData = await chunkRes.json();
+    let lastError = null;
+
+    // 2. Intentar la subida rotando entre las claves disponibles
+    for (let idx = 0; idx < keyPool.length; idx++) {
+      const currentKey = keyPool[idx];
+      try {
+        console.log(`[Subida Cloudflare] Intentando con clave ${idx + 1}/${keyPool.length}...`);
+
+        // Iniciar sesión de subida pasando la clave tanto por query param como por header
+        const initUrl = `${CLOUDFLARE_WORKER_URL}/upload/v1beta/files?uploadType=resumable&key=${encodeURIComponent(currentKey)}`;
+        const initRes = await fetch(initUrl, {
+          method: "POST",
+          headers: {
+            "X-Goog-Upload-Protocol": "resumable",
+            "X-Goog-Upload-Command": "start",
+            "X-Goog-Upload-Header-Content-Length": file.size.toString(),
+            "X-Goog-Upload-Header-Content-Type": file.type || "audio/mp3",
+            "Content-Type": "application/json",
+            "x-goog-api-key": currentKey
+          },
+          body: JSON.stringify({ file: { display_name: file.name } })
+        });
+
+        if (!initRes.ok) {
+          const errText = await initRes.text();
+          throw new Error(`Error al iniciar subida (${initRes.status}): ${errText}`);
+        }
+
+        let uploadUrl = initRes.headers.get("x-goog-upload-url");
+        if (!uploadUrl) throw new Error("No se recibió la URL de subida de Google.");
+
+        // Redirigir los bloques a través del Worker
+        uploadUrl = uploadUrl.replace("https://generativelanguage.googleapis.com", CLOUDFLARE_WORKER_URL);
+
+        // Subir el audio cortado en bloques de 8 MB
+        let offset = 0;
+        let fileData = null;
+
+        while (offset < file.size) {
+          const end = Math.min(offset + CHUNK_SIZE, file.size);
+          const chunk = file.slice(offset, end);
+          const isLastChunk = (end === file.size);
+
+          const chunkHeaders = {
+            "Content-Length": chunk.size.toString(),
+            "X-Goog-Upload-Offset": offset.toString(),
+            "X-Goog-Upload-Command": isLastChunk ? "upload, finalize" : "upload"
+          };
+
+          const chunkRes = await fetch(uploadUrl, {
+            method: "POST",
+            headers: chunkHeaders,
+            body: chunk
+          });
+
+          if (!chunkRes.ok) {
+            const errText = await chunkRes.text();
+            throw new Error(`Fallo en bloque (${offset}-${end}): ${errText}`);
+          }
+
+          offset = end;
+          if (onProgress) {
+            const pct = Math.round((offset / file.size) * 100);
+            onProgress(pct, offset, file.size);
+          }
+
+          if (isLastChunk) {
+            fileData = await chunkRes.json();
+          }
+        }
+
+        // Subida exitosa con esta clave
+        return { googleFile: fileData?.file || fileData, usedKey: currentKey };
+
+      } catch (err) {
+        console.warn(`[Subida Cloudflare] Falló clave ${idx + 1}/${keyPool.length}:`, err);
+        lastError = err;
+
+        // Si quedan más claves, esperar 1 segundo y probar con la siguiente
+        if (idx + 1 < keyPool.length) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
       }
     }
 
-    return fileData?.file || fileData;
+    throw new Error(`No se pudo subir el audio con ninguna de las ${keyPool.length} claves: ${lastError?.message || lastError}`);
   }
 
-  // 7. Iniciar Proceso de Transcripción (Subida Directa Exclusiva a Google vía Cloudflare Worker con Rotación de Claves - 0 MB en Render)
+  // 7. Iniciar Proceso de Transcripción (Subida Directa Exclusiva a Google vía Cloudflare Worker - 0 MB en Render)
   btnStartTranscribe.addEventListener("click", async () => {
     hideError();
     const errorBannerEl = document.getElementById("errorBanner");
@@ -1364,105 +1406,51 @@ ${speakerHint}${kw}
     setProgressStep("local");
 
     try {
-      // 1. Armar el pool de API Keys (Claves del usuario en navegador + Claves del .env vía /api/upload-keys)
-      const localKeyRaw = (localStorage.getItem("gemini_api_key") || "").trim();
-      const localKeys = localKeyRaw.split(/[\n,;]+/).map(k => k.trim()).filter(Boolean);
-
-      let serverKeys = [];
-      try {
-        const resKeys = await fetch("/api/upload-keys");
-        if (resKeys.ok) {
-          const dataKeys = await resKeys.json();
-          if (Array.isArray(dataKeys.keys)) {
-            serverKeys = dataKeys.keys.map(k => k.trim()).filter(Boolean);
-          }
+      // Paso 1: Subir audio directamente a Google Files API vía Cloudflare Worker en bloques de 8 MB (0 MB en Render)
+      setProgressStep("cloud");
+      const { googleFile, usedKey } = await uploadAudioDirectToGoogle(currentFile, (pct, uploadedBytes, totalBytes) => {
+        if (progressSubtitle) {
+          progressSubtitle.textContent = `Subiendo directo a Google Files API: ${pct}% (${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}) • 0 MB en Render.`;
         }
-      } catch (e) {
-        console.warn("No se pudo obtener /api/upload-keys:", e);
+      });
+
+      const googleFileName = googleFile ? (googleFile.name || "") : "";
+      if (!googleFileName) {
+        throw new Error("No se recibió el identificador del archivo desde Google.");
       }
 
-      // Combinar sin duplicados (priorizando las del navegador si las hubiera, seguidas de las del .env)
-      const keyPool = [...new Set([...localKeys, ...serverKeys])];
-
-      if (keyPool.length === 0) {
-        showError("Falta la API Key", "Por favor ingresa tu API Key de Google AI Studio antes de continuar.");
-        if (apiKeyModal) apiKeyModal.classList.remove("hidden");
-        return;
-      }
-
+      // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador (1 KB) y la clave exacta con la que se subió
+      setProgressStep("gemini");
       const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
-      let finalData = null;
-      let lastError = null;
+      const transcribeResponse = await fetch("/api/transcribe-file-uri", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          file_name: googleFileName,
+          api_key: usedKey,
+          audio_type: currentAudioType || "clase",
+          keywords: (inputKeywords && inputKeywords.value.trim()) || "",
+          model_name: selectedModelName
+        })
+      });
 
-      // 2. Bucle de Rotación Automática de Claves:
-      // En Google Files API el archivo subido pertenece exclusivamente a la clave que lo subió.
-      // Si una clave agota cuota o falla en la subida o transcripción, rotamos a la siguiente clave.
-      for (let i = 0; i < keyPool.length; i++) {
-        const currentKey = keyPool[i];
-        const keyLabel = keyPool.length > 1 ? ` (Clave ${i + 1}/${keyPool.length})` : "";
-
+      if (!transcribeResponse.ok) {
+        const errorText = await transcribeResponse.text();
+        let errMsg = `Error HTTP ${transcribeResponse.status} al transcribir.`;
         try {
-          // Paso 1: Subir audio directamente a Google Files API vía Cloudflare Worker en bloques de 8 MB (0 MB en Render)
-          setProgressStep("cloud");
-          const uploadedFile = await uploadAudioDirectToGoogle(currentFile, currentKey, (pct, uploadedBytes, totalBytes) => {
-            if (progressSubtitle) {
-              progressSubtitle.textContent = `Subiendo directo a Google Files API${keyLabel}: ${pct}% (${formatBytes(uploadedBytes)} / ${formatBytes(totalBytes)}) • 0 MB en Render.`;
-            }
-          });
-
-          const googleFileName = uploadedFile ? (uploadedFile.name || "") : "";
-          if (!googleFileName) {
-            throw new Error("No se recibió el identificador del archivo desde Google.");
-          }
-
-          // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador (1 KB) y la clave exacta propietaria del archivo
-          setProgressStep("gemini");
-          if (progressSubtitle && keyPool.length > 1) {
-            progressSubtitle.textContent = `Transcribiendo palabra por palabra con Gemini Flash${keyLabel}...`;
-          }
-
-          const transcribeResponse = await fetch("/api/transcribe-file-uri", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              file_name: googleFileName,
-              api_key: currentKey,
-              audio_type: currentAudioType || "clase",
-              keywords: (inputKeywords && inputKeywords.value.trim()) || "",
-              model_name: selectedModelName
-            })
-          });
-
-          if (!transcribeResponse.ok) {
-            const errorText = await transcribeResponse.text();
-            let errMsg = `Error HTTP ${transcribeResponse.status} al transcribir.`;
-            try {
-              errMsg = JSON.parse(errorText).detail || errMsg;
-            } catch (e) {}
-            throw new Error(errMsg);
-          }
-
-          const data = await transcribeResponse.json();
-          if (!data.transcript || !data.transcript.trim()) {
-            throw new Error("La transcripción recibida está vacía.");
-          }
-
-          finalData = data;
-          break; // ¡Éxito! Salir del bucle de rotación
-        } catch (attemptErr) {
-          console.warn(`[Rotación de Claves] Falló intento con clave ${i + 1}/${keyPool.length}:`, attemptErr);
-          lastError = attemptErr;
-          // Si quedan más claves en el pool, continúa automáticamente con la siguiente clave
-        }
+          errMsg = JSON.parse(errorText).detail || errMsg;
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
-      if (!finalData) {
-        throw lastError || new Error("No se pudo completar la transcripción con ninguna de las claves disponibles.");
-      }
+      const data = await transcribeResponse.json();
+      rawTranscriptText = data.transcript || "";
 
-      rawTranscriptText = finalData.transcript || "";
+      if (!rawTranscriptText.trim()) {
+        throw new Error("La transcripción recibida está vacía.");
+      }
 
       // Finalizar visualización limpia
       setProgressStep("done");
@@ -1472,7 +1460,7 @@ ${speakerHint}${kw}
       if (streamingIndicator) streamingIndicator.classList.add("hidden");
       currentActiveFileName = currentFile ? currentFile.name : "audio.mp3";
       resultFileName.textContent = currentActiveFileName;
-      resultModelBadge.textContent = `${finalData.model_used || selectedModelName} • completado`;
+      resultModelBadge.textContent = `${data.model_used || selectedModelName} • completado`;
       transcriptContent.innerHTML = formatTranscript(rawTranscriptText);
 
       // Guardar en historial local y sincronizar con Supabase
