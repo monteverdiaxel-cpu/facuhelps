@@ -529,6 +529,8 @@ class TranscribeFileUriRequest(BaseModel):
     api_key: Optional[str] = None
     model_name: Optional[str] = "gemini-3.8-flash"
 
+import traceback
+
 @app.post("/api/transcribe-file-uri")
 async def transcribe_file_uri(req: TranscribeFileUriRequest):
     from google import genai
@@ -543,10 +545,6 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     if not current_key:
         raise HTTPException(status_code=400, detail="No se encontró una API Key válida.")
 
-    # Normalizar MIME type para archivos .m4a (formato oficial de Google Files API: audio/mp4)
-    clean_mime = sanitize_audio_mime(req.file_name or "", req.mime_type or "audio/mp3")
-
-    # Asegurar el formato "files/xxxx"
     file_name = req.file_name
     if not file_name and req.file_uri:
         if "/files/" in req.file_uri:
@@ -555,81 +553,52 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     if file_name and not file_name.startswith("files/"):
         file_name = f"files/{file_name}"
 
-    system_instruction, user_prompt = get_transcription_prompts(req.audio_type, req.keywords)
+    system_instruction = (
+        "Eres un transcriptor profesional de audio para textos académicos universitarios. "
+        "Tu tarea es transcribir palabra por palabra (verbatim) de forma exhaustiva, precisa y estructurada, "
+        "identificando docentes y estudiantes si los hay, sin resumir ni omitir absolutamente nada."
+    )
 
+    user_prompt = (
+        "Transcribe el audio completo adjunto en su totalidad de forma literal, palabra por palabra (verbatim), "
+        "estructurado con saltos de párrafo claros y sin omitir nada del contenido."
+    )
+
+    # Configuración limpia 100% compatible con audios (sin parámetros conflictivos)
     gen_config = types.GenerateContentConfig(
         system_instruction=system_instruction,
-        temperature=0.1,
-        max_output_tokens=8192,
-        thinking_config=types.ThinkingConfig(thinking_level="LOW")
+        max_output_tokens=8192
     )
 
     client = genai.Client(api_key=current_key)
     google_file = None
 
-    # 2. Espera activa hasta que Google confirme estado ACTIVE (hasta 60 segundos para audios de más de 100 MB)
-    is_file_active = False
+    # 2. Espera activa hasta que Google confirme estado ACTIVE
     if file_name:
-        for attempt in range(1, 31):
+        for attempt in range(1, 30):
             try:
                 google_file = await asyncio.to_thread(client.files.get, name=file_name)
                 state_str = str(getattr(google_file, "state", "")).upper()
                 print(f"[Google Files API] Esperando audio ({attempt}/30): {state_str}")
 
-                # Si ya terminó de procesar y está activo, salir del bucle y transcribir
                 if "ACTIVE" in state_str:
-                    is_file_active = True
                     break
                 elif "FAIL" in state_str:
-                    raise Exception("Google Files API reportó fallo al procesar el archivo de audio.")
+                    raise Exception("Google Files API reportó fallo al procesar el archivo.")
             except Exception as e:
-                if "reportó fallo" in str(e):
-                    raise HTTPException(status_code=500, detail=str(e))
                 print(f"[Google Files API] Intento {attempt}/30: {e}")
 
-            # Esperar 2 segundos antes del siguiente chequeo
             await asyncio.sleep(2)
 
-        if google_file and not is_file_active:
-            final_state = str(getattr(google_file, "state", "")).upper()
-            if "ACTIVE" not in final_state:
-                raise HTTPException(
-                    status_code=504,
-                    detail=f"El archivo aún se está procesando en Google Files API (estado: {final_state}). Intenta nuevamente en unos segundos."
-                )
+    if not google_file:
+        raise HTTPException(status_code=500, detail="El audio no alcanzó el estado activo en Google.")
 
-    # 3. Preparar contenido asegurando el MIME type sanitizado (ej. audio/mp4 para .m4a)
-    contents = []
-    if google_file:
-        display_fn = getattr(google_file, "display_name", "") or req.file_name or ""
-        raw_file_mime = getattr(google_file, "mime_type", "") or req.mime_type or "audio/mp3"
-        clean_mime = sanitize_audio_mime(display_fn, raw_file_mime)
-        file_uri_val = getattr(google_file, "uri", None) or req.file_uri
-        if file_uri_val:
-            contents = [
-                types.Part.from_uri(file_uri=file_uri_val, mime_type=clean_mime),
-                user_prompt
-            ]
-        else:
-            try:
-                google_file.mime_type = clean_mime
-            except Exception:
-                pass
-            contents = [google_file, user_prompt]
-    elif req.file_uri:
-        contents = [
-            types.Part.from_uri(file_uri=req.file_uri, mime_type=clean_mime),
-            user_prompt
-        ]
-    else:
-        raise HTTPException(status_code=400, detail="No se pudo resolver el archivo en Google Files API.")
-
-    # 4. Transcripción con Gemini Flash
+    # 3. Llamar a Gemini con el archivo activo y el prompt
     try:
         response = await asyncio.to_thread(
             client.models.generate_content,
             model=req.model_name or "gemini-3.8-flash",
-            contents=contents,
+            contents=[google_file, user_prompt],
             config=gen_config
         )
 
@@ -638,22 +607,25 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
             raise Exception("Gemini devolvió una transcripción vacía.")
 
         # Limpiar archivo temporal de Google
-        if google_file:
-            try:
-                await asyncio.to_thread(client.files.delete, name=google_file.name)
-            except Exception:
-                pass
+        try:
+            await asyncio.to_thread(client.files.delete, name=google_file.name)
+        except Exception:
+            pass
 
         return JSONResponse({
             "success": True,
-            "transcript": transcript_text,
-            "model_used": req.model_name or "gemini-3.8-flash"
+            "transcript": transcript_text
         })
 
     except Exception as exc:
+        traceback.print_exc()
+        error_detail = str(exc)
+        if hasattr(exc, "message"):
+            error_detail = exc.message
+        print(f"[ERROR GENERATE CONTENT]: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error durante la transcripción directa: {str(exc)}"
+            detail=f"Error durante la transcripción directa: {error_detail}"
         )
 
 class SummarizeRequest(BaseModel):
