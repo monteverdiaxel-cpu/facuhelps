@@ -1467,7 +1467,7 @@ ${speakerHint}${kw}
 
       // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador/URI nuevo (1 KB) y la clave exacta con la que se subió
       setProgressStep("gemini");
-      const selectedModelName = "gemini-2.5-flash";
+      const selectedModelName = "gemini-3.8-flash";
       const transcribeResponse = await fetch("/api/transcribe-file-uri", {
         method: "POST",
         cache: "no-store",

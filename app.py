@@ -530,7 +530,7 @@ class TranscribeFileUriRequest(BaseModel):
     audio_type: Optional[str] = "clase"
     keywords: Optional[str] = ""
     api_key: Optional[str] = None
-    model_name: Optional[str] = "gemini-2.5-flash"
+    model_name: Optional[str] = "gemini-3.8-flash"
 
 import traceback
 import time
@@ -605,8 +605,8 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     except Exception:
         pass
 
-    # 3. Llamar a Gemini ("gemini-2.5-flash") con reintentos ante errores temporales o de cuota (429/503)
-    target_model = "gemini-2.5-flash"
+    # 3. Llamar a Gemini ("gemini-3.8-flash") con reintentos ante errores temporales o de cuota (429/503)
+    target_model = "gemini-3.8-flash"
     last_exc = None
 
     for gen_attempt in range(1, 4):
