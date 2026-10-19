@@ -446,6 +446,57 @@ async def get_upload_session(req: UploadSessionRequest):
 
     raise HTTPException(status_code=500, detail=f"No se pudo crear sesión de subida con ninguna API Key: {str(last_error)}")
 
+class CreateUploadSessionRequest(BaseModel):
+    filename: str
+    file_size: int
+    mime_type: Optional[str] = "audio/mp3"
+    api_key: Optional[str] = None
+
+@app.post("/api/create-upload-session")
+async def create_upload_session(req: CreateUploadSessionRequest):
+    key_pool = []
+    if req.api_key:
+        key_pool.extend(parse_api_keys(req.api_key))
+    for k in parse_api_keys(os.getenv("GEMINI_API_KEY", "")):
+        if k not in key_pool:
+            key_pool.append(k)
+
+    if not key_pool:
+        raise HTTPException(status_code=400, detail="No hay claves configuradas en el servidor (.env).")
+
+    last_err = None
+    for k_idx, current_key in enumerate(key_pool):
+        try:
+            init_url = f"https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key={current_key}"
+            payload = json.dumps({"file": {"display_name": req.filename}}).encode("utf-8")
+            
+            headers = {
+                "X-Goog-Upload-Protocol": "resumable",
+                "X-Goog-Upload-Command": "start",
+                "X-Goog-Upload-Header-Content-Length": str(req.file_size),
+                "X-Goog-Upload-Header-Content-Type": req.mime_type or "audio/mp3",
+                "Content-Type": "application/json",
+                "x-goog-api-key": current_key
+            }
+            
+            req_obj = urllib.request.Request(init_url, data=payload, headers=headers, method="POST")
+            with urllib.request.urlopen(req_obj, timeout=15) as resp:
+                upload_url = resp.headers.get("x-goog-upload-url") or resp.headers.get("X-Goog-Upload-URL")
+                if upload_url:
+                    return JSONResponse({
+                        "success": True,
+                        "upload_url": upload_url,
+                        "key_used": current_key
+                    })
+        except Exception as e:
+            last_err = e
+            continue
+
+    raise HTTPException(
+        status_code=500, 
+        detail=f"No se pudo iniciar la sesión de subida en Google con ninguna de las {len(key_pool)} claves: {str(last_err)}"
+    )
+
 class TranscribeFileUriRequest(BaseModel):
     file_name: str
     api_key: Optional[str] = None

@@ -1266,123 +1266,92 @@ ${speakerHint}${kw}
   const CHUNK_SIZE = 8 * 1024 * 1024; // 8,388,608 bytes exactos
 
   /**
-   * Sube el audio a Google Files API vía Cloudflare con rotación automática entre las 5 claves
+   * 1. Inicia la sesión resumible desde el servidor Render (/api/create-upload-session, solo 150 bytes, sin CORS)
+   * 2. Sube los bloques de 8 MB directamente a Google Files API a través de Cloudflare Worker (0 MB en Render)
    */
   async function uploadAudioDirectToGoogle(file, onProgress) {
-    // 1. Obtener el pool de claves (de localStorage o del servidor Render .env)
-    let keyPool = [];
-    const localKey = localStorage.getItem("gemini_api_key");
-    if (localKey && localKey.trim()) {
-      localKey.split(/[\n,;]+/).forEach(k => {
-        const clean = k.trim();
-        if (clean && !keyPool.includes(clean)) keyPool.push(clean);
+    const localKey = (localStorage.getItem("gemini_api_key") || "").trim();
+
+    // 1. Obtener URL de subida resumible desde el backend (con rotación de las 5 claves del .env)
+    const sessionRes = await fetch("/api/create-upload-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        file_size: file.size,
+        mime_type: file.type || "audio/mp3",
+        api_key: localKey || undefined
+      })
+    });
+
+    if (!sessionRes.ok) {
+      const errData = await sessionRes.json().catch(() => ({}));
+      throw new Error(errData.detail || `Error al iniciar sesión de subida (${sessionRes.status})`);
+    }
+
+    const sessionData = await sessionRes.json();
+    let uploadUrl = sessionData.upload_url;
+    const usedKey = sessionData.key_used;
+
+    if (!uploadUrl) {
+      throw new Error("No se recibió la URL de subida de Google desde el servidor.");
+    }
+
+    // 2. Redirigir los bloques de 8 MB a través del Cloudflare Worker (0 MB en Render)
+    const workerChunkBaseUrl = uploadUrl.replace("https://generativelanguage.googleapis.com", CLOUDFLARE_WORKER_URL);
+
+    let offset = 0;
+    let fileData = null;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let chunkIndex = 0;
+
+    while (offset < file.size) {
+      chunkIndex++;
+      const end = Math.min(offset + CHUNK_SIZE, file.size);
+      const chunk = file.slice(offset, end);
+      const isLastChunk = (end === file.size);
+      const command = isLastChunk ? "upload, finalize" : "upload";
+
+      const chunkHeaders = {
+        "Content-Length": chunk.size.toString(),
+        "X-Goog-Upload-Offset": offset.toString(),
+        "X-Goog-Upload-Command": command,
+        "Content-Type": "application/octet-stream"
+      };
+
+      // Intentamos primero en la ruta proxy directa del Worker; si el Worker usa ?action=chunk, hacemos fallback automático
+      let chunkRes = await fetch(workerChunkBaseUrl, {
+        method: "POST",
+        headers: chunkHeaders,
+        body: chunk
       });
-    }
 
-    try {
-      const res = await fetch("/api/upload-keys");
-      const data = await res.json().catch(() => ({}));
-      if (data.keys && Array.isArray(data.keys)) {
-        data.keys.forEach(k => {
-          const clean = (typeof k === "string" ? k : k?.key || "").trim();
-          if (clean && !keyPool.includes(clean)) keyPool.push(clean);
-        });
-      }
-    } catch (e) {
-      console.warn("No se pudo obtener pool de claves del servidor:", e);
-    }
-
-    if (keyPool.length === 0) {
-      throw new Error("No hay API Keys disponibles en el servidor (.env) ni en la interfaz.");
-    }
-
-    let lastError = null;
-
-    // 2. Intentar la subida rotando entre las claves disponibles
-    for (let idx = 0; idx < keyPool.length; idx++) {
-      const currentKey = keyPool[idx];
-      try {
-        console.log(`[Subida Cloudflare] Intentando con clave ${idx + 1}/${keyPool.length}...`);
-
-        // Iniciar sesión de subida pasando la clave tanto por query param como por header
-        const initUrl = `${CLOUDFLARE_WORKER_URL}/upload/v1beta/files?uploadType=resumable&key=${encodeURIComponent(currentKey)}`;
-        const initRes = await fetch(initUrl, {
+      if (!chunkRes.ok && chunkRes.status === 400) {
+        const fallbackWorkerUrl = `${CLOUDFLARE_WORKER_URL}/?action=chunk&upload_url=${encodeURIComponent(uploadUrl)}&offset=${offset}&command=${encodeURIComponent(command)}`;
+        chunkRes = await fetch(fallbackWorkerUrl, {
           method: "POST",
-          headers: {
-            "X-Goog-Upload-Protocol": "resumable",
-            "X-Goog-Upload-Command": "start",
-            "X-Goog-Upload-Header-Content-Length": file.size.toString(),
-            "X-Goog-Upload-Header-Content-Type": file.type || "audio/mp3",
-            "Content-Type": "application/json",
-            "x-goog-api-key": currentKey
-          },
-          body: JSON.stringify({ file: { display_name: file.name } })
+          headers: { "Content-Type": "application/octet-stream" },
+          body: chunk
         });
+      }
 
-        if (!initRes.ok) {
-          const errText = await initRes.text();
-          throw new Error(`Error al iniciar subida (${initRes.status}): ${errText}`);
-        }
+      if (!chunkRes.ok) {
+        const errText = await chunkRes.text();
+        throw new Error(`Fallo en bloque ${chunkIndex}/${totalChunks} (${offset}-${end}): ${errText}`);
+      }
 
-        let uploadUrl = initRes.headers.get("x-goog-upload-url");
-        if (!uploadUrl) throw new Error("No se recibió la URL de subida de Google.");
+      offset = end;
+      if (onProgress) {
+        const pct = Math.round((offset / file.size) * 100);
+        onProgress(pct, offset, file.size);
+      }
 
-        // Redirigir los bloques a través del Worker
-        uploadUrl = uploadUrl.replace("https://generativelanguage.googleapis.com", CLOUDFLARE_WORKER_URL);
-
-        // Subir el audio cortado en bloques de 8 MB
-        let offset = 0;
-        let fileData = null;
-
-        while (offset < file.size) {
-          const end = Math.min(offset + CHUNK_SIZE, file.size);
-          const chunk = file.slice(offset, end);
-          const isLastChunk = (end === file.size);
-
-          const chunkHeaders = {
-            "Content-Length": chunk.size.toString(),
-            "X-Goog-Upload-Offset": offset.toString(),
-            "X-Goog-Upload-Command": isLastChunk ? "upload, finalize" : "upload"
-          };
-
-          const chunkRes = await fetch(uploadUrl, {
-            method: "POST",
-            headers: chunkHeaders,
-            body: chunk
-          });
-
-          if (!chunkRes.ok) {
-            const errText = await chunkRes.text();
-            throw new Error(`Fallo en bloque (${offset}-${end}): ${errText}`);
-          }
-
-          offset = end;
-          if (onProgress) {
-            const pct = Math.round((offset / file.size) * 100);
-            onProgress(pct, offset, file.size);
-          }
-
-          if (isLastChunk) {
-            fileData = await chunkRes.json();
-          }
-        }
-
-        // Subida exitosa con esta clave
-        return { googleFile: fileData?.file || fileData, usedKey: currentKey };
-
-      } catch (err) {
-        console.warn(`[Subida Cloudflare] Falló clave ${idx + 1}/${keyPool.length}:`, err);
-        lastError = err;
-
-        // Si quedan más claves, esperar 1 segundo y probar con la siguiente
-        if (idx + 1 < keyPool.length) {
-          await new Promise(r => setTimeout(r, 1000));
-          continue;
-        }
+      if (isLastChunk) {
+        fileData = await chunkRes.json();
       }
     }
 
-    throw new Error(`No se pudo subir el audio con ninguna de las ${keyPool.length} claves: ${lastError?.message || lastError}`);
+    return { googleFile: fileData?.file || fileData, usedKey };
   }
 
   // 7. Iniciar Proceso de Transcripción (Subida Directa Exclusiva a Google vía Cloudflare Worker - 0 MB en Render)
