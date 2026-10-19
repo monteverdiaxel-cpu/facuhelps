@@ -188,6 +188,12 @@ async def get_key_pool():
         "default_model": os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     }
 
+@app.get("/api/upload-keys")
+async def get_upload_keys():
+    """Entrega el pool de claves del .env para subida directa por Cloudflare con rotación."""
+    pool = parse_api_keys(os.getenv("GEMINI_API_KEY", ""))
+    return {"keys": pool}
+
 @app.post("/api/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),
