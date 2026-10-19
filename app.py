@@ -548,24 +548,23 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     client = genai.Client(api_key=current_key)
     google_file = None
 
-    # 2. Espera de propagación y estado ACTIVE (hasta 30 segundos en audios pesados)
+    # 2. Espera activa hasta que Google confirme estado ACTIVE (hasta 60 segundos para audios de más de 100 MB)
     if file_name:
-        for attempt in range(1, 16):
+        for attempt in range(1, 30):
             try:
                 google_file = await asyncio.to_thread(client.files.get, name=file_name)
-                state = getattr(google_file, "state", None)
-                state_name = getattr(state, "name", str(state))
+                state_str = str(getattr(google_file, "state", "")).upper()
+                print(f"[Google Files API] Esperando audio ({attempt}/30): {state_str}")
 
-                if state_name == "ACTIVE":
+                # Si ya terminó de procesar y está activo, salir del bucle y transcribir
+                if "ACTIVE" in state_str:
                     break
-                elif state_name == "FAILED":
-                    raise Exception("Google Files API reportó fallo al procesar el audio.")
+                elif "FAIL" in state_str:
+                    raise Exception("Google Files API reportó fallo al procesar el archivo de audio.")
             except Exception as e:
-                if "reportó fallo" in str(e):
-                    raise
-                # Si Google aún no propagó los permisos (403 transitorio), esperar y reintentar
-                print(f"[Google Files API] Esperando propagación del archivo ({attempt}/15)...")
-            
+                print(f"[Google Files API] Intento {attempt}/30: {e}")
+
+            # Esperar 2 segundos antes del siguiente chequeo
             await asyncio.sleep(2)
 
     # 3. Preparar contenido
