@@ -137,12 +137,13 @@ def get_system_instruction(audio_type: str = "clase") -> str:
    - Mantené siempre asignado el mismo número a la misma voz a lo largo de todo el audio.
    - Separa cada intervención en párrafos limpios y claros, con puntos y aparte."""
     else:  # clase / teórico
-        speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (CLASE / TEÓRICO):
-   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación.
-   - Utiliza OBLIGATORIAMENTE de principio a fin las etiquetas en negrita:
+        speaker_rules = """3. CAPTURA RIGUROSA DE TODOS LOS PARTICIPANTES DEL AULA Y MATERIALES REPRODUCIDOS (CLASE / TEÓRICO):
+   - Captura rigurosamente a TODOS los participantes del aula, utilizando OBLIGATORIAMENTE de principio a fin las etiquetas en negrita:
      * **Docente:** para quien enseña o expone la clase.
-     * **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:** si intervienen varios) para los alumnos que participan o preguntan.
-   - Si habla una sola persona (clase magistral o monólogo continuo): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
+     * **Estudiante 1:**, **Estudiante 2:**, **Estudiante 3:**, etc. (o **Estudiante:** si interviene uno solo) para cada alumno que participa, comenta, responde o pregunta.
+   - ATENCIÓN A INTERVENCIONES LATERALES O LEJANAS: Captura y transcribe todas las intervenciones de los estudiantes, incluyendo aportes breves, acotaciones o voces de bajo volumen provenientes desde los laterales (canal izquierdo o derecho) o lejos del micrófono. Bajo ninguna circunstancia las descartes ni las ignores como ruido de fondo.
+   - AUDIOS Y MATERIALES MULTIMEDIA REPRODUCIDOS EN EL AULA: Cuando el docente reproduzca en clase grabaciones, fragmentos de radio, televisión, llamadas telefónicas, entrevistas grabadas, videos o música, transcríbelos íntegramente identificando su origen con etiquetas en negrita tales como: **Audio:**, **Voz en audio:**, **Locutor en audio:**, **Periodista en audio:**, **[Nombre] en audio:** (ej: **Luca Prodan en audio:**, **Javier Negre en audio:**) o **Canción en audio:**.
+   - Si habla una sola persona durante toda la grabación (clase magistral sin intervenciones ni audios externos): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
 
     return f"""Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
 Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma fiel, con una estructura de lectura limpia, clara y sin marcas de tiempo.
@@ -150,7 +151,7 @@ Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio 
 REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
 1. FIDELIDAD TEXTUAL SIN RESUMIR: Transcribe el contenido íntegro del audio de principio a fin sin resumir, sin sintetizar y sin omitir frases ni explicaciones. Transcribe hasta la última palabra del archivo.
 2. FILTRO Y TOLERANCIA A AUDIOS DIFÍCILES (RUIDO Y ECO):
-   - Si el audio presenta baja ganancia, eco de aula, murmullos de fondo o lejanía del micrófono, aísla la voz principal del orador e ignora el ruido ambiente.
+   - Si el audio presenta baja ganancia, eco de aula, murmullos de fondo o lejanía del micrófono, aísla las voces humanas (tanto del docente como de cada estudiante en los canales izquierdo/derecho o lejos del micrófono, así como audios reproducidos en clase) e ignora únicamente el ruido mecánico o estático.
    - Reconstruye con máxima fidelidad las palabras habladas apoyándote en el contexto semántico de la clase o conversación.
 {speaker_rules}
 4. LIMPIEZA DE HABLA (FLUIDEZ):
@@ -170,7 +171,8 @@ def get_user_prompt(audio_type: str = "clase", keywords: Optional[str] = None) -
     elif audio_type == "radio":
         speaker_hint = """- Formato de oradores: Identifica a todos los participantes usando ESTRICTAMENTE **Persona 1:**, **Persona 2:**, **Persona 3:**, etc. (incrementando según cada voz distinta). CERO nombres propios."""
     else:
-        speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Docente:** y **Estudiante:** (o **Estudiante 1:**, **Estudiante 2:**) (CERO nombres propios). Si es clase magistral individual, párrafos limpios con puntos y aparte sin prefijos."""
+        speaker_hint = """- Formato de oradores en el aula: Captura rigurosamente a todos los participantes usando **Docente:** y **Estudiante 1:**, **Estudiante 2:**, etc., incluyendo intervenciones breves o de bajo volumen desde los laterales (canal izquierdo o derecho) o lejos del micrófono, sin descartarlas como ruido.
+- Materiales y audios reproducidos en clase: Cuando el docente pase grabaciones, radio, televisión, llamadas, entrevistas o música, transcríbelos identificando el origen con etiquetas en negrita como **Audio:**, **Voz en audio:**, **Locutor en audio:**, **Periodista en audio:**, **[Nombre] en audio:** (ej: **Luca Prodan en audio:**, **Javier Negre en audio:**) o **Canción en audio:**."""
 
     keywords_instruction = ""
     clean_kw = (keywords or "").strip()
@@ -178,11 +180,11 @@ def get_user_prompt(audio_type: str = "clase", keywords: Optional[str] = None) -
         keywords_instruction = f"\n- Atención a vocabulario específico: asegúrate de transcribir con correcta ortografía los siguientes términos y autores si aparecen en el audio: {clean_kw}."
 
     return f"""Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
-- Filtro de audio difícil: aísla la voz principal ante eco de aula, lejanía o ruido de fondo, reconstruyendo las palabras con fidelidad según el contexto temático.
+- Filtro de audio difícil: rescata tanto la voz principal como las intervenciones bajas o lejanas en el aula (canales laterales o fondo) y grabaciones reproducidas, reconstruyendo las palabras con fidelidad según el contexto temático.
 {speaker_hint}{keywords_instruction}
 - Limpieza de habla: elimina tartamudeos ("de de") y muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
 - Comillas: usa exclusivamente comillas dobles comunes ("..."), nunca angulares («...»).
-- PROHIBIDO incluir marcas de tiempo [mm:ss] o timestamps.
+- PROHIBIDAS las marcas de tiempo [mm:ss] o timestamps.
 - Prohibido devolver bloques densos de texto sin saltos de línea."""
 
 @app.get("/api/config")
@@ -272,8 +274,7 @@ async def transcribe_audio(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536,
-            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+            max_output_tokens=65536
         )
 
         transcript_text = ""
@@ -606,14 +607,14 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
         pass
 
     # 3. Llamar a Gemini ("gemini-3.8-flash") con reintentos ante errores temporales o de cuota (429/503)
-    target_model = "gemini-3.8-flash"
+    target_model_name = "gemini-3.8-flash"
     last_exc = None
 
     for gen_attempt in range(1, 4):
         try:
             response = await asyncio.to_thread(
                 client.models.generate_content,
-                model=target_model,
+                model=target_model_name,
                 contents=[google_file, user_prompt],
                 config=gen_config
             )
@@ -631,7 +632,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
             return JSONResponse({
                 "success": True,
                 "transcript": transcript_text,
-                "model_used": target_model
+                "model_used": target_model_name
             })
 
         except Exception as exc:
@@ -677,7 +678,7 @@ async def summarize_transcript(req: SummarizeRequest):
         from google import genai
         from google.genai import types
 
-        target_model = "gemini-3.8-flash"
+        target_model_name = "gemini-3.8-flash"
 
         system_instruction = (
             "Actúa como un analista y asistente pedagógico experto. "
@@ -697,9 +698,8 @@ async def summarize_transcript(req: SummarizeRequest):
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
-            temperature=0.1,
-            max_output_tokens=4096,
-            thinking_config=types.ThinkingConfig(thinking_level="LOW")
+            temperature=0.0,
+            max_output_tokens=65536
         )
 
         response = None
@@ -715,7 +715,7 @@ async def summarize_transcript(req: SummarizeRequest):
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = curr_client.models.generate_content(
-                        model=target_model,
+                        model=target_model_name,
                         contents=[user_content],
                         config=config
                     )
@@ -800,8 +800,6 @@ async def summarize_pdf(
             shutil.copyfileobj(file.file, buffer)
 
         target_model_name = "gemini-3.8-flash"
-        if model_name and "pro" in model_name.lower():
-            target_model_name = "gemini-3.8-pro"
 
         system_instruction = (
             "Actúa como un profesor universitario y analista de textos académicos de Ciencias Sociales. "
