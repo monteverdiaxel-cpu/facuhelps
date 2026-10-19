@@ -1313,6 +1313,7 @@ ${speakerHint}${kw}
         method: "POST",
         headers: {
           "Content-Length": file.size.toString(),
+          "Content-Type": cleanMimeType,
           "X-Goog-Upload-Offset": "0",
           "X-Goog-Upload-Command": "upload, finalize",
           "x-goog-api-key": key_used
@@ -1333,6 +1334,7 @@ ${speakerHint}${kw}
 
         const chunkHeaders = {
           "Content-Length": chunk.size.toString(),
+          "Content-Type": cleanMimeType,
           "X-Goog-Upload-Offset": offset.toString(),
           "X-Goog-Upload-Command": isLastChunk ? "upload, finalize" : "upload",
           "x-goog-api-key": key_used // <-- Inyectada en cada bloque

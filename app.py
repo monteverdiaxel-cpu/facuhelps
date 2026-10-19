@@ -59,6 +59,19 @@ def sanitize_filename(filename: str) -> str:
     safe_name = re.sub(r'[^a-zA-Z0-9._-]', '_', normalized).strip('._')
     return safe_name or "audio"
 
+def sanitize_audio_mime(filename: str, mime: str) -> str:
+    fn = (filename or "").lower().strip()
+    m = (mime or "").lower().strip()
+    if fn.endswith(".m4a") or fn.endswith(".aac") or "m4a" in m or "aac" in m:
+        return "audio/mp4" # Formato oficial que exige Gemini para archivos M4A
+    if fn.endswith(".mp3") or "mp3" in m or "mpeg" in m:
+        return "audio/mp3"
+    if fn.endswith(".wav") or "wav" in m:
+        return "audio/wav"
+    if fn.endswith(".ogg") or "ogg" in m:
+        return "audio/ogg"
+    return "audio/mp4" if "mp4" in m else (mime or "audio/mp3")
+
 def parse_api_keys(key_string: Optional[str]) -> list[str]:
     """Extrae y limpia una lista de API Keys separadas por comas, espacios o saltos de línea."""
     if not key_string:
@@ -464,15 +477,13 @@ async def create_upload_session(req: CreateUploadSessionRequest):
     if not key_pool:
         raise HTTPException(status_code=400, detail="No hay claves configuradas en el servidor (.env).")
 
-    clean_mime = (req.mime_type or "audio/mp3").strip()
-    if req.filename.lower().endswith(".m4a") or "m4a" in clean_mime.lower():
-        clean_mime = "audio/mp4"
+    clean_mime = sanitize_audio_mime(req.filename, req.mime_type or "audio/mp3")
 
     last_err = None
     for k_idx, current_key in enumerate(key_pool):
         try:
             init_url = f"https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=resumable&key={current_key}"
-            payload = json.dumps({"file": {"display_name": req.filename}}).encode("utf-8")
+            payload = json.dumps({"file": {"display_name": req.filename, "mime_type": clean_mime}}).encode("utf-8")
             
             headers = {
                 "X-Goog-Upload-Protocol": "resumable",
@@ -490,7 +501,8 @@ async def create_upload_session(req: CreateUploadSessionRequest):
                     return JSONResponse({
                         "success": True,
                         "upload_url": upload_url,
-                        "key_used": current_key
+                        "key_used": current_key,
+                        "mime_type": clean_mime
                     })
         except Exception as e:
             last_err = e
@@ -532,9 +544,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
         raise HTTPException(status_code=400, detail="No se encontró una API Key válida.")
 
     # Normalizar MIME type para archivos .m4a (formato oficial de Google Files API: audio/mp4)
-    clean_mime = (req.mime_type or "audio/mp3").strip()
-    if "m4a" in clean_mime.lower() or (req.file_name and req.file_name.lower().endswith(".m4a")):
-        clean_mime = "audio/mp4"
+    clean_mime = sanitize_audio_mime(req.file_name or "", req.mime_type or "audio/mp3")
 
     # Asegurar el formato "files/xxxx"
     file_name = req.file_name
@@ -588,10 +598,24 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
                     detail=f"El archivo aún se está procesando en Google Files API (estado: {final_state}). Intenta nuevamente en unos segundos."
                 )
 
-    # 3. Preparar contenido
+    # 3. Preparar contenido asegurando el MIME type sanitizado (ej. audio/mp4 para .m4a)
     contents = []
     if google_file:
-        contents = [google_file, user_prompt]
+        display_fn = getattr(google_file, "display_name", "") or req.file_name or ""
+        raw_file_mime = getattr(google_file, "mime_type", "") or req.mime_type or "audio/mp3"
+        clean_mime = sanitize_audio_mime(display_fn, raw_file_mime)
+        file_uri_val = getattr(google_file, "uri", None) or req.file_uri
+        if file_uri_val:
+            contents = [
+                types.Part.from_uri(file_uri=file_uri_val, mime_type=clean_mime),
+                user_prompt
+            ]
+        else:
+            try:
+                google_file.mime_type = clean_mime
+            except Exception:
+                pass
+            contents = [google_file, user_prompt]
     elif req.file_uri:
         contents = [
             types.Part.from_uri(file_uri=req.file_uri, mime_type=clean_mime),
