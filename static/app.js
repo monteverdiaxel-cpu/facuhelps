@@ -1402,6 +1402,12 @@ ${speakerHint}${kw}
         throw new Error("No se recibió el identificador ni URI del archivo desde Google.");
       }
 
+      // Pausa breve de propagación en Google Files API para evitar 403 transitorio en archivos grandes
+      if (progressSubtitle) {
+        progressSubtitle.textContent = "Verificando propagación del archivo en Google Files API...";
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // Paso 2: Pedir la transcripción a Render enviando únicamente el identificador/URI (1 KB) y la clave exacta con la que se subió
       setProgressStep("gemini");
       const selectedModelName = (selectModel ? selectModel.value : "gemini-3.8-flash") || "gemini-3.8-flash";
