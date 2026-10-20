@@ -118,77 +118,88 @@ def is_retriable_error(exc: Exception) -> bool:
 def get_system_instruction(audio_type: str = "clase") -> str:
     if audio_type == "continuo":
         speaker_rules = """3. SIN DIFERENCIAR HABLANTES (TEXTO CONTINUO EN PÁRRAFOS):
-   - NO incluyas NINGUNA etiqueta de orador bajo ninguna circunstancia (está terminantemente prohibido usar Docente, Estudiante, Hablante, Entrevistador, Entrevistado, Persona o nombres propios).
-   - Transcribe todo el texto de corrido organizado únicamente en párrafos limpios, legibles y naturales, con puntos y aparte claros ante cada cambio de tema o pausa temática, sin ningún prefijo ni número al inicio de los párrafos."""
+   - NO incluyas ninguna etiqueta de orador bajo ninguna circunstancia.
+   - Transcribe todo el texto de corrido organizado únicamente en párrafos limpios, legibles y naturales, con puntos y aparte claros ante cada cambio de tema o pausa temática, sin prefijos ni números al inicio."""
     elif audio_type == "entrevista":
-        speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (ENTREVISTA):
-   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si se mencionan en la conversación.
-   - Utiliza OBLIGATORIAMENTE de principio a fin las etiquetas en negrita:
+        speaker_rules = """3. IDENTIFICACIÓN DE ORADORES (ENTREVISTA):
+   - Si en el audio o en los términos clave se conocen o mencionan los nombres de los participantes (ejemplo: el entrevistador y el entrevistado se presentan o son presentados), utiliza sus NOMBRES REALES en negrita como etiqueta de orador (ejemplo: **[Nombre del entrevistador]:** y **[Nombre del entrevistado]:**).
+   - Si no se mencionan nombres propios, utiliza de principio a fin las etiquetas en negrita:
      * **Entrevistador:** para quien realiza las preguntas.
      * **Entrevistado:** (o **Entrevistado 1:**, **Entrevistado 2:** si hubiese varios) para quien responde.
-   - Si habla una sola persona (relato o monólogo): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
+   - Si habla una sola persona (relato o monólogo): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema."""
     elif audio_type == "radio":
-        speaker_rules = """3. UNIFORMIDAD TOTAL DE ORADORES (RADIO / PODCAST / DEBATE):
-   - NO utilices nombres propios de personas bajo ninguna circunstancia como etiquetas de orador, incluso si los participantes son presentados o se nombran entre sí.
-   - Identifica y distingue a todos los hablantes intervinientes usando ESTRICTAMENTE y de principio a fin el formato en negrita:
-     * **Persona 1:** para la primera voz que habla.
-     * **Persona 2:** para la segunda voz que interviene.
-     * **Persona 3:**, **Persona 4:**, etc., incrementando consecutivamente según las distintas voces del programa o panel.
-   - Mantené siempre asignado el mismo número a la misma voz a lo largo de todo el audio.
+        speaker_rules = """3. IDENTIFICACIÓN DE ORADORES (RADIO / PODCAST / DEBATE):
+   - Si los conductores, periodistas, columnistas o invitados se presentan o son nombrados en la emisión, utiliza sus NOMBRES REALES en negrita como etiqueta de orador (ejemplo: **[Nombre del conductor]:**, **[Nombre del columnista]:**, **[Nombre del invitado]:**).
+   - Si no se mencionan sus nombres propios, identifica a los participantes de principio a fin de forma fija y correlativa como **Persona 1:**, **Persona 2:**, **Persona 3:**, etc., manteniendo siempre la misma etiqueta para la misma voz.
    - Separa cada intervención en párrafos limpios y claros, con puntos y aparte."""
     else:  # clase / teórico
-        speaker_rules = """3. IDENTIFICACIÓN PRECISA DE ALUMNOS, DOCENTE Y AUDIOS REPRODUCIDOS EN CLASE (CLASE / TEÓRICO):
-   - Captura rigurosamente a TODOS los participantes del aula utilizando OBLIGATORIAMENTE etiquetas en negrita:
-     * **Docente:** para quien enseña o expone la clase.
-     * **Estudiante 1:**, **Estudiante 2:**, **Estudiante 3:**... (llegando a **Estudiante 10:** o más si participan varios): Asigna números correlativos únicos a cada alumno diferente según su orden de aparición y timbre de voz. Está terminantemente PROHIBIDO reutilizar el número de un alumno para una voz distinta.
-   - LÍNEA PROPIA PARA CADA ACOTACIÓN BREVE DE ALUMNOS: Toda acotación breve o intervención de alumnos en clase (ej: "¿Qué?", "El podcast...", "Sí.", "Una duda", "¿De quién?"), incluso de bajo volumen desde los laterales (canal izquierdo o derecho) o lejos del micrófono, debe tener OBLIGATORIAMENTE su propia línea y su propia etiqueta **Estudiante N:**, sin descartarse como ruido y sin fusionarse jamás con la frase del docente.
-   - NOMBRES PRECISOS EN AUDIOS REPRODUCIDOS EN CLASE: Cuando el docente reproduzca grabaciones, radio, televisión, llamadas, entrevistas, trabajos de alumnos o música:
-     * Si el docente introduce al personaje, entrevistado o columnista por su nombre antes o durante el audio (ej: "se llama Sergio", "vamos a escuchar a Javier Negre", "Luca Prodan"), usa OBLIGATORIAMENTE ese nombre exacto: **Sergio en audio:**, **Javier Negre en audio:**, **Luca Prodan en audio:**.
-     * Para quien conduce o entrevista dentro del audio reproducido: **Conductor en audio:** o **Entrevistador en audio:** (o **Locutor en audio:** / **Periodista en audio:**).
-     * Para aperturas, música, publicidades o producciones estudiantiles reproducidas: **Cortina musical en audio:**, **Canción en audio:**, **Publicidad en audio:**, **Audio de alumna:** o **Audio:**.
-   - Si habla una sola persona durante toda la grabación (clase magistral sin intervenciones ni audios externos): separa obligatoriamente en párrafos naturales y legibles con puntos y aparte ante cada cambio de tema o pausa, sin ningún número al inicio."""
+        speaker_rules = """3. IDENTIFICACIÓN PRECISA DE ORADORES Y AUDIOS EXTERNOS (CLASE / TEÓRICO):
+   - ORADORES EN EL AULA (DOCENTE Y ALUMNOS):
+     * **Docente:** para el profesor o expositor principal de la clase (o **Docente [Nombre]:** si el profesor se presenta o es nombrado, ej: **Docente (Profesor Rossi):**).
+     * ALUMNOS Y PREGUNTAS: Identifica a los estudiantes que intervienen asignando un identificador claro a cada voz:
+       - Si el alumno se presenta o el docente lo llama por su nombre (ej: "Juan", "Sofía"), puedes etiquetarlo como **Estudiante (Juan):** o **Juan:**.
+       - Si no se conoce el nombre, numéralos correlativamente según cada voz distinta (**Estudiante 1:**, **Estudiante 2:**, **Estudiante 3:**... pudiendo llegar a **Estudiante 10:** o más si intervienen varias personas distintas). NUNCA agrupes voces diferentes bajo un mismo número.
+       - ACOTACIONES BREVES EN EL AULA: Si un alumno hace una pregunta o acotación de pocas palabras (por ejemplo: "¿Qué?", "El podcast...", "Sí.", "Una duda", "Una consulta", "¿De quién?"), dale OBLIGATORIAMENTE su propia línea y etiqueta de estudiante (**Estudiante N:**). NUNCA descartes estas acotaciones ni las fusiones dentro del párrafo del docente.
+   - AUDIOS Y MATERIALES EXTERNOS REPRODUCIDOS EN CLASE:
+     * Cuando en clase se reproduce un audio externo (programas de radio, streaming, televisión, llamadas, entrevistas o música), transcribe con precisión distinguiendo los hablantes del audio reproducido con estas etiquetas acordes a lo que se escucha y a lo que introduce el docente:
+       - Si el docente introduce al personaje o columnista por su nombre antes o durante la reproducción (ej.: "se llama Sergio", "vamos a escuchar a Javier Negre", "Luca Prodan"): UTILIZA ESE NOMBRE EXACTO en la etiqueta (ejemplo: **Sergio en audio:**, **Javier Negre en audio:**, **Luca Prodan en audio:**).
+       - Para el locutor o conductor del programa de radio/TV donde se emite la columna o entrevista: **Conductor en audio:** o **Entrevistador en audio:** (o **Periodista en audio:**).
+       - Para aperturas o locuciones breves de radio: **Voz en audio:** o **Locutor en audio:**.
+       - Para cortinas o separadores de radio: **Cortina musical en audio:**.
+       - Para temas musicales reproducidos: **Canción en audio:** (indicando el título o banda si se escucha o se nombra).
+       - Para trabajos o audios de alumnos reproducidos por el docente: **Audio de alumna:** o **Audio de alumno:**.
+       - Para llamadas judiciales, estafas o testimonios generales: **Audio:**.
+       - Para avisos comerciales: **Publicidad en audio:**.
+     * NUNCA omitas ni dejes sin etiquetar los audios reproducidos en el aula, y NUNCA los fusiones dentro de la voz del docente."""
 
     return f"""Actúa como un taquígrafo profesional y motor de transcripción de máxima fidelidad textual.
 Tu única tarea es transcribir exactamente cada palabra pronunciada en el audio de principio a fin de forma fiel, con una estructura de lectura limpia, clara y sin marcas de tiempo.
 
 REGLAS ESTRICTAS DE TRANSCRIPCIÓN Y FORMATO:
-1. FIDELIDAD TEXTUAL SIN RESUMIR: Transcribe el contenido íntegro del audio de principio a fin sin resumir, sin sintetizar y sin omitir frases ni explicaciones. Transcribe hasta la última palabra del archivo.
-2. FILTRO Y TOLERANCIA A AUDIOS DIFÍCILES (RUIDO Y ECO):
-   - Si el audio presenta baja ganancia, eco de aula, murmullos de fondo o lejanía del micrófono, aísla las voces humanas (tanto del docente como de cada estudiante en los canales izquierdo/derecho o lejos del micrófono, así como audios reproducidos en clase) e ignora únicamente el ruido mecánico o estático.
-   - Reconstruye con máxima fidelidad las palabras habladas apoyándote en el contexto semántico de la clase o conversación.
+1. FIDELIDAD TEXTUAL ABSOLUTA (VERBATIM ESTRICTO): Transcribe el contenido íntegro del audio de principio a fin sin resumir, sin sintetizar y sin omitir frases ni explicaciones. Transcribe hasta la última palabra del archivo.
+   - NUNCA inventes, cambies ni sustituyas nombres de bandas, canciones, radios, marcas ni autores por otros parecidos. Transcribe estrictamente lo que se pronuncia en el audio de forma literal.
+2. TOLERANCIA A AUDIOS DIFÍCILES Y CAPTURA DE TODAS LAS VOCES:
+   - Captura y transcribe rigurosamente TODAS las intervenciones orales del aula: tanto la voz principal del docente como la de cualquier estudiante que hable desde los laterales del aula (canal izquierdo o derecho), el fondo o lejos del micrófono, por breves que sean sus intervenciones.
+   - No descartes las intervenciones de los alumnos como ruido: aísla únicamente ruidos mecánicos o golpes y transcribe con máxima fidelidad cada turno de habla.
 {speaker_rules}
 4. LIMPIEZA DE HABLA (FLUIDEZ):
    - Elimina repeticiones involuntarias y tartamudeos accidentales (ej.: "de de de" -> "de", "con- contrastivas" -> "contrastivas", "pe- presentar" -> "presentar").
    - Omite muletillas sonoras y vacilaciones como "eh", "mmm", "este...", manteniendo intactas todas las demás palabras pronunciadas.
 5. USO DE COMILLAS:
-   - No utilices comillas angulares («...»). Emplea exclusivamente comillas dobles estándar ("...") para citas, términos específicos o ejemplos mencionados.
+   - No utilices comillas angulares («...»). Emplea comillas dobles estándar ("...") para citas, términos específicos o ejemplos mencionados.
 6. PROHIBIDAS LAS MARCAS DE TIEMPO: Está terminantemente prohibido incluir marcas de tiempo, timestamps, segundos o minutos (nada de [mm:ss], [hh:mm:ss] ni numeración de tiempo en ninguna parte).
 7. PROHIBIDO DEVOLVER BLOQUES DENSOS: No entregues textos continuos en un solo bloque denso sin saltos de línea.
 8. SIN INTRODUCCIONES NI NOTAS: No agregues notas, comentarios ni saludos. Comienza directamente con la transcripción."""
 
 def get_user_prompt(audio_type: str = "clase", keywords: Optional[str] = None) -> str:
     if audio_type == "continuo":
-        speaker_hint = """- Formato: SIN etiquetas de orador (nada de Docente, Estudiante ni Hablante). Transcribe el texto de corrido organizado únicamente en párrafos limpios con puntos y aparte claros."""
+        speaker_hint = """- Formato: SIN etiquetas de orador. Transcribe el texto de corrido organizado únicamente en párrafos limpios con puntos y aparte claros."""
     elif audio_type == "entrevista":
-        speaker_hint = """- Formato de oradores: USA OBLIGATORIAMENTE **Entrevistador:** y **Entrevistado:** (CERO nombres propios). Si habla una sola persona, párrafos limpios con puntos y aparte sin prefijos."""
+        speaker_hint = """- Formato de oradores: Identifica a los participantes por sus nombres reales si se mencionan o se conocen (ej: **[Nombre]:**); si no se nombran, utiliza obligatoriamente **Entrevistador:** y **Entrevistado:**."""
     elif audio_type == "radio":
-        speaker_hint = """- Formato de oradores: Identifica a todos los participantes usando ESTRICTAMENTE **Persona 1:**, **Persona 2:**, **Persona 3:**, etc. (incrementando según cada voz distinta). CERO nombres propios."""
+        speaker_hint = """- Formato de oradores: Identifica a los participantes por sus nombres reales si se mencionan en la emisión (ej: **[Nombre]:**); si no se nombran, utiliza estrictamente **Persona 1:**, **Persona 2:**, etc."""
     else:
-        speaker_hint = """- Identificación precisa de alumnos y docente: Usa **Docente:** y asigna números correlativos únicos a cada alumno distinto según su orden de aparición y timbre de voz (**Estudiante 1:**, **Estudiante 2:**, **Estudiante 3:**..., llegando a **Estudiante 10:** o más si participan varios; prohibido reutilizar el número de un alumno para una voz distinta).
-- Intervenciones breves en línea propia: Toda acotación breve de alumnos en clase (ej: "¿Qué?", "El podcast...", "Sí.", "Una duda", "¿De quién?"), incluso desde los laterales (canal izquierdo/derecho) o lejos del micrófono, debe tener OBLIGATORIAMENTE su propia línea y etiqueta **Estudiante N:**, sin fusionarse con la frase del docente.
-- Nombres precisos en audios reproducidos en clase: Si el docente introduce al personaje o columnista por su nombre antes o durante el audio (ej: "se llama Sergio", "vamos a escuchar a Javier Negre", "Luca Prodan"), usa ese nombre exacto (**Sergio en audio:**, **Javier Negre en audio:**, **Luca Prodan en audio:**). Para quien conduce o entrevista en el audio usa **Conductor en audio:** o **Entrevistador en audio:**; y para aperturas, música o piezas usa **Cortina musical en audio:**, **Canción en audio:**, **Publicidad en audio:**, **Audio de alumna:** o **Audio:**."""
+        speaker_hint = """- Formato de oradores en aula:
+  * Docente: usa **Docente:** (o **Docente [Nombre]:** si se menciona).
+  * Alumnos: usa **Estudiante 1:**, **Estudiante 2:**, **Estudiante 3:**... (o el nombre del alumno si el docente lo nombra, ej: **Estudiante (Lucas):**), asignando un número único correlativo a cada voz distinta que hable en el aula. Nunca agrupes personas distintas bajo el mismo número.
+  * Acotaciones breves: captura siempre las preguntas y comentarios cortos de alumnos en su propia línea separada (ej.: "¿Qué?", "El podcast...", "Sí.", "Una duda", "¿De quién?").
+- Audios reproducidos en clase: transcribe todos los audios pasados por el docente identificando el orador según el contexto:
+  * Si el docente lo nombra o se presenta: usa ese nombre exacto (ej: **Sergio en audio:**, **Javier Negre en audio:**, **Luca Prodan en audio:**).
+  * En radio y entrevistas: **Conductor en audio:**, **Entrevistador en audio:**, **Periodista en audio:**, **Voz en audio:** o **Locutor en audio:**.
+  * Música, publicidades y clips: **Cortina musical en audio:**, **Canción en audio:**, **Publicidad en audio:**, **Audio de alumna:** o **Audio:**."""
 
     keywords_instruction = ""
     clean_kw = (keywords or "").strip()
     if clean_kw:
-        keywords_instruction = f"\n- Atención a vocabulario específico: asegúrate de transcribir con correcta ortografía los siguientes términos y autores si aparecen en el audio: {clean_kw}."
+        keywords_instruction = f"\n- Términos clave, autores y oradores: transcribe con exacta fidelidad ortográfica los siguientes términos y nombres: {clean_kw}. Si alguno de estos nombres corresponde a un orador del audio, utilízalo como su etiqueta de orador correspondiente."
 
-    return f"""Transcribe todo el audio adjunto de principio a fin de forma fiel y completa sin resumir:
-- Filtro de audio difícil: rescata tanto la voz principal como las intervenciones bajas o lejanas en el aula (canales laterales o fondo) y grabaciones reproducidas, reconstruyendo las palabras con fidelidad según el contexto temático.
+    return f"""Transcribe todo el audio adjunto de principio a fin de forma fiel, exacta y completa sin resumir:
+- Fidelidad estricta: transcribe literalmente cada palabra sin inventar ni cambiar nombres de bandas, canciones, radios ni autores.
+- Captura integral de voces: transcribe a todos los participantes del aula (tanto al docente como a los estudiantes que acotan o preguntan desde los lados o fondo) y a todos los audios reproducidos.
 {speaker_hint}{keywords_instruction}
 - Limpieza de habla: elimina tartamudeos ("de de") y muletillas sonoras ("eh", "mmm"), dejando el resto intacto.
 - Comillas: usa exclusivamente comillas dobles comunes ("..."), nunca angulares («...»).
-- PROHIBIDAS las marcas de tiempo [mm:ss] o timestamps.
+- PROHIBIDO incluir marcas de tiempo [mm:ss] o timestamps.
 - Prohibido devolver bloques densos de texto sin saltos de línea."""
 
 @app.get("/api/config")
@@ -1108,7 +1119,7 @@ async def export_docx(req: DocxExportRequest):
         p.paragraph_format.line_spacing = 1.15
 
         # Detectar si la línea inicia con una etiqueta de hablante (con o sin asteriscos markdown)
-        m = re.match(r'^\*{0,2}([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+:)\*{0,2}\s*(.*)$', line)
+        m = re.match(r'^\*{0,2}([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\(\)]+:)\*{0,2}\s*(.*)$', line)
 
         if m:
             speaker = m.group(1).replace('*', '').strip()
