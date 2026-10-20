@@ -115,6 +115,47 @@ def is_retriable_error(exc: Exception) -> bool:
         "500", "internal"
     ])
 
+def get_safety_settings():
+    try:
+        from google.genai import types
+        categories = [
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "HARM_CATEGORY_CIVIC_INTEGRITY"
+        ]
+        settings = []
+        for cat_name in categories:
+            cat = getattr(types.HarmCategory, cat_name, None)
+            if cat is not None:
+                settings.append(types.SafetySetting(
+                    category=cat,
+                    threshold=types.HarmBlockThreshold.BLOCK_NONE
+                ))
+        return settings
+    except Exception:
+        return []
+
+def extract_transcript_text(response) -> str:
+    if not response:
+        return ""
+    text = ""
+    try:
+        if hasattr(response, "text") and response.text:
+            text = response.text.strip()
+    except Exception:
+        pass
+    
+    if not text and hasattr(response, "candidates") and response.candidates:
+        cand = response.candidates[0]
+        if hasattr(cand, "content") and cand.content:
+            parts = getattr(cand.content, "parts", []) or []
+            extracted = [getattr(p, "text", "") for p in parts if getattr(p, "text", None)]
+            if extracted:
+                text = "".join(extracted).strip()
+    return text
+
 def get_system_instruction(audio_type: str = "clase") -> str:
     if audio_type == "continuo":
         speaker_rules = """3. SIN DIFERENCIAR HABLANTES (TEXTO CONTINUO EN PÁRRAFOS):
@@ -289,7 +330,8 @@ async def transcribe_audio(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536
+            max_output_tokens=65536,
+            safety_settings=get_safety_settings()
         )
 
         transcript_text = ""
@@ -346,7 +388,7 @@ async def transcribe_audio(
                             continue
                         raise gen_err
 
-                transcript_text = (response.text or "").strip() if response else ""
+                transcript_text = extract_transcript_text(response)
                 if not transcript_text:
                     raise Exception("La API de Gemini devolvió una transcripción vacía.")
 
@@ -583,7 +625,8 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
     gen_config = types.GenerateContentConfig(
         system_instruction=system_instruction,
         temperature=0.0,
-        max_output_tokens=65536
+        max_output_tokens=65536,
+        safety_settings=get_safety_settings()
     )
 
     client = genai.Client(api_key=current_key)
@@ -634,9 +677,15 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
                 config=gen_config
             )
 
-            transcript_text = (response.text or "").strip() if response else ""
+            transcript_text = extract_transcript_text(response)
             if not transcript_text:
-                raise Exception("Gemini devolvió una transcripción vacía.")
+                finish_reason = ""
+                try:
+                    if response and getattr(response, "candidates", None):
+                        finish_reason = f" (finish_reason={getattr(response.candidates[0], 'finish_reason', '')})"
+                except Exception:
+                    pass
+                raise Exception(f"Gemini devolvió una transcripción vacía{finish_reason}.")
 
             # Limpiar archivo temporal de Google tras transcribir exitosamente
             try:
@@ -654,7 +703,7 @@ async def transcribe_file_uri(req: TranscribeFileUriRequest):
             last_exc = exc
             err_str = str(exc)
             print(f"[WARN GENERATE CONTENT] Intento {gen_attempt}/3 falló: {err_str}")
-            if gen_attempt < 3 and any(code in err_str.upper() for code in ["429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "QUOTA", "OVERLOADED", "TIMEOUT"]):
+            if gen_attempt < 3 and any(code in err_str.upper() for code in ["429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "QUOTA", "OVERLOADED", "TIMEOUT", "VACÍA", "EMPTY"]):
                 time.sleep(5)
                 continue
             break
@@ -714,7 +763,8 @@ async def summarize_transcript(req: SummarizeRequest):
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.0,
-            max_output_tokens=65536
+            max_output_tokens=65536,
+            safety_settings=get_safety_settings()
         )
 
         response = None
@@ -756,7 +806,7 @@ async def summarize_transcript(req: SummarizeRequest):
             else:
                 break
 
-        summary_text = (response.text or "").strip() if response else ""
+        summary_text = extract_transcript_text(response)
         return JSONResponse({
             "success": True,
             "summary": summary_text
@@ -837,7 +887,8 @@ async def summarize_pdf(
         gen_config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.2,
-            max_output_tokens=8192
+            max_output_tokens=8192,
+            safety_settings=get_safety_settings()
         )
 
         summary_text = None
@@ -897,7 +948,7 @@ async def summarize_pdf(
                         else:
                             raise gen_err
 
-                summary_text = (response.text or "").strip() if response else ""
+                summary_text = extract_transcript_text(response)
                 if not summary_text:
                     raise Exception("La API de Gemini devolvió un resumen vacío.")
 
